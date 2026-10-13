@@ -1,9 +1,10 @@
 #!/bin/sh
 # Auto-bump the patch number in VERSION on every commit.
 #
-# Format: MAJOR.MINOR.PATCH (e.g. 1.3.15). Only PATCH is bumped here.
-# To change MAJOR or MINOR, edit VERSION by hand and stage it: a staged
-# manual change is respected and NOT bumped again in that commit.
+# Format: MAJOR.MINOR.PATCH (e.g. 1.3.15), each segment 0..99.
+# PATCH is bumped on every commit; when it exceeds 99 it rolls over into
+# MINOR, and MINOR rolls over into MAJOR the same way. A manually staged
+# VERSION is committed as is (no extra bump).
 #
 # Skip once:   SKIP_VERSION_BUMP=1 git commit ...
 # Enabled by:  git config core.hooksPath .githooks
@@ -17,8 +18,8 @@ if [ "$SKIP_VERSION_BUMP" = "1" ]; then
 fi
 
 if [ ! -f "$VERSION_FILE" ]; then
-    echo "pre-commit: $VERSION_FILE not found, creating 1.0.0" >&2
-    printf '1.0.0\n' > "$VERSION_FILE"
+    echo "pre-commit: $VERSION_FILE not found, creating 0.0.1" >&2
+    printf '0.0.1\n' > "$VERSION_FILE"
     git add "$VERSION_FILE"
     exit 0
 fi
@@ -51,7 +52,18 @@ case "$major$minor$patch" in
         ;;
 esac
 
+# Bump PATCH; carry into MINOR / MAJOR when a segment exceeds 99.
+#   0.0.99  -> 0.1.0
+#   0.99.99 -> 1.0.0
 patch=$((patch + 1))
+if [ "$patch" -gt 99 ]; then
+    patch=0
+    minor=$((minor + 1))
+    if [ "$minor" -gt 99 ]; then
+        minor=0
+        major=$((major + 1))
+    fi
+fi
 new="$major.$minor.$patch"
 
 printf '%s\n' "$new" > "$VERSION_FILE"

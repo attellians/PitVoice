@@ -1,11 +1,8 @@
-using System.Reflection;
-using System.Runtime.InteropServices;
 using System.Text.Json;
 using PitVoice.Core.Asr;
 using PitVoice.Core.Audio;
 using PitVoice.Core.Languages;
 using PitVoice.Core.Parsing;
-using Vosk;
 
 namespace PitVoice.Speech.Asr;
 
@@ -15,27 +12,25 @@ namespace PitVoice.Speech.Asr;
 /// </summary>
 public sealed class VoskAsrEngine : IAsrEngine, IDisposable
 {
-    private static readonly FieldInfo? ModelHandle = typeof(Model).GetField("handle", BindingFlags.NonPublic | BindingFlags.Instance);
-
     private readonly GrammarMode _mode;
-    private readonly Func<string, Model> _loadModel;
+    private readonly Func<string, VoskModelHandle> _loadModel;
     private readonly Lock _lock = new();
-    private Model? _model;
+    private VoskModelHandle? _model;
     private string? _grammar;
 
     static VoskAsrEngine()
     {
-        Vosk.Vosk.SetLogLevel(-1);
+        VoskNative.SetLogLevel(-1);
     }
 
     public VoskAsrEngine(GrammarMode mode = GrammarBuilder.DefaultMode)
-        : this(mode, path => new Model(path))
+        : this(mode, VoskModelHandle.Load)
     {
     }
 
     /// <param name="mode">Grammar shape.</param>
     /// <param name="loadModel">Loads a model from disk; replaceable so tests can count loads.</param>
-    internal VoskAsrEngine(GrammarMode mode, Func<string, Model> loadModel)
+    internal VoskAsrEngine(GrammarMode mode, Func<string, VoskModelHandle> loadModel)
     {
         ArgumentNullException.ThrowIfNull(loadModel);
         _mode = mode;
@@ -107,7 +102,7 @@ public sealed class VoskAsrEngine : IAsrEngine, IDisposable
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(pack);
-        var (model, error) = await OpenModelAsync(modelPath, path => new Model(path), cancellationToken).ConfigureAwait(false);
+        var (model, error) = await OpenModelAsync(modelPath, VoskModelHandle.Load, cancellationToken).ConfigureAwait(false);
         if (model is null)
         {
             return (null, error);
@@ -119,12 +114,12 @@ public sealed class VoskAsrEngine : IAsrEngine, IDisposable
         }
     }
 
-    private static Func<string, bool> IsKnownWord(Model model) => word => model.FindWord(word) >= 0;
+    private static Func<string, bool> IsKnownWord(VoskModelHandle model) => model.Contains;
 
     /// <summary>Opens a model directory; failures are returned as messages, the process never crashes on a bad model.</summary>
-    private static async Task<(Model? Model, string? Error)> OpenModelAsync(
+    private static async Task<(VoskModelHandle? Model, string? Error)> OpenModelAsync(
         string modelPath,
-        Func<string, Model> loadModel,
+        Func<string, VoskModelHandle> loadModel,
         CancellationToken cancellationToken)
     {
         var fullPath = Path.GetFullPath(modelPath);
@@ -136,11 +131,11 @@ public sealed class VoskAsrEngine : IAsrEngine, IDisposable
             return (null, $"model directory corrupted: {fullPath}: {Path.Combine("am", "final.mdl")} is missing");
         }
 
-        Model? model = null;
+        VoskModelHandle? model = null;
         try
         {
             model = await Task.Run(() => loadModel(fullPath), cancellationToken).ConfigureAwait(false);
-            if (IsNull(model))
+            if (model.IsInvalid)
             {
                 model.Dispose();
                 return (null, $"model directory corrupted: {fullPath}: the files are missing or unreadable");
@@ -169,7 +164,7 @@ public sealed class VoskAsrEngine : IAsrEngine, IDisposable
     public RecognizedPhrase Recognize(AudioBuffer buffer)
     {
         ArgumentNullException.ThrowIfNull(buffer);
-        Model model;
+        VoskModelHandle model;
         string grammar;
         lock (_lock)
         {
@@ -182,11 +177,14 @@ public sealed class VoskAsrEngine : IAsrEngine, IDisposable
             return RecognizedPhrase.Empty;
         }
 
-        using var recognizer = new VoskRecognizer(model, AudioBuffer.SampleRate, grammar);
-        recognizer.SetWords(true);
-        var samples = buffer.ToArray();
-        recognizer.AcceptWaveform(samples, samples.Length);
-        return ParseResult(recognizer.FinalResult());
+        using var recognizer = VoskNative.RecognizerNewGrammar(model, AudioBuffer.SampleRate, grammar);
+        if (recognizer.IsInvalid)
+        {
+            throw new InvalidOperationException("Vosk could not create a recognizer for the grammar");
+        }
+
+        VoskNative.RecognizerSetWords(recognizer, 1);
+        return ParseResult(recognizer.Recognize(buffer.ToArray()));
     }
 
     public void Unload()
@@ -231,7 +229,4 @@ public sealed class VoskAsrEngine : IAsrEngine, IDisposable
         var text = root.TryGetProperty("text", out var t) ? t.GetString() : null;
         return string.IsNullOrWhiteSpace(text) ? RecognizedPhrase.Empty : RecognizedPhrase.FromText(text);
     }
-
-    private static bool IsNull(Model model) =>
-        ModelHandle?.GetValue(model) is HandleRef handle && handle.Handle == IntPtr.Zero;
 }

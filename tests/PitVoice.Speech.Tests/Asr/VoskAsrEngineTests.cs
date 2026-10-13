@@ -3,7 +3,6 @@ using PitVoice.Core.Audio;
 using PitVoice.Core.Parsing;
 using PitVoice.Speech.Asr;
 using PitVoice.Speech.Audio;
-using Vosk;
 using Xunit;
 
 namespace PitVoice.Speech.Tests.Asr;
@@ -123,7 +122,7 @@ public sealed class VoskAsrEngineTests
         using var engine = new VoskAsrEngine(GrammarBuilder.DefaultMode, path =>
         {
             Interlocked.Increment(ref loads);
-            return new Model(path);
+            return VoskModelHandle.Load(path);
         });
         var pack = TestEnvironment.Pack("en");
         var modelPath = TestEnvironment.RequireModel("en");
@@ -180,6 +179,32 @@ public sealed class VoskAsrEngineTests
         Assert.Contains("corrupted", error, StringComparison.Ordinal);
     }
 
+    [ModelFact("en")]
+    public async Task Vosk_ModelPathWithCyrillic_Loads()
+    {
+        // Native strings must cross as UTF-8 whatever the Windows ANSI code page is (user names are often Cyrillic).
+        using var temp = new Audio.TempDirectory();
+        var target = Path.Combine(temp.Path, "модели пилота", "en");
+        CopyDirectory(TestEnvironment.RequireModel("en"), target);
+        using var engine = new VoskAsrEngine();
+
+        var load = await engine.LoadAsync(TestEnvironment.Pack("en"), target);
+        var result = new SpeechRecognizer(engine).Recognize(WavFile.Load(TestEnvironment.Fixture(EnFixture)));
+
+        Assert.True(load.IsLoaded, load.Error);
+        Assert.Equal("change all tires and add thirty liters", result.Phrase.Text);
+    }
+
+    private static void CopyDirectory(string source, string target)
+    {
+        foreach (var file in Directory.EnumerateFiles(source, "*", SearchOption.AllDirectories))
+        {
+            var destination = Path.Combine(target, Path.GetRelativePath(source, file));
+            Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
+            File.Copy(file, destination);
+        }
+    }
+
     [ModelFact("ru")]
     public async Task Vosk_LanguageSwitch_Reloads()
     {
@@ -187,7 +212,7 @@ public sealed class VoskAsrEngineTests
         using var engine = new VoskAsrEngine(GrammarBuilder.DefaultMode, path =>
         {
             loads.Add(path);
-            return new Model(path);
+            return VoskModelHandle.Load(path);
         });
 
         await engine.LoadAsync(TestEnvironment.Pack("ru"), TestEnvironment.RequireModel("ru"));

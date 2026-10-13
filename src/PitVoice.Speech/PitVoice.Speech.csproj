@@ -2,6 +2,8 @@
 
   <PropertyGroup>
     <RootNamespace>PitVoice.Speech</RootNamespace>
+    <!-- LibraryImport (UTF-8 calls into libvosk) generates unsafe marshalling code. -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Description>Audio capture (NAudio), WAV loading, resampling to 16 kHz mono and speech recognition (Vosk).</Description>
   </PropertyGroup>
 

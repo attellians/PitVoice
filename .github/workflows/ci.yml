@@ -16,9 +16,9 @@ jobs:
     env:
       PITVOICE_MODELS_DIR: ${{ github.workspace }}/models-cache
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.x
 
@@ -31,7 +31,7 @@ jobs:
       # The manifest pins every archive by sha256, so its hash is a safe cache key.
       - name: Cache speech models
         id: models
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: models-cache
           key: speech-models-${{ runner.os }}-${{ hashFiles('models/manifest.json') }}
@@ -52,7 +52,7 @@ jobs:
 
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: test-results-${{ matrix.os }}
           path: TestResults

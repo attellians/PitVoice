@@ -117,6 +117,50 @@ public class CommandParserTests
 
     // --- Compound commands
 
+    [Theory]
+    [InlineData("ru", "меняй шины залей двадцать пять литров")]
+    [InlineData("en", "change all tires add twenty five liters")]
+    public void Compound_without_conjunction_splits_into_exact_parts(string language, string phrase)
+    {
+        var commands = Accepted(Parse(language, phrase));
+
+        Assert.Equal([IntentCatalog.TiresAll, IntentCatalog.FuelAdd], commands.Select(c => c.Intent));
+        Assert.Equal(25, commands[1].Amount);
+        Assert.All(commands, c => Assert.Equal(1.0, c.Confidence));
+    }
+
+    [Fact]
+    public void Compound_without_conjunction_needs_every_word_matched()
+    {
+        Rejected(Parse("ru", "меняй шины спой песню"), RejectReason.NotUnderstood);
+    }
+
+    [Fact]
+    public void Compound_without_conjunction_inside_conjunction_part()
+    {
+        var commands = Accepted(Parse("ru", "меняй шины залей двадцать и протри стекло"));
+
+        Assert.Equal([IntentCatalog.TiresAll, IntentCatalog.FuelAdd, IntentCatalog.WindshieldTearoff], commands.Select(c => c.Intent));
+    }
+
+    [Theory]
+    [InlineData("ru", "перед")]
+    [InlineData("ru", "стекло")]
+    [InlineData("en", "front")]
+    [InlineData("en", "reset")]
+    public void Single_word_never_changes_the_pit_stop(string language, string phrase)
+    {
+        Assert.False(Parse(language, phrase).IsAccepted);
+    }
+
+    [Theory]
+    [InlineData("ru", "отмена", "assistant.cancel")]
+    [InlineData("en", "cancel", "assistant.cancel")]
+    public void Single_word_allowed_for_intents_that_change_nothing(string language, string phrase, string intent)
+    {
+        Assert.Equal(intent, Assert.Single(Accepted(Parse(language, phrase))).Intent.Value);
+    }
+
     [Fact]
     public void Two_commands_keep_their_order()
     {

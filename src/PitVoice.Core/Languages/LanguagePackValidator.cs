@@ -19,6 +19,9 @@ public sealed record ValidationResult(LanguagePack? Pack, IReadOnlyList<PackIssu
 /// </summary>
 public static class LanguagePackValidator
 {
+    /// <summary>Minimum number of required words in a pattern of an intent that changes the pit stop.</summary>
+    public const int MinPitPatternWords = 2;
+
     public static ValidationResult Validate(LanguagePackDto dto, string fileName)
     {
         ArgumentNullException.ThrowIfNull(dto);
@@ -234,6 +237,12 @@ public static class LanguagePackValidator
 
                         if (template is null)
                         {
+                            continue;
+                        }
+
+                        if (definition.ChangesPitSetup && template.RequiredLength < MinPitPatternWords)
+                        {
+                            Error($"pattern \"{pattern}\" has a single word; intent '{intentKey}' changes the pit stop and needs at least {MinPitPatternWords} words, because one word is too easily heard in unrelated speech", "intents", intentKey, "patterns", index);
                             continue;
                         }
 

@@ -1,0 +1,13 @@
+{ "models": [
+    {
+      "id": "test-agpl",
+      "type": "asr",
+      "language": "xx",
+      "url": "https://example.org/test-agpl.zip",
+      "mirror": null,
+      "sizeBytes": 10,
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "license": "AGPL-3.0",
+      "source": "https://example.org"
+    }
+] }

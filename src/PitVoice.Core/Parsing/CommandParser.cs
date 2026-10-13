@@ -57,13 +57,19 @@ public sealed class CommandParser
                 foreach (var piece in pieces)
                 {
                     var match = _matcher.Match(piece);
-                    if (match.Best is null)
+                    if (match.Best is not null)
+                    {
+                        matched.Add(ToCommand(match.Best, piece, options));
+                    }
+                    else if (SegmentExactly(piece, options) is { } segmented)
+                    {
+                        matched.AddRange(segmented);
+                    }
+                    else
                     {
                         failure = Describe(piece, match);
                         break;
                     }
-
-                    matched.Add(ToCommand(match.Best, piece, options));
                 }
 
                 if (failure is null)
@@ -78,6 +84,11 @@ public sealed class CommandParser
                 {
                     return new ParseResult.Rejected(RejectReason.NotUnderstood, failure);
                 }
+            }
+            else if (SegmentExactly(tokens, options) is { } segmented)
+            {
+                // Recognizers often lose a short conjunction: "меняй шины залей двадцать" is still two exact commands.
+                parts = segmented;
             }
             else if (whole.Best is not null)
             {
@@ -120,6 +131,73 @@ public sealed class CommandParser
 
         var recognition = tokens.Count == 0 ? 1.0 : tokens.Min(t => t.Confidence);
         return new ParsedCommand(definition.Id, match.Amount, unit, match.Quality * recognition);
+    }
+
+    /// <summary>
+    /// Splits a token run without conjunctions into two or more consecutive parts that each match a template exactly
+    /// and unambiguously. Uses the fewest parts; when several splits have that many parts, returns null (ambiguous).
+    /// Fuzzy matches are never used here, so every word of the phrase is accounted for.
+    /// </summary>
+    private List<ParsedCommand>? SegmentExactly(IReadOnlyList<Token> tokens, ParseOptions options)
+    {
+        var n = tokens.Count;
+        if (n < 2)
+        {
+            return null;
+        }
+
+        // fewest[i]: fewest exact parts covering tokens[0..i); ways[i]: how many splits reach that minimum.
+        var fewest = new int[n + 1];
+        var ways = new int[n + 1];
+        var previous = new int[n + 1];
+        var matches = new TemplateMatch?[n + 1];
+        Array.Fill(fewest, int.MaxValue);
+        fewest[0] = 0;
+        ways[0] = 1;
+        for (var end = 1; end <= n; end++)
+        {
+            for (var start = 0; start < end; start++)
+            {
+                if (fewest[start] == int.MaxValue)
+                {
+                    continue;
+                }
+
+                var slice = tokens.Skip(start).Take(end - start).ToArray();
+                if (_matcher.Match(slice).Best is not { Distance: 0 } match)
+                {
+                    continue;
+                }
+
+                var parts = fewest[start] + 1;
+                if (parts < fewest[end])
+                {
+                    fewest[end] = parts;
+                    ways[end] = ways[start];
+                    previous[end] = start;
+                    matches[end] = match;
+                }
+                else if (parts == fewest[end])
+                {
+                    ways[end] += ways[start];
+                }
+            }
+        }
+
+        if (fewest[n] is int.MaxValue or < 2 || ways[n] != 1)
+        {
+            return null;
+        }
+
+        var result = new List<ParsedCommand>();
+        for (var end = n; end > 0; end = previous[end])
+        {
+            var start = previous[end];
+            result.Add(ToCommand(matches[end]!, tokens.Skip(start).Take(end - start).ToArray(), options));
+        }
+
+        result.Reverse();
+        return result;
     }
 
     private static string Describe(IReadOnlyList<Token> tokens, MatchResult match)

@@ -58,7 +58,6 @@ intents:
       - "change left tires"
       - "left tires"
       - "change left side"
-      - "lefts"
     response: "changing left side"
 
   tires.right:
@@ -68,15 +67,12 @@ intents:
       - "change right tires"
       - "right tires"
       - "change right side"
-      - "rights"
     response: "changing right side"
 
   tires.front:
     patterns:
       - "front tires"
       - "change front tires"
-      - "fronts"
-      - "front"
       - "change fronts"
       - "front side"
     response: "changing front tires"
@@ -85,8 +81,6 @@ intents:
     patterns:
       - "rear tires"
       - "change rear tires"
-      - "rears"
-      - "rear"
       - "change rears"
       - "rear side"
     response: "changing rear tires"
@@ -104,17 +98,13 @@ intents:
   windshield.tearoff:
     patterns:
       - "tear off"
-      - "tearoff"
-      - "windshield"
       - "clean windshield"
       - "new tear off"
-      - "windscreen"
     response: "tear off"
 
   windshield.none:
     patterns:
       - "no tear off"
-      - "no tearoff"
       - "keep windshield"
       - "don't tear off"
       - "dont tear off"
@@ -125,7 +115,6 @@ intents:
     patterns:
       - "fast repair"
       - "quick repair"
-      - "repair"
       - "fix it"
       - "fix the car"
       - "use fast repair"
@@ -145,10 +134,8 @@ intents:
     patterns:
       - "clear all"
       - "clear everything"
-      - "reset"
       - "clear pit"
       - "reset everything"
-      - "clear"
     response: "cleared everything"
 
   status.fuel:
@@ -249,13 +236,9 @@ tests:
   # windshield
   - say: "tear off"
     expect: [{ intent: windshield.tearoff }]
-  - say: "tearoff"
-    expect: [{ intent: windshield.tearoff }]
   - say: "clean windshield"
     expect: [{ intent: windshield.tearoff }]
   - say: "no tear off"
-    expect: [{ intent: windshield.none }]
-  - say: "no tearoff"
     expect: [{ intent: windshield.none }]
   - say: "keep windshield"
     expect: [{ intent: windshield.none }]
@@ -273,6 +256,8 @@ tests:
   # pit.clear
   - say: "clear all"
     expect: [{ intent: pit.clear }]
+  - say: "front"                                      # single words never change the pit stop
+    expect: reject
   - say: "reset everything"
     expect: [{ intent: pit.clear }]
   - say: "clear all and add twenty"
@@ -294,6 +279,8 @@ tests:
 
   # compound commands
   - say: "change tires and add twenty five liters"
+    expect: [{ intent: tires.all }, { intent: fuel.add, amount: 25, unit: liters }]
+  - say: "change all tires add twenty five liters"       # recognizer lost the conjunction
     expect: [{ intent: tires.all }, { intent: fuel.add, amount: 25, unit: liters }]
   - say: "left side and add ten gallons"
     expect: [{ intent: tires.left }, { intent: fuel.add, amount: 10, unit: gallons }]

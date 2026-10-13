@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>PitVoice.Speech</RootNamespace>
+    <Description>Audio capture (NAudio), WAV loading, resampling to 16 kHz mono and speech recognition (Vosk).</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NAudio.Core" Version="3.1.0" />
+    <PackageReference Include="NAudio.Wasapi" Version="3.1.0" />
+    <PackageReference Include="Vosk" Version="0.3.38" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\PitVoice.Core\PitVoice.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="PitVoice.Speech.Tests" />
+  </ItemGroup>
+
+</Project>

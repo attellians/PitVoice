@@ -4,7 +4,7 @@
     <OutputType>Exe</OutputType>
     <AssemblyName>pitvoice-cli</AssemblyName>
     <RootNamespace>PitVoice.Cli</RootNamespace>
-    <Description>Console tool: parse a text command and validate language packs.</Description>
+    <Description>Console tool: parse text commands, validate language packs, manage models and recognize speech.</Description>
   </PropertyGroup>
 
   <ItemGroup>
@@ -13,10 +13,13 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\PitVoice.Core\PitVoice.Core.csproj" />
+    <ProjectReference Include="..\..\src\PitVoice.Models\PitVoice.Models.csproj" />
+    <ProjectReference Include="..\..\src\PitVoice.Speech\PitVoice.Speech.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <None Include="..\..\languages\*.yaml" Link="languages\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\models\manifest.json" Link="models\manifest.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

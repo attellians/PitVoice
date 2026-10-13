@@ -48,8 +48,8 @@ public static class IntentCatalog
         new(RepairFast, NoSlots, RepairGroup, IsNegation: false, IsStandalone: false),
         new(RepairNone, NoSlots, RepairGroup, IsNegation: true, IsStandalone: false),
         new(PitClear, NoSlots, null, IsNegation: false, IsStandalone: true),
-        new(StatusFuel, NoSlots, null, IsNegation: false, IsStandalone: false),
-        new(AssistantCancel, NoSlots, null, IsNegation: false, IsStandalone: true),
+        new(StatusFuel, NoSlots, null, IsNegation: false, IsStandalone: false) { ChangesPitSetup = false },
+        new(AssistantCancel, NoSlots, null, IsNegation: false, IsStandalone: true) { ChangesPitSetup = false },
     ];
 
     private static readonly FrozenDictionary<IntentId, IntentDefinition> ById =

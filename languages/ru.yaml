@@ -12,7 +12,7 @@ units:
     synonyms: [литр, литра, литров, литры, л]
     forms: { one: литр, few: литра, many: литров }
   gallons:
-    synonyms: [галлон, галлона, галлонов, галлоны]
+    synonyms: [галлон, галлона, галлонов]
     forms: { one: галлон, few: галлона, many: галлонов }
 
 conjunctions: [и, а также, плюс, потом, затем, ещё]
@@ -23,7 +23,7 @@ intents:
   fuel.add:
     patterns:
       - "залей {amount} {unit?}"
-      - "заправь {amount} {unit?}"
+      - "заправить {amount} {unit?}"
       - "добавь {amount} {unit?} топлива"
       - "добавь {amount} {unit?}"
       - "топливо {amount} {unit?}"
@@ -33,7 +33,7 @@ intents:
   fuel.none:
     patterns:
       - "без топлива"
-      - "не заправляй"
+      - "не заправлять"
       - "топливо не надо"
       - "не заливай"
       - "не заправляться"
@@ -53,7 +53,6 @@ intents:
   tires.left:
     patterns:
       - "меняй левые"
-      - "левые"
       - "левые шины"
       - "меняй левые шины"
       - "левая сторона"
@@ -63,7 +62,6 @@ intents:
   tires.right:
     patterns:
       - "меняй правые"
-      - "правые"
       - "правые шины"
       - "меняй правые шины"
       - "правая сторона"
@@ -73,19 +71,15 @@ intents:
   tires.front:
     patterns:
       - "меняй передние"
-      - "передние"
       - "передние шины"
       - "меняй передние шины"
-      - "перед"
     response: "меняем передние"
 
   tires.rear:
     patterns:
       - "меняй задние"
-      - "задние"
       - "задние шины"
       - "меняй задние шины"
-      - "зад"
     response: "меняем задние"
 
   tires.none:
@@ -104,14 +98,13 @@ intents:
       - "сорви плёнку"
       - "тир офф"
       - "смени плёнку"
-      - "стекло"
       - "почисти стекло"
     response: "протираем стекло"
 
   windshield.none:
     patterns:
       - "стекло не трогай"
-      - "не протирай стекло"
+      - "не протирать стекло"
       - "плёнку не трогай"
       - "не трогай стекло"
       - "без стекла"
@@ -121,8 +114,6 @@ intents:
   repair.fast:
     patterns:
       - "быстрый ремонт"
-      - "ремонт"
-      - "чини"
       - "почини машину"
       - "быстрая починка"
       - "чини машину"
@@ -133,7 +124,7 @@ intents:
       - "без ремонта"
       - "не чини"
       - "ремонт не надо"
-      - "не ремонтируй"
+      - "не ремонтировать"
       - "без починки"
       - "не надо ремонта"
     response: "без ремонта"
@@ -141,7 +132,6 @@ intents:
   pit.clear:
     patterns:
       - "сбрось всё"
-      - "сброс"
       - "очисти всё"
       - "отмени всё"
       - "сбрось все команды"
@@ -182,7 +172,7 @@ tests:
     expect: [{ intent: fuel.add, amount: 35, unit: liters }]
   - say: "залей двадцать"
     expect: [{ intent: fuel.add, amount: 20 }]          # unit comes from settings
-  - say: "заправь сто двадцать пять литров"
+  - say: "заправить сто двадцать пять литров"
     expect: [{ intent: fuel.add, amount: 125, unit: liters }]
   - say: "добавь двадцать литров топлива"
     expect: [{ intent: fuel.add, amount: 20, unit: liters }]
@@ -206,7 +196,7 @@ tests:
   # fuel.none
   - say: "без топлива"
     expect: [{ intent: fuel.none }]
-  - say: "не заправляй"
+  - say: "не заправлять"
     expect: [{ intent: fuel.none }]
   - say: "топливо не надо"
     expect: [{ intent: fuel.none }]
@@ -258,7 +248,7 @@ tests:
     expect: [{ intent: windshield.tearoff }]
   - say: "стекло не трогай"
     expect: [{ intent: windshield.none }]
-  - say: "не протирай стекло"
+  - say: "не протирать стекло"
     expect: [{ intent: windshield.none }]
 
   # repair
@@ -274,8 +264,10 @@ tests:
   # pit.clear
   - say: "сбрось всё"
     expect: [{ intent: pit.clear }]
-  - say: "сброс"
+  - say: "отмени всё"
     expect: [{ intent: pit.clear }]
+  - say: "сброс"                                       # single words never change the pit stop
+    expect: reject
   - say: "сбрось все и залей двадцать"
     expect: reject
 
@@ -295,6 +287,8 @@ tests:
 
   # compound commands
   - say: "меняй шины и залей двадцать пять литров"
+    expect: [{ intent: tires.all }, { intent: fuel.add, amount: 25, unit: liters }]
+  - say: "меняй шины залей двадцать пять литров"          # recognizer lost the conjunction
     expect: [{ intent: tires.all }, { intent: fuel.add, amount: 25, unit: liters }]
   - say: "меняй левые и залей десять литров"
     expect: [{ intent: tires.left }, { intent: fuel.add, amount: 10, unit: liters }]

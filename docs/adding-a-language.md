@@ -14,6 +14,13 @@ dotnet run --project tools/PitVoice.Cli -- parse --lang <code>        # interact
 CI runs the same validation and the `tests:` section of every pack, so a pack that fails validation or whose
 test phrase regresses fails the build.
 
+With the pack's `asr_model` installed (`models download <id>`), `validate` also checks every pack word against the
+model vocabulary. A word the model does not know can never be recognized by voice: replace it with a form the model
+has (small Vosk models often lack rare imperatives; an infinitive such as `заправить` usually exists) or drop the
+pattern. Patterns of intents that change the pit stop (fuel, tires, windshield, repair, `pit.clear`) need at least
+two words: a single word such as "перед" or "front" is too easily heard in unrelated speech, and validation rejects
+it. Only `status.fuel` and `assistant.cancel` may have one-word patterns. Write `е` instead of `ё` as usual; the recognizer grammar switches to the `ё` spelling when the model needs it.
+
 ## File layout
 
 ```yaml
@@ -29,7 +36,7 @@ units:                             # only `liters` and `gallons` are known
     synonyms: [литр, литра, литров, литры, л]      # single words that mean this unit in speech
     forms: { one: литр, few: литра, many: литров }  # one form per plural category of `plural_rules`
   gallons:
-    synonyms: [галлон, галлона, галлонов, галлоны]
+    synonyms: [галлон, галлона, галлонов]
     forms: { one: галлон, few: галлона, many: галлонов }
 
 conjunctions: [и, а также, плюс]   # split compound phrases; multi-word entries are allowed

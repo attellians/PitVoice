@@ -38,29 +38,6 @@ internal static class ParseRunner
         }
     }
 
-    private static void Print(CommandParser parser, ResponseBuilder responses, string phrase, ParseOptions options)
-    {
-        var recognized = RecognizedPhrase.FromText(phrase);
-        var tokens = parser.Pack.Normalizer.Normalize(recognized);
-        Console.WriteLine($"tokens:   {string.Join(' ', tokens)}");
-
-        var result = parser.Parse(recognized, options);
-        switch (result)
-        {
-            case ParseResult.Accepted accepted:
-                Console.WriteLine("accepted");
-                foreach (var command in accepted.Commands)
-                {
-                    Console.WriteLine($"  {command}");
-                }
-
-                break;
-
-            case ParseResult.Rejected rejected:
-                Console.WriteLine($"rejected: {rejected.Reason}: {rejected.Details}");
-                break;
-        }
-
-        Console.WriteLine($"response: {responses.Build(result)}");
-    }
+    private static void Print(CommandParser parser, ResponseBuilder responses, string phrase, ParseOptions options) =>
+        ParseOutput.Print(parser, responses, RecognizedPhrase.FromText(phrase), options);
 }

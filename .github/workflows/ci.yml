@@ -13,6 +13,8 @@ jobs:
       fail-fast: false
       matrix:
         os: [windows-latest, ubuntu-latest]
+    env:
+      PITVOICE_MODELS_DIR: ${{ github.workspace }}/models-cache
     steps:
       - uses: actions/checkout@v4
 
@@ -26,7 +28,23 @@ jobs:
       - name: Build
         run: dotnet build PitVoice.sln --configuration Release --no-restore
 
+      # The manifest pins every archive by sha256, so its hash is a safe cache key.
+      - name: Cache speech models
+        id: models
+        uses: actions/cache@v4
+        with:
+          path: models-cache
+          key: speech-models-${{ runner.os }}-${{ hashFiles('models/manifest.json') }}
+
+      - name: Download speech models
+        if: steps.models.outputs.cache-hit != 'true'
+        run: |
+          dotnet run --project tools/PitVoice.Cli --configuration Release --no-build -- models download vosk-model-small-ru-0.22
+          dotnet run --project tools/PitVoice.Cli --configuration Release --no-build -- models download vosk-model-small-en-us-0.15
+
       - name: Test
+        env:
+          PITVOICE_REQUIRE_MODELS: "1"
         run: dotnet test PitVoice.sln --configuration Release --no-build --logger "trx" --results-directory TestResults
 
       - name: Validate language packs

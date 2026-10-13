@@ -28,3 +28,13 @@ $RECYCLE.BIN/
 
 ### macOS
 .DS_Store
+
+### Local spike (TZ §14), not committed
+spike/
+
+### Speech models downloaded by CI
+models-cache/
+
+### Acceptance voice recordings stay on the developer machine (personal voice data)
+tests/PitVoice.Speech.Tests/Samples/**/*.wav
+tests/PitVoice.Speech.Tests/Samples/**/samples.yaml

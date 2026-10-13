@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>PitVoice.Models</RootNamespace>
+    <Description>Model manifest, on-demand download with checksum verification and the per-user model store. No platform dependencies.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="PitVoice.Models.Tests" />
+  </ItemGroup>
+
+</Project>

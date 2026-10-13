@@ -1,0 +1,17 @@
+language: ru
+name: Единица без форм
+units:
+  liters:
+    synonyms: [литр]
+  gallons:
+    synonyms: [галлон]
+    forms: { one: галлон }
+intents:
+  tires.all:
+    patterns: ["меняй шины"]
+    response: "меняем шины"
+responses:
+  not_understood: "не понял"
+tests:
+  - say: "меняй шины"
+    expect: [{ intent: tires.all }]

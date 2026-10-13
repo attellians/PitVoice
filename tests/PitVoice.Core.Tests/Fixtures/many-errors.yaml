@@ -1,0 +1,18 @@
+language: xx
+name: ""
+units: {}
+intents:
+  tires.all:
+    patterns: ["меняй шины", "{amount} шины", "шины {oops}"]
+  fuel.add:
+    patterns: ["залей"]
+    response: "заливаем {laps}"
+responses:
+  cancelled: "ок"
+tests:
+  - say: ""
+    expect: reject
+  - say: "меняй шины"
+    expect: maybe
+  - say: "залей"
+    expect: [{ intent: windshield.none }]

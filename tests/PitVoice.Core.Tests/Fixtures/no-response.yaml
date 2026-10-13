@@ -1,0 +1,14 @@
+language: ru
+name: Нет ответа
+units:
+  liters:
+    synonyms: [литр]
+    forms: { one: литр, few: литра, many: литров }
+intents:
+  tires.all:
+    patterns: ["меняй шины"]
+responses:
+  not_understood: "не понял"
+tests:
+  - say: "меняй шины"
+    expect: [{ intent: tires.all }]

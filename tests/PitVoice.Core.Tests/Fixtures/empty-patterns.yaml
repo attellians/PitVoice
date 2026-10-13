@@ -1,0 +1,15 @@
+language: ru
+name: Пустые шаблоны
+units:
+  liters:
+    synonyms: [литр]
+    forms: { one: литр, few: литра, many: литров }
+intents:
+  tires.all:
+    patterns: []
+    response: "меняем шины"
+responses:
+  not_understood: "не понял"
+tests:
+  - say: "меняй шины"
+    expect: [{ intent: tires.all }]

@@ -1,0 +1,18 @@
+language: ru
+name: Intent без теста
+units:
+  liters:
+    synonyms: [литр]
+    forms: { one: литр, few: литра, many: литров }
+intents:
+  tires.all:
+    patterns: ["меняй шины"]
+    response: "меняем шины"
+  repair.fast:
+    patterns: ["быстрый ремонт"]
+    response: "ремонт"
+responses:
+  not_understood: "не понял"
+tests:
+  - say: "меняй шины"
+    expect: [{ intent: tires.all }]

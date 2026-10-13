@@ -1,3 +1,18 @@
+### .NET
+bin/
+obj/
+*.user
+*.suo
+*.swp
+.vs/
+.idea/
+*.binlog
+TestResults/
+artifacts/
+*.nupkg
+*.snupkg
+launchSettings.json
+
 ### Windows
 # Windows thumbnail cache files
 Thumbs.db
@@ -10,3 +25,6 @@ $RECYCLE.BIN/
 
 # Windows shortcuts
 *.lnk
+
+### macOS
+.DS_Store

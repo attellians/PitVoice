@@ -1,0 +1,17 @@
+language: ru
+name: Неизвестный слот
+units:
+  liters:
+    synonyms: [литр]
+    forms: { one: литр, few: литра, many: литров }
+intents:
+  fuel.add:
+    patterns:
+      - "залей {amount} {unit?}"
+      - "залей {amount} {liters}"
+    response: "заливаем {amount} {unit}"
+responses:
+  not_understood: "не понял"
+tests:
+  - say: "залей десять"
+    expect: [{ intent: fuel.add, amount: 10 }]

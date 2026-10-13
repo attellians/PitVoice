@@ -1,0 +1,20 @@
+language: en
+name: Duplicate
+units:
+  liters:
+    synonyms: [liters]
+    forms: { one: liter, other: liters }
+intents:
+  tires.all:
+    patterns: ["change tires"]
+    response: "changing tires"
+  tires.none:
+    patterns: ["Change   tires!"]
+    response: "no tires"
+responses:
+  not_understood: "say again"
+tests:
+  - say: "change tires"
+    expect: [{ intent: tires.all }]
+  - say: "no"
+    expect: [{ intent: tires.none }]

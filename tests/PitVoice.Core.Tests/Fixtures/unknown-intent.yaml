@@ -1,0 +1,18 @@
+language: ru
+name: Неизвестный intent
+units:
+  liters:
+    synonyms: [литр]
+    forms: { one: литр, few: литра, many: литров }
+intents:
+  tires.all:
+    patterns: ["меняй шины"]
+    response: "меняем шины"
+  tires.flip:
+    patterns: ["переверни шины"]
+    response: "переворачиваем"
+responses:
+  not_understood: "не понял"
+tests:
+  - say: "меняй шины"
+    expect: [{ intent: tires.all }]

@@ -1,0 +1,330 @@
+# PitVoice language pack: Russian.
+# Format: docs/adding-a-language.md. Validate with `pitvoice-cli validate`.
+language: ru
+name: Русский
+version: 1
+asr_model: vosk-model-small-ru-0.22
+default_voice: piper-ru-dmitri-medium
+plural_rules: ru
+
+units:
+  liters:
+    synonyms: [литр, литра, литров, литры, л]
+    forms: { one: литр, few: литра, many: литров }
+  gallons:
+    synonyms: [галлон, галлона, галлонов, галлоны]
+    forms: { one: галлон, few: галлона, many: галлонов }
+
+conjunctions: [и, а также, плюс, потом, затем, ещё]
+fillers: [пожалуйста, давай, так, ну, слушай, эй, короче, значит]
+negations: [не, без]
+
+intents:
+  fuel.add:
+    patterns:
+      - "залей {amount} {unit?}"
+      - "заправь {amount} {unit?}"
+      - "добавь {amount} {unit?} топлива"
+      - "добавь {amount} {unit?}"
+      - "топливо {amount} {unit?}"
+      - "{amount} {unit} топлива"
+    response: "заливаем {amount} {unit}"
+
+  fuel.none:
+    patterns:
+      - "без топлива"
+      - "не заправляй"
+      - "топливо не надо"
+      - "не заливай"
+      - "не заправляться"
+      - "топливо не нужно"
+    response: "без топлива"
+
+  tires.all:
+    patterns:
+      - "меняй шины"
+      - "меняем шины"
+      - "меняй резину"
+      - "все четыре"
+      - "новые шины"
+      - "меняй все шины"
+    response: "меняем все шины"
+
+  tires.left:
+    patterns:
+      - "меняй левые"
+      - "левые"
+      - "левые шины"
+      - "меняй левые шины"
+      - "левая сторона"
+      - "меняй левую сторону"
+    response: "меняем левые"
+
+  tires.right:
+    patterns:
+      - "меняй правые"
+      - "правые"
+      - "правые шины"
+      - "меняй правые шины"
+      - "правая сторона"
+      - "меняй правую сторону"
+    response: "меняем правые"
+
+  tires.front:
+    patterns:
+      - "меняй передние"
+      - "передние"
+      - "передние шины"
+      - "меняй передние шины"
+      - "перед"
+    response: "меняем передние"
+
+  tires.rear:
+    patterns:
+      - "меняй задние"
+      - "задние"
+      - "задние шины"
+      - "меняй задние шины"
+      - "зад"
+    response: "меняем задние"
+
+  tires.none:
+    patterns:
+      - "не меняй шины"
+      - "шины не меняем"
+      - "без шин"
+      - "резину не меняй"
+      - "не меняй резину"
+      - "шины не надо"
+    response: "шины не меняем"
+
+  windshield.tearoff:
+    patterns:
+      - "протри стекло"
+      - "сорви плёнку"
+      - "тир офф"
+      - "смени плёнку"
+      - "стекло"
+      - "почисти стекло"
+    response: "протираем стекло"
+
+  windshield.none:
+    patterns:
+      - "стекло не трогай"
+      - "не протирай стекло"
+      - "плёнку не трогай"
+      - "не трогай стекло"
+      - "без стекла"
+      - "стекло не надо"
+    response: "стекло не трогаем"
+
+  repair.fast:
+    patterns:
+      - "быстрый ремонт"
+      - "ремонт"
+      - "чини"
+      - "почини машину"
+      - "быстрая починка"
+      - "чини машину"
+    response: "быстрый ремонт"
+
+  repair.none:
+    patterns:
+      - "без ремонта"
+      - "не чини"
+      - "ремонт не надо"
+      - "не ремонтируй"
+      - "без починки"
+      - "не надо ремонта"
+    response: "без ремонта"
+
+  pit.clear:
+    patterns:
+      - "сбрось всё"
+      - "сброс"
+      - "очисти всё"
+      - "отмени всё"
+      - "сбрось все команды"
+      - "ничего не делай"
+    response: "сбросил всё"
+
+  status.fuel:
+    patterns:
+      - "сколько топлива"
+      - "сколько бензина"
+      - "сколько осталось топлива"
+      - "уровень топлива"
+      - "сколько горючего"
+      - "остаток топлива"
+    response: "проверяю топливо"
+
+  assistant.cancel:
+    patterns:
+      - "отмена"
+      - "отменить"
+      - "отбой"
+      - "стоп"
+      - "не надо"
+      - "забудь"
+    response: "отменил"
+
+responses:
+  not_understood: "не понял, повтори"
+  not_connected: "нет связи с игрой"
+  not_in_car: "ты не в машине"
+  apply_failed: "команда не применилась"
+  fuel_capped: "больше не влезет, заливаем {amount} {unit}"
+  cancelled: "отменил"
+
+tests:
+  # fuel.add
+  - say: "залей тридцать пять литров"
+    expect: [{ intent: fuel.add, amount: 35, unit: liters }]
+  - say: "залей двадцать"
+    expect: [{ intent: fuel.add, amount: 20 }]          # unit comes from settings
+  - say: "заправь сто двадцать пять литров"
+    expect: [{ intent: fuel.add, amount: 125, unit: liters }]
+  - say: "добавь двадцать литров топлива"
+    expect: [{ intent: fuel.add, amount: 20, unit: liters }]
+  - say: "залей сорок галлонов"
+    expect: [{ intent: fuel.add, amount: 40, unit: gallons }]
+  - say: "залей 40 литров"
+    expect: [{ intent: fuel.add, amount: 40, unit: liters }]
+  - say: "залей двадцать один литр"
+    expect: [{ intent: fuel.add, amount: 21, unit: liters }]
+  - say: "залей двадцать одна литр"
+    expect: [{ intent: fuel.add, amount: 21, unit: liters }]
+  - say: "Ну, залей, пожалуйста, тридцать литров!"
+    expect: [{ intent: fuel.add, amount: 30, unit: liters }]
+  - say: "залей ещё десять литров"
+    expect: [{ intent: fuel.add, amount: 10, unit: liters }]
+  - say: "залей тысячу литров"
+    expect: reject
+  - say: "залей 1000 литров"
+    expect: reject
+
+  # fuel.none
+  - say: "без топлива"
+    expect: [{ intent: fuel.none }]
+  - say: "не заправляй"
+    expect: [{ intent: fuel.none }]
+  - say: "топливо не надо"
+    expect: [{ intent: fuel.none }]
+
+  # tires.all
+  - say: "меняй шины"
+    expect: [{ intent: tires.all }]
+  - say: "все четыре"
+    expect: [{ intent: tires.all }]
+  - say: "меняй все эти шины"
+    expect: [{ intent: tires.all }]
+  - say: "Меняй резину"
+    expect: [{ intent: tires.all }]
+
+  # tires.left / right / front / rear
+  - say: "меняй левые"
+    expect: [{ intent: tires.left }]
+  - say: "левая сторона"
+    expect: [{ intent: tires.left }]
+  - say: "меняй правые"
+    expect: [{ intent: tires.right }]
+  - say: "правые шины"
+    expect: [{ intent: tires.right }]
+  - say: "меняй передние"
+    expect: [{ intent: tires.front }]
+  - say: "передние шины"
+    expect: [{ intent: tires.front }]
+  - say: "меняй задние"
+    expect: [{ intent: tires.rear }]
+  - say: "задние шины"
+    expect: [{ intent: tires.rear }]
+
+  # tires.none
+  - say: "не меняй шины"
+    expect: [{ intent: tires.none }]
+  - say: "шины не меняем"
+    expect: [{ intent: tires.none }]
+  - say: "не меняй все шины"
+    expect: [{ intent: tires.none }]
+  - say: "без шин"
+    expect: [{ intent: tires.none }]
+
+  # windshield
+  - say: "протри стекло"
+    expect: [{ intent: windshield.tearoff }]
+  - say: "сорви плёнку"
+    expect: [{ intent: windshield.tearoff }]
+  - say: "сорви пленку"
+    expect: [{ intent: windshield.tearoff }]
+  - say: "стекло не трогай"
+    expect: [{ intent: windshield.none }]
+  - say: "не протирай стекло"
+    expect: [{ intent: windshield.none }]
+
+  # repair
+  - say: "быстрый ремонт"
+    expect: [{ intent: repair.fast }]
+  - say: "почини машину"
+    expect: [{ intent: repair.fast }]
+  - say: "без ремонта"
+    expect: [{ intent: repair.none }]
+  - say: "ремонт не надо"
+    expect: [{ intent: repair.none }]
+
+  # pit.clear
+  - say: "сбрось всё"
+    expect: [{ intent: pit.clear }]
+  - say: "сброс"
+    expect: [{ intent: pit.clear }]
+  - say: "сбрось все и залей двадцать"
+    expect: reject
+
+  # status.fuel
+  - say: "сколько топлива"
+    expect: [{ intent: status.fuel }]
+  - say: "сколько осталось топлива"
+    expect: [{ intent: status.fuel }]
+
+  # assistant.cancel
+  - say: "отмена"
+    expect: [{ intent: assistant.cancel }]
+  - say: "отбой"
+    expect: [{ intent: assistant.cancel }]
+  - say: "отмена и залей двадцать"
+    expect: reject
+
+  # compound commands
+  - say: "меняй шины и залей двадцать пять литров"
+    expect: [{ intent: tires.all }, { intent: fuel.add, amount: 25, unit: liters }]
+  - say: "меняй левые и залей десять литров"
+    expect: [{ intent: tires.left }, { intent: fuel.add, amount: 10, unit: liters }]
+  - say: "залей тридцать литров а также протри стекло"
+    expect: [{ intent: fuel.add, amount: 30, unit: liters }, { intent: windshield.tearoff }]
+  - say: "меняй шины плюс быстрый ремонт потом залей пятьдесят"
+    expect: [{ intent: tires.all }, { intent: repair.fast }, { intent: fuel.add, amount: 50 }]
+  - say: "меняй шины и меняй шины"
+    expect: [{ intent: tires.all }]
+  - say: "залей двадцать и залей тридцать"
+    expect: [{ intent: fuel.add, amount: 30 }]
+  - say: "меняй шины и спой песню"
+    expect: reject
+
+  # conflicts
+  - say: "меняй шины и не меняй шины"
+    expect: reject
+  - say: "залей двадцать и без топлива"
+    expect: reject
+  - say: "протри стекло и стекло не трогай"
+    expect: reject
+  - say: "быстрый ремонт и без ремонта"
+    expect: reject
+
+  # foreign phrases
+  - say: "какая сегодня погода"
+    expect: reject
+  - say: "ну пожалуйста"
+    expect: reject
+  - say: "резину не надо"
+    expect: reject
+  - say: "поехали быстрее"
+    expect: reject

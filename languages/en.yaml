@@ -1,0 +1,329 @@
+# PitVoice language pack: English.
+# Format: docs/adding-a-language.md. Validate with `pitvoice-cli validate`.
+language: en
+name: English
+version: 1
+asr_model: vosk-model-small-en-us-0.15
+default_voice: piper-en-us-lessac-medium
+plural_rules: en
+
+units:
+  liters:
+    synonyms: [liters, liter, litres, litre, l]
+    forms: { one: liter, other: liters }
+  gallons:
+    synonyms: [gallons, gallon, gal]
+    forms: { one: gallon, other: gallons }
+
+conjunctions: [and, and then, then, plus, also, as well as]
+fillers: [please, just, hey, um, uh, okay, ok, now]
+negations: [no, not, don't, dont, without, never]
+
+intents:
+  fuel.add:
+    patterns:
+      - "add {amount} {unit?}"
+      - "fuel {amount} {unit?}"
+      - "{amount} {unit} of fuel"
+      - "put in {amount} {unit?}"
+      - "add {amount} {unit?} of fuel"
+      - "refuel {amount} {unit?}"
+    response: "adding {amount} {unit}"
+
+  fuel.none:
+    patterns:
+      - "no fuel"
+      - "don't refuel"
+      - "dont refuel"
+      - "no refuel"
+      - "skip fuel"
+      - "without fuel"
+    response: "no fuel"
+
+  tires.all:
+    patterns:
+      - "change all tires"
+      - "change tires"
+      - "change the tires"
+      - "all four"
+      - "change all four tires"
+      - "new tires"
+      - "all tires"
+    response: "changing all tires"
+
+  tires.left:
+    patterns:
+      - "left side tires"
+      - "left side"
+      - "change left tires"
+      - "left tires"
+      - "change left side"
+      - "lefts"
+    response: "changing left side"
+
+  tires.right:
+    patterns:
+      - "right side tires"
+      - "right side"
+      - "change right tires"
+      - "right tires"
+      - "change right side"
+      - "rights"
+    response: "changing right side"
+
+  tires.front:
+    patterns:
+      - "front tires"
+      - "change front tires"
+      - "fronts"
+      - "front"
+      - "change fronts"
+      - "front side"
+    response: "changing front tires"
+
+  tires.rear:
+    patterns:
+      - "rear tires"
+      - "change rear tires"
+      - "rears"
+      - "rear"
+      - "change rears"
+      - "rear side"
+    response: "changing rear tires"
+
+  tires.none:
+    patterns:
+      - "no tires"
+      - "don't change tires"
+      - "dont change tires"
+      - "no tire change"
+      - "keep tires"
+      - "no new tires"
+    response: "no tire change"
+
+  windshield.tearoff:
+    patterns:
+      - "tear off"
+      - "tearoff"
+      - "windshield"
+      - "clean windshield"
+      - "new tear off"
+      - "windscreen"
+    response: "tear off"
+
+  windshield.none:
+    patterns:
+      - "no tear off"
+      - "no tearoff"
+      - "keep windshield"
+      - "don't tear off"
+      - "dont tear off"
+      - "no windshield"
+    response: "no tear off"
+
+  repair.fast:
+    patterns:
+      - "fast repair"
+      - "quick repair"
+      - "repair"
+      - "fix it"
+      - "fix the car"
+      - "use fast repair"
+    response: "fast repair"
+
+  repair.none:
+    patterns:
+      - "no fast repair"
+      - "no repair"
+      - "don't repair"
+      - "dont repair"
+      - "skip repair"
+      - "no fix"
+    response: "no repair"
+
+  pit.clear:
+    patterns:
+      - "clear all"
+      - "clear everything"
+      - "reset"
+      - "clear pit"
+      - "reset everything"
+      - "clear"
+    response: "cleared everything"
+
+  status.fuel:
+    patterns:
+      - "how much fuel"
+      - "fuel level"
+      - "fuel status"
+      - "how much gas"
+      - "fuel left"
+      - "remaining fuel"
+    response: "checking fuel"
+
+  assistant.cancel:
+    patterns:
+      - "cancel"
+      - "never mind"
+      - "nevermind"
+      - "stop"
+      - "forget it"
+      - "abort"
+    response: "cancelled"
+
+responses:
+  not_understood: "sorry, say again"
+  not_connected: "no connection to the game"
+  not_in_car: "you are not in the car"
+  apply_failed: "the command was not applied"
+  fuel_capped: "that won't fit, adding {amount} {unit}"
+  cancelled: "cancelled"
+
+tests:
+  # fuel.add
+  - say: "add thirty liters"
+    expect: [{ intent: fuel.add, amount: 30, unit: liters }]
+  - say: "add thirty-five liters"
+    expect: [{ intent: fuel.add, amount: 35, unit: liters }]
+  - say: "add thirty five litres"
+    expect: [{ intent: fuel.add, amount: 35, unit: liters }]
+  - say: "add twenty"
+    expect: [{ intent: fuel.add, amount: 20 }]          # unit comes from settings
+  - say: "fuel a hundred liters"
+    expect: [{ intent: fuel.add, amount: 100, unit: liters }]
+  - say: "put in one hundred and five liters"
+    expect: [{ intent: fuel.add, amount: 105, unit: liters }]
+  - say: "twelve gallons of fuel"
+    expect: [{ intent: fuel.add, amount: 12, unit: gallons }]
+  - say: "Please add 40 liters now"
+    expect: [{ intent: fuel.add, amount: 40, unit: liters }]
+  - say: "add one liter"
+    expect: [{ intent: fuel.add, amount: 1, unit: liters }]
+  - say: "add a thousand liters"
+    expect: reject
+
+  # fuel.none
+  - say: "no fuel"
+    expect: [{ intent: fuel.none }]
+  - say: "don't refuel"
+    expect: [{ intent: fuel.none }]
+  - say: "skip fuel"
+    expect: [{ intent: fuel.none }]
+
+  # tires.all
+  - say: "change all tires"
+    expect: [{ intent: tires.all }]
+  - say: "change tires"
+    expect: [{ intent: tires.all }]
+  - say: "change all four tires"
+    expect: [{ intent: tires.all }]
+  - say: "new tires"
+    expect: [{ intent: tires.all }]
+
+  # tires.left / right / front / rear
+  - say: "left side tires"
+    expect: [{ intent: tires.left }]
+  - say: "change left side"
+    expect: [{ intent: tires.left }]
+  - say: "right side tires"
+    expect: [{ intent: tires.right }]
+  - say: "change right tires"
+    expect: [{ intent: tires.right }]
+  - say: "front tires"
+    expect: [{ intent: tires.front }]
+  - say: "change fronts"
+    expect: [{ intent: tires.front }]
+  - say: "rear tires"
+    expect: [{ intent: tires.rear }]
+  - say: "change rears"
+    expect: [{ intent: tires.rear }]
+
+  # tires.none
+  - say: "no tires"
+    expect: [{ intent: tires.none }]
+  - say: "don't change tires"
+    expect: [{ intent: tires.none }]
+  - say: "keep tires"
+    expect: [{ intent: tires.none }]
+
+  # windshield
+  - say: "tear off"
+    expect: [{ intent: windshield.tearoff }]
+  - say: "tearoff"
+    expect: [{ intent: windshield.tearoff }]
+  - say: "clean windshield"
+    expect: [{ intent: windshield.tearoff }]
+  - say: "no tear off"
+    expect: [{ intent: windshield.none }]
+  - say: "no tearoff"
+    expect: [{ intent: windshield.none }]
+  - say: "keep windshield"
+    expect: [{ intent: windshield.none }]
+
+  # repair
+  - say: "fast repair"
+    expect: [{ intent: repair.fast }]
+  - say: "fix the car"
+    expect: [{ intent: repair.fast }]
+  - say: "no fast repair"
+    expect: [{ intent: repair.none }]
+  - say: "skip repair"
+    expect: [{ intent: repair.none }]
+
+  # pit.clear
+  - say: "clear all"
+    expect: [{ intent: pit.clear }]
+  - say: "reset everything"
+    expect: [{ intent: pit.clear }]
+  - say: "clear all and add twenty"
+    expect: reject
+
+  # status.fuel
+  - say: "how much fuel"
+    expect: [{ intent: status.fuel }]
+  - say: "fuel level"
+    expect: [{ intent: status.fuel }]
+
+  # assistant.cancel
+  - say: "cancel"
+    expect: [{ intent: assistant.cancel }]
+  - say: "never mind"
+    expect: [{ intent: assistant.cancel }]
+  - say: "cancel and add twenty"
+    expect: reject
+
+  # compound commands
+  - say: "change tires and add twenty five liters"
+    expect: [{ intent: tires.all }, { intent: fuel.add, amount: 25, unit: liters }]
+  - say: "left side and add ten gallons"
+    expect: [{ intent: tires.left }, { intent: fuel.add, amount: 10, unit: gallons }]
+  - say: "add thirty liters as well as tear off"
+    expect: [{ intent: fuel.add, amount: 30, unit: liters }, { intent: windshield.tearoff }]
+  - say: "change tires plus fast repair and then add fifty"
+    expect: [{ intent: tires.all }, { intent: repair.fast }, { intent: fuel.add, amount: 50 }]
+  - say: "change tires and change tires"
+    expect: [{ intent: tires.all }]
+  - say: "add twenty and add thirty"
+    expect: [{ intent: fuel.add, amount: 30 }]
+  - say: "change tires and sing a song"
+    expect: reject
+
+  # conflicts
+  - say: "change tires and no tires"
+    expect: reject
+  - say: "add twenty and no fuel"
+    expect: reject
+  - say: "tear off and no tear off"
+    expect: reject
+  - say: "fast repair and no repair"
+    expect: reject
+
+  # foreign phrases
+  - say: "what is the weather today"
+    expect: reject
+  - say: "please okay"
+    expect: reject
+  - say: "change this side"
+    expect: reject
+  - say: "go faster"
+    expect: reject

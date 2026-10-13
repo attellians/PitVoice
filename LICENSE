@@ -1,0 +1,7 @@
+PitVoice - license placeholder
+
+The project license has not been chosen yet. The decision (GPLv3 or MIT / Apache 2.0)
+is due before the first public release; see docs/TZ.md section 9 in the specs repository.
+Until a license is chosen, all rights are reserved by the PitVoice contributors.
+
+All third-party dependencies used so far are compatible with both options.

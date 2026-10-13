@@ -1,0 +1,6 @@
+language: ru
+name: Сломанный
+units:
+  liters:
+    synonyms: [литр]
+   forms: { one: литр }

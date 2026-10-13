@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using System.Text;
 
 namespace PitVoice.Speech.Asr;
 
@@ -50,8 +51,37 @@ internal sealed class VoskModelHandle : SafeHandle
 
     public override bool IsInvalid => handle == IntPtr.Zero;
 
-    /// <summary>Loads a model directory (UTF-8 path). Check <see cref="SafeHandle.IsInvalid"/>: Vosk does not throw.</summary>
-    public static VoskModelHandle Load(string path) => VoskNative.ModelNew(path);
+    private static readonly Lock CurrentDirectoryLock = new();
+
+    /// <summary>Loads a model directory. Check <see cref="SafeHandle.IsInvalid"/>: Vosk does not throw.</summary>
+    /// <remarks>
+    /// On Windows libvosk opens model files with narrow C runtime calls that interpret the path in the ANSI code page,
+    /// so a non-ASCII path (a Cyrillic user name in %LocalAppData%) cannot be passed at all. The model directory is then
+    /// made the current directory for the duration of the load and "." is passed: Windows resolves the relative names
+    /// against its Unicode current directory. The model is read completely inside the call.
+    /// </remarks>
+    public static VoskModelHandle Load(string path)
+    {
+        ArgumentNullException.ThrowIfNull(path);
+        if (!OperatingSystem.IsWindows() || Ascii.IsValid(path))
+        {
+            return VoskNative.ModelNew(path);
+        }
+
+        lock (CurrentDirectoryLock)
+        {
+            var previous = Environment.CurrentDirectory;
+            Environment.CurrentDirectory = path;
+            try
+            {
+                return VoskNative.ModelNew(".");
+            }
+            finally
+            {
+                Environment.CurrentDirectory = previous;
+            }
+        }
+    }
 
     /// <summary>True when the model vocabulary contains <paramref name="word"/> exactly.</summary>
     public bool Contains(string word) => VoskNative.ModelFindWord(this, word) >= 0;

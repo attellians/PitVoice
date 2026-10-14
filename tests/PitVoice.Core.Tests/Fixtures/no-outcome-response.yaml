@@ -1,0 +1,29 @@
+language: ru
+name: Без ответа not_supported
+plural_rules: ru
+units:
+  liters:
+    synonyms: [литр, литра, литров]
+    forms: { one: литр, few: литра, many: литров }
+conjunctions: [и]
+fillers: [пожалуйста]
+negations: [не]
+intents:
+  fuel.add:
+    patterns: ["залей {amount} {unit?}"]
+    response: "заливаем {amount} {unit}"
+  tires.all:
+    patterns: ["меняй шины"]
+    response: "меняем шины"
+responses:
+  not_understood: "не понял"
+  not_connected: "no connection"
+  not_in_car: "not in car"
+  apply_failed: "failed"
+tests:
+  - say: "залей десять литров"
+    expect: [{ intent: fuel.add, amount: 10, unit: liters }]
+  - say: "меняй шины"
+    expect: [{ intent: tires.all }]
+  - say: "привет"
+    expect: reject

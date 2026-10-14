@@ -85,12 +85,13 @@ public class TemplateMatcherTests
     [Fact]
     public void Fuzzy_match_never_drops_a_negation_from_the_phrase()
     {
-        // "не меняй все шины" vs "меняй все шины": dropping "не" is forbidden, so tires.none wins by dropping "все".
-        var best = Best(Match("ru", "не меняй все шины"));
-        Assert.Equal(IntentCatalog.TiresNone, best.Template.Intent);
-
-        var en = Best(Match("en", "don't change all tires"));
-        Assert.Equal(IntentCatalog.TiresNone, en.Template.Intent);
+        // "не меняй эти шины" vs "меняй все шины": dropping "не" is forbidden, so only negating intents are candidates.
+        foreach (var (language, phrase) in new[] { ("ru", "не меняй эти шины"), ("en", "don't change these tires") })
+        {
+            var candidates = Match(language, phrase).Candidates;
+            Assert.NotEmpty(candidates);
+            Assert.All(candidates, c => Assert.True(IntentCatalog.Get(c.Template.Intent).IsNegation, $"{phrase} -> {c.Template.Source}"));
+        }
     }
 
     [Fact]

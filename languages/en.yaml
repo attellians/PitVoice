@@ -85,15 +85,130 @@ intents:
       - "rear side"
     response: "changing rear tires"
 
+  tires.lf:
+    patterns:
+      - "front left tire"
+      - "front left"
+      - "change front left"
+      - "left front tire"
+      - "change left front"
+    response: "changing front left"
+
+  tires.rf:
+    patterns:
+      - "front right tire"
+      - "front right"
+      - "change front right"
+      - "right front tire"
+      - "change right front"
+    response: "changing front right"
+
+  tires.lr:
+    patterns:
+      - "rear left tire"
+      - "rear left"
+      - "change rear left"
+      - "left rear tire"
+      - "change left rear"
+    response: "changing rear left"
+
+  tires.rr:
+    patterns:
+      - "rear right tire"
+      - "rear right"
+      - "change rear right"
+      - "right rear tire"
+      - "change right rear"
+    response: "changing rear right"
+
   tires.none:
     patterns:
       - "no tires"
       - "don't change tires"
+      - "don't change all tires"
       - "dont change tires"
       - "no tire change"
       - "keep tires"
       - "no new tires"
     response: "no tire change"
+
+  tires.none.left:
+    patterns:
+      - "no left side tires"
+      - "no left tires"
+      - "no left side"
+      - "don't change left tires"
+      - "dont change left tires"
+      - "keep left tires"
+    response: "keeping left side"
+
+  tires.none.right:
+    patterns:
+      - "no right side tires"
+      - "no right tires"
+      - "no right side"
+      - "don't change right tires"
+      - "dont change right tires"
+      - "keep right tires"
+    response: "keeping right side"
+
+  tires.none.front:
+    patterns:
+      - "no front tires"
+      - "no fronts"
+      - "don't change front tires"
+      - "dont change front tires"
+      - "keep front tires"
+    response: "keeping front tires"
+
+  tires.none.rear:
+    patterns:
+      - "no rear tires"
+      - "no rears"
+      - "don't change rear tires"
+      - "dont change rear tires"
+      - "keep rear tires"
+    response: "keeping rear tires"
+
+  tires.none.lf:
+    patterns:
+      - "no front left"
+      - "no front left tire"
+      - "no left front"
+      - "don't change front left"
+      - "dont change front left"
+      - "keep front left"
+    response: "keeping front left"
+
+  tires.none.rf:
+    patterns:
+      - "no front right"
+      - "no front right tire"
+      - "no right front"
+      - "don't change front right"
+      - "dont change front right"
+      - "keep front right"
+    response: "keeping front right"
+
+  tires.none.lr:
+    patterns:
+      - "no rear left"
+      - "no rear left tire"
+      - "no left rear"
+      - "don't change rear left"
+      - "dont change rear left"
+      - "keep rear left"
+    response: "keeping rear left"
+
+  tires.none.rr:
+    patterns:
+      - "no rear right"
+      - "no rear right tire"
+      - "no right rear"
+      - "don't change rear right"
+      - "dont change rear right"
+      - "keep rear right"
+    response: "keeping rear right"
 
   windshield.tearoff:
     patterns:
@@ -163,7 +278,7 @@ responses:
   not_connected: "no connection to the game"
   not_in_car: "you are not in the car"
   apply_failed: "the command was not applied"
-  fuel_capped: "that won't fit, adding {amount} {unit}"
+  not_supported: "not available yet"
   cancelled: "cancelled"
 
 tests:
@@ -232,6 +347,58 @@ tests:
     expect: [{ intent: tires.none }]
   - say: "keep tires"
     expect: [{ intent: tires.none }]
+
+  # single wheels
+  - say: "front left tire"
+    expect: [{ intent: tires.lf }]
+  - say: "change right front"
+    expect: [{ intent: tires.rf }]
+  - say: "rear left"
+    expect: [{ intent: tires.lr }]
+  - say: "change rear right"
+    expect: [{ intent: tires.rr }]
+  - say: "change left front"
+    expect: [{ intent: tires.lf }]
+  - say: "front right tire"
+    expect: [{ intent: tires.rf }]
+  - say: "left rear tire"
+    expect: [{ intent: tires.lr }]
+  - say: "right rear tire"
+    expect: [{ intent: tires.rr }]
+
+  # removing sides and wheels
+  - say: "no left side tires"
+    expect: [{ intent: tires.none.left }]
+  - say: "don't change right tires"
+    expect: [{ intent: tires.none.right }]
+  - say: "no front tires"
+    expect: [{ intent: tires.none.front }]
+  - say: "keep rear tires"
+    expect: [{ intent: tires.none.rear }]
+  - say: "no front left"
+    expect: [{ intent: tires.none.lf }]
+  - say: "keep front right"
+    expect: [{ intent: tires.none.rf }]
+  - say: "no rear left tire"
+    expect: [{ intent: tires.none.lr }]
+  - say: "don't change rear right"
+    expect: [{ intent: tires.none.rr }]
+  - say: "keep left tires"
+    expect: [{ intent: tires.none.left }]
+  - say: "no right side"
+    expect: [{ intent: tires.none.right }]
+  - say: "no fronts"
+    expect: [{ intent: tires.none.front }]
+  - say: "no rears"
+    expect: [{ intent: tires.none.rear }]
+  - say: "no left front"
+    expect: [{ intent: tires.none.lf }]
+  - say: "no front right tire"
+    expect: [{ intent: tires.none.rf }]
+  - say: "keep rear left"
+    expect: [{ intent: tires.none.lr }]
+  - say: "no right rear"
+    expect: [{ intent: tires.none.rr }]
 
   # windshield
   - say: "tear off"
@@ -304,6 +471,14 @@ tests:
     expect: reject
   - say: "fast repair and no repair"
     expect: reject
+  - say: "left side tires and no front left"
+    expect: reject
+
+  # tires: add and remove different wheels, overlapping additions
+  - say: "right side tires and no left side tires"
+    expect: [{ intent: tires.right }, { intent: tires.none.left }]
+  - say: "left side tires and front tires"
+    expect: [{ intent: tires.left }, { intent: tires.front }]
 
   # foreign phrases
   - say: "what is the weather today"

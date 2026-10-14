@@ -309,9 +309,12 @@ public static class LanguagePackValidator
             }
         }
 
-        if (!responses.ContainsKey(Responses.ResponseBuilder.NotUnderstoodKey))
+        foreach (var required in Responses.ResponseBuilder.RequiredKeys)
         {
-            Error($"'responses.{Responses.ResponseBuilder.NotUnderstoodKey}' is required", "responses");
+            if (!responses.ContainsKey(required))
+            {
+                Error($"'responses.{required}' is required", "responses");
+            }
         }
 
         // --- tests

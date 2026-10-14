@@ -82,15 +82,118 @@ intents:
       - "меняй задние шины"
     response: "меняем задние"
 
+  tires.lf:
+    patterns:
+      - "меняй переднее левое"
+      - "переднее левое"
+      - "переднее левое колесо"
+      - "меняй переднее левое колесо"
+      - "левое переднее"
+    response: "меняем переднее левое"
+
+  tires.rf:
+    patterns:
+      - "меняй переднее правое"
+      - "переднее правое"
+      - "переднее правое колесо"
+      - "меняй переднее правое колесо"
+      - "правое переднее"
+    response: "меняем переднее правое"
+
+  tires.lr:
+    patterns:
+      - "меняй заднее левое"
+      - "заднее левое"
+      - "заднее левое колесо"
+      - "меняй заднее левое колесо"
+      - "левое заднее"
+    response: "меняем заднее левое"
+
+  tires.rr:
+    patterns:
+      - "меняй заднее правое"
+      - "заднее правое"
+      - "заднее правое колесо"
+      - "меняй заднее правое колесо"
+      - "правое заднее"
+    response: "меняем заднее правое"
+
   tires.none:
     patterns:
       - "не меняй шины"
+      - "не меняй все шины"
       - "шины не меняем"
       - "без шин"
       - "резину не меняй"
       - "не меняй резину"
       - "шины не надо"
     response: "шины не меняем"
+
+  tires.none.left:
+    patterns:
+      - "не меняй левые"
+      - "не меняй левые шины"
+      - "левые не меняем"
+      - "левые не меняй"
+      - "не меняй левую сторону"
+    response: "левые не меняем"
+
+  tires.none.right:
+    patterns:
+      - "не меняй правые"
+      - "не меняй правые шины"
+      - "правые не меняем"
+      - "правые не меняй"
+      - "не меняй правую сторону"
+    response: "правые не меняем"
+
+  tires.none.front:
+    patterns:
+      - "не меняй передние"
+      - "не меняй передние шины"
+      - "передние не меняем"
+      - "передние не меняй"
+    response: "передние не меняем"
+
+  tires.none.rear:
+    patterns:
+      - "не меняй задние"
+      - "не меняй задние шины"
+      - "задние не меняем"
+      - "задние не меняй"
+    response: "задние не меняем"
+
+  tires.none.lf:
+    patterns:
+      - "не меняй переднее левое"
+      - "переднее левое не меняй"
+      - "переднее левое не меняем"
+      - "не меняй левое переднее"
+    response: "переднее левое не меняем"
+
+  tires.none.rf:
+    patterns:
+      - "не меняй переднее правое"
+      - "переднее правое не меняй"
+      - "переднее правое не меняем"
+      - "не меняй правое переднее"
+    response: "переднее правое не меняем"
+
+  tires.none.lr:
+    patterns:
+      - "не меняй заднее левое"
+      - "заднее левое не меняй"
+      - "заднее левое не меняем"
+      - "не меняй левое заднее"
+    response: "заднее левое не меняем"
+
+  tires.none.rr:
+    patterns:
+      - "не меняй заднее правое"
+      - "заднее правое не меняй"
+      - "заднее правое не меняем"
+      - "не меняй правое заднее"
+    response: "заднее правое не меняем"
 
   windshield.tearoff:
     patterns:
@@ -163,7 +266,7 @@ responses:
   not_connected: "нет связи с игрой"
   not_in_car: "ты не в машине"
   apply_failed: "команда не применилась"
-  fuel_capped: "больше не влезет, заливаем {amount} {unit}"
+  not_supported: "пока не умею"
   cancelled: "отменил"
 
 tests:
@@ -229,6 +332,26 @@ tests:
   - say: "задние шины"
     expect: [{ intent: tires.rear }]
 
+  # single wheels
+  - say: "меняй переднее левое"
+    expect: [{ intent: tires.lf }]
+  - say: "левое переднее"
+    expect: [{ intent: tires.lf }]
+  - say: "меняй переднее правое колесо"
+    expect: [{ intent: tires.rf }]
+  - say: "заднее левое"
+    expect: [{ intent: tires.lr }]
+  - say: "меняй заднее правое"
+    expect: [{ intent: tires.rr }]
+  - say: "правое переднее"
+    expect: [{ intent: tires.rf }]
+  - say: "меняй заднее левое колесо"
+    expect: [{ intent: tires.lr }]
+  - say: "правое заднее"
+    expect: [{ intent: tires.rr }]
+  - say: "переднее"                                      # single words never change the pit stop
+    expect: reject
+
   # tires.none
   - say: "не меняй шины"
     expect: [{ intent: tires.none }]
@@ -238,6 +361,40 @@ tests:
     expect: [{ intent: tires.none }]
   - say: "без шин"
     expect: [{ intent: tires.none }]
+
+  # removing sides and wheels
+  - say: "не меняй левые"
+    expect: [{ intent: tires.none.left }]
+  - say: "правые не меняем"
+    expect: [{ intent: tires.none.right }]
+  - say: "не меняй передние шины"
+    expect: [{ intent: tires.none.front }]
+  - say: "задние не меняй"
+    expect: [{ intent: tires.none.rear }]
+  - say: "не меняй переднее левое"
+    expect: [{ intent: tires.none.lf }]
+  - say: "переднее правое не меняй"
+    expect: [{ intent: tires.none.rf }]
+  - say: "не меняй заднее левое"
+    expect: [{ intent: tires.none.lr }]
+  - say: "не меняй заднее правое"
+    expect: [{ intent: tires.none.rr }]
+  - say: "левые не меняй"
+    expect: [{ intent: tires.none.left }]
+  - say: "не меняй правую сторону"
+    expect: [{ intent: tires.none.right }]
+  - say: "передние не меняем"
+    expect: [{ intent: tires.none.front }]
+  - say: "не меняй задние"
+    expect: [{ intent: tires.none.rear }]
+  - say: "переднее левое не меняем"
+    expect: [{ intent: tires.none.lf }]
+  - say: "не меняй правое переднее"
+    expect: [{ intent: tires.none.rf }]
+  - say: "заднее левое не меняй"
+    expect: [{ intent: tires.none.lr }]
+  - say: "не меняй правое заднее"
+    expect: [{ intent: tires.none.rr }]
 
   # windshield
   - say: "протри стекло"
@@ -312,6 +469,14 @@ tests:
     expect: reject
   - say: "быстрый ремонт и без ремонта"
     expect: reject
+  - say: "меняй левые и не меняй переднее левое"
+    expect: reject
+
+  # tires: add and remove different wheels, overlapping additions
+  - say: "меняй правые и не меняй левые"
+    expect: [{ intent: tires.right }, { intent: tires.none.left }]
+  - say: "меняй левые и меняй передние"
+    expect: [{ intent: tires.left }, { intent: tires.front }]
 
   # foreign phrases
   - say: "какая сегодня погода"

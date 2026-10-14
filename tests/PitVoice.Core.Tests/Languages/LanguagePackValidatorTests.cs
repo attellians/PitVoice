@@ -93,6 +93,18 @@ public class LanguagePackValidatorTests
     }
 
     [Fact]
+    public void Missing_outcome_response_is_an_error()
+    {
+        var result = LoadFixture("no-outcome-response.yaml");
+
+        Assert.False(result.IsSuccess);
+        Assert.Null(result.Pack);
+        var error = Assert.Single(result.Errors);
+        Assert.EndsWith("no-outcome-response.yaml", error.File, StringComparison.Ordinal);
+        Assert.Contains("'responses.not_supported' is required", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Intent_without_test_phrase_is_an_error()
     {
         var result = LoadFixture("intent-without-test.yaml");
@@ -188,6 +200,10 @@ public class LanguagePackValidatorTests
                 response: "меняем"
             responses:
               not_understood: "не понял"
+              not_connected: "нет связи"
+              not_in_car: "не в машине"
+              apply_failed: "не применилось"
+              not_supported: "не умею"
             tests:
               - say: "меняй шины"
                 expect: [{ intent: tires.all }]

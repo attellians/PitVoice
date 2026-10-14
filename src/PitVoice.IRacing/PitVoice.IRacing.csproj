@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>PitVoice.IRacing</RootNamespace>
+    <!-- Pointer access to the SDK shared memory and LibraryImport marshalling. -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Description>iRacing SDK: telemetry from the shared memory, pit commands by broadcast message, telemetry recording and replay.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\PitVoice.Core\PitVoice.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="PitVoice.IRacing.Tests" />
+  </ItemGroup>
+
+</Project>

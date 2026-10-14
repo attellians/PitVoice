@@ -1,0 +1,40 @@
+using PitVoice.Core.Parsing;
+
+namespace PitVoice.Core.Pit;
+
+/// <summary>How the execution of one phrase ended. Exactly one per phrase.</summary>
+public enum ExecutionOutcome
+{
+    /// <summary>Every command was confirmed by telemetry, or the phrase changes nothing (cancel).</summary>
+    Applied,
+
+    /// <summary>Some commands were confirmed, some were not.</summary>
+    PartiallyApplied,
+
+    /// <summary>Nothing was confirmed in time, or the connection was lost while waiting.</summary>
+    NotApplied,
+
+    /// <summary>The game is not running; nothing was sent.</summary>
+    NotConnected,
+
+    /// <summary>The game runs but the driver is not in the car; nothing was sent.</summary>
+    NotInCar,
+
+    /// <summary>The phrase asks for something this version cannot do yet (<c>status.fuel</c>); nothing was sent.</summary>
+    NotSupported,
+}
+
+/// <summary>Result of executing an accepted phrase. Expected race situations are values here, not exceptions.</summary>
+/// <param name="Outcome">The outcome.</param>
+/// <param name="Sent">Commands sent to the game, in order.</param>
+/// <param name="Unconfirmed">Parsed commands whose effect the telemetry did not show.</param>
+public sealed record ExecutionResult(
+    ExecutionOutcome Outcome,
+    IReadOnlyList<SentCommand> Sent,
+    IReadOnlyList<ParsedCommand> Unconfirmed)
+{
+    public static ExecutionResult Of(ExecutionOutcome outcome) => new(outcome, [], []);
+
+    public override string ToString() =>
+        $"{Outcome}; sent: [{string.Join(", ", Sent)}]; unconfirmed: [{string.Join(", ", Unconfirmed.Select(c => c.Intent))}]";
+}

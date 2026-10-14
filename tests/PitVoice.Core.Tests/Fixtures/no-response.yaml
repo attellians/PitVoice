@@ -9,6 +9,10 @@ intents:
     patterns: ["меняй шины"]
 responses:
   not_understood: "не понял"
+  not_connected: "no connection"
+  not_in_car: "not in car"
+  apply_failed: "failed"
+  not_supported: "not supported"
 tests:
   - say: "меняй шины"
     expect: [{ intent: tires.all }]

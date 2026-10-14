@@ -152,9 +152,50 @@ var listenCommand = new Command("listen", "Record from the microphone, recognize
 listenCommand.SetAction((result, cancellationToken) =>
     SpeechRunner.ListenAsync(SpeechSettingsFrom(result), result.GetValue(micOption), result.GetValue(saveWavOption), cancellationToken));
 
+var watchOption = new Option<bool>("--watch")
+{
+    Description = "Keep printing the state whenever it changes, until Ctrl+C.",
+};
+
+var statusCommand = new Command("status", "Show the connection to iRacing and what is selected in the black box.") { watchOption };
+statusCommand.SetAction((result, cancellationToken) => GameRunner.StatusAsync(result.GetValue(watchOption), cancellationToken));
+
+var sendPhraseArgument = new Argument<string>("phrase") { Description = "Phrase to parse and execute in the game." };
+
+var sendCommand = new Command("send", "Parse a text command and execute it in iRacing: send, wait for confirmation, print the outcome. Exit code is 0 only when applied.")
+{
+    langOption,
+    unitOption,
+    thresholdOption,
+    dirOption,
+    sendPhraseArgument,
+};
+sendCommand.SetAction((result, cancellationToken) => GameRunner.SendAsync(
+    Packs.ResolveDirectory(result.GetValue(dirOption)),
+    result.GetValue(langOption)!,
+    result.GetValue(sendPhraseArgument)!,
+    new ParseOptions
+    {
+        DefaultUnit = result.GetValue(unitOption)!,
+        ConfidenceThreshold = result.GetValue(thresholdOption),
+    },
+    cancellationToken));
+
+var outOption = new Option<string>("--out", "-o")
+{
+    Description = "File to write the recording to (JSON Lines).",
+    Required = true,
+};
+
+var recordCommand = new Command("record", "Record connection and black box telemetry to a file for replay tests, until Ctrl+C.") { outOption };
+recordCommand.SetAction((result, cancellationToken) => GameRunner.RecordAsync(result.GetValue(outOption)!, cancellationToken));
+
 var root = new RootCommand("PitVoice command-line tool.")
 {
     parseCommand,
+    statusCommand,
+    sendCommand,
+    recordCommand,
     validateCommand,
     modelsCommand,
     devicesCommand,

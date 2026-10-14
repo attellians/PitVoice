@@ -4,7 +4,7 @@
     <OutputType>Exe</OutputType>
     <AssemblyName>pitvoice-cli</AssemblyName>
     <RootNamespace>PitVoice.Cli</RootNamespace>
-    <Description>Console tool: parse text commands, validate language packs, manage models and recognize speech.</Description>
+    <Description>Console tool: parse text commands, validate language packs, manage models, recognize speech and send pit commands to iRacing.</Description>
   </PropertyGroup>
 
   <ItemGroup>
@@ -13,6 +13,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\PitVoice.Core\PitVoice.Core.csproj" />
+    <ProjectReference Include="..\..\src\PitVoice.IRacing\PitVoice.IRacing.csproj" />
     <ProjectReference Include="..\..\src\PitVoice.Models\PitVoice.Models.csproj" />
     <ProjectReference Include="..\..\src\PitVoice.Speech\PitVoice.Speech.csproj" />
   </ItemGroup>

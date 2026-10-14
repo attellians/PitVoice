@@ -112,7 +112,7 @@ public class LanguagePacksTests
     public void Pack_has_every_generic_response(string language)
     {
         var pack = Pack(language);
-        foreach (var key in new[] { "not_understood", "not_connected", "not_in_car", "apply_failed", "fuel_capped", "cancelled" })
+        foreach (var key in new[] { "not_understood", "not_connected", "not_in_car", "apply_failed", "not_supported", "cancelled" })
         {
             Assert.True(pack.Responses.ContainsKey(key), $"{language}: responses.{key} is missing");
         }

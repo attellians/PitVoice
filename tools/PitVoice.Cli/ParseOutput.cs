@@ -3,10 +3,10 @@ using PitVoice.Core.Responses;
 
 namespace PitVoice.Cli;
 
-/// <summary>Prints the parse block shared by <c>parse</c>, <c>recognize</c> and <c>listen</c>.</summary>
+/// <summary>Prints the parse block shared by <c>parse</c>, <c>recognize</c>, <c>listen</c> and <c>send</c>.</summary>
 internal static class ParseOutput
 {
-    public static ParseResult Print(CommandParser parser, ResponseBuilder responses, RecognizedPhrase phrase, ParseOptions options)
+    public static ParseResult Print(CommandParser parser, ResponseBuilder responses, RecognizedPhrase phrase, ParseOptions options, bool printResponse = true)
     {
         var tokens = parser.Pack.Normalizer.Normalize(phrase);
         Console.WriteLine($"tokens:   {string.Join(' ', tokens)}");
@@ -28,7 +28,11 @@ internal static class ParseOutput
                 break;
         }
 
-        Console.WriteLine($"response: {responses.Build(result)}");
+        if (printResponse)
+        {
+            Console.WriteLine($"response: {responses.Build(result)}");
+        }
+
         return result;
     }
 }

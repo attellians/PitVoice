@@ -12,6 +12,10 @@ intents:
     response: "заливаем {amount} {unit}"
 responses:
   not_understood: "не понял"
+  not_connected: "no connection"
+  not_in_car: "not in car"
+  apply_failed: "failed"
+  not_supported: "not supported"
 tests:
   - say: "залей десять"
     expect: [{ intent: fuel.add, amount: 10 }]

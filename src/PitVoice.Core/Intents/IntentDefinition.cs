@@ -1,3 +1,5 @@
+using PitVoice.Core.Pit;
+
 namespace PitVoice.Core.Intents;
 
 /// <summary>
@@ -24,6 +26,19 @@ public sealed record IntentDefinition(
     /// word is too easily heard in unrelated speech (spike of stage 2: "кто впереди меня" was recognized as "перед").
     /// </summary>
     public bool ChangesPitSetup { get; init; } = true;
+
+    /// <summary>
+    /// Wheels a tire intent works on; <see cref="Wheels.None"/> for other intents. Whether they are added to the
+    /// selection or removed from it is given by <see cref="IsNegation"/> (see <see cref="AddsWheels"/>,
+    /// <see cref="RemovesWheels"/>).
+    /// </summary>
+    public Wheels Wheels { get; init; }
+
+    /// <summary>Wheels this intent adds to the selection in the black box.</summary>
+    public Wheels AddsWheels => IsNegation ? Wheels.None : Wheels;
+
+    /// <summary>Wheels this intent removes from the selection in the black box.</summary>
+    public Wheels RemovesWheels => IsNegation ? Wheels : Wheels.None;
 
     public bool HasSlot(SlotKind kind) => Slots.Contains(kind);
 }

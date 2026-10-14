@@ -274,6 +274,60 @@ public class CommandParserTests
         Assert.Equal([IntentCatalog.TiresLeft, IntentCatalog.TiresRight], commands.Select(c => c.Intent));
     }
 
+    [Theory]
+    [InlineData("ru", "меняй левые и не меняй переднее левое")]
+    [InlineData("ru", "меняй переднее правое и не меняй правые")]
+    [InlineData("en", "change left tires and no front left")]
+    public void Same_wheel_added_and_removed_is_a_conflict(string language, string phrase)
+    {
+        Rejected(Parse(language, phrase), RejectReason.Conflict);
+    }
+
+    [Theory]
+    [InlineData("ru", "меняй правые и не меняй левые", "tires.right", "tires.none.left")]
+    [InlineData("ru", "меняй шины и не меняй переднее левое", null, null)]
+    [InlineData("en", "change right tires and no left side tires", "tires.right", "tires.none.left")]
+    public void Different_wheels_added_and_removed_are_kept(string language, string phrase, string? first, string? second)
+    {
+        var result = Parse(language, phrase);
+        if (first is null)
+        {
+            // tires.all adds every wheel, so removing any wheel in the same phrase conflicts.
+            Rejected(result, RejectReason.Conflict);
+            return;
+        }
+
+        Assert.Equal([first, second], Accepted(result).Select(c => c.Intent.Value));
+    }
+
+    [Fact]
+    public void Overlapping_tire_additions_do_not_conflict()
+    {
+        var resolution = ConflictResolver.Resolve(
+        [
+            new ParsedCommand(IntentCatalog.TiresLeft, null, null, 1.0),
+            new ParsedCommand(IntentCatalog.TiresFront, null, null, 1.0),
+        ]);
+
+        Assert.False(resolution.HasConflict);
+        Assert.Equal([IntentCatalog.TiresLeft, IntentCatalog.TiresFront], resolution.Commands!.Select(c => c.Intent));
+        Assert.Equal(
+            [IntentCatalog.TiresLeft, IntentCatalog.TiresFront],
+            Accepted(Parse("ru", "меняй левые и меняй передние")).Select(c => c.Intent));
+    }
+
+    [Fact]
+    public void Removing_the_same_wheel_twice_does_not_conflict()
+    {
+        var resolution = ConflictResolver.Resolve(
+        [
+            new ParsedCommand(IntentCatalog.TiresNoneLeft, null, null, 1.0),
+            new ParsedCommand(IntentCatalog.TiresNoneLF, null, null, 1.0),
+        ]);
+
+        Assert.False(resolution.HasConflict);
+    }
+
     [Fact]
     public void Resolver_keeps_the_last_fuel_add_in_place_and_first_of_others()
     {

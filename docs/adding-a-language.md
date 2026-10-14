@@ -56,10 +56,10 @@ intents:
 
 responses:
   not_understood: "не понял, повтори"   # required
-  not_connected: "нет связи с игрой"
-  not_in_car: "ты не в машине"
-  apply_failed: "команда не применилась"
-  fuel_capped: "больше не влезет, заливаем {amount} {unit}"
+  not_connected: "нет связи с игрой"    # required
+  not_in_car: "ты не в машине"          # required
+  apply_failed: "команда не применилась" # required
+  not_supported: "пока не умею"         # required
   cancelled: "отменил"
 
 tests:
@@ -77,10 +77,28 @@ The catalog of intents is fixed in code (`IntentCatalog`, TZ §5). A pack cannot
 an intent out: the language then loads with a warning and phrases for that intent are rejected. The shipped `ru`
 and `en` packs describe every intent and the pack tests enforce that.
 
-| Intent | Slots |
-|---|---|
-| `fuel.add` | `{amount}` required, `{unit}` or `{unit?}` |
-| every other intent | none |
+| Intent | Meaning | Slots |
+|---|---|---|
+| `fuel.add` | add fuel; 0 removes refueling | `{amount}` required, `{unit}` or `{unit?}` |
+| `fuel.none` | do not refuel | none |
+| `tires.all` | change all four tires | none |
+| `tires.left`, `tires.right` | change the left / right side | none |
+| `tires.front`, `tires.rear` | change the front / rear axle | none |
+| `tires.lf`, `tires.rf`, `tires.lr`, `tires.rr` | change one wheel: front left, front right, rear left, rear right | none |
+| `tires.none` | change no tires (removes all four) | none |
+| `tires.none.left`, `tires.none.right` | do not change the left / right side | none |
+| `tires.none.front`, `tires.none.rear` | do not change the front / rear axle | none |
+| `tires.none.lf`, `tires.none.rf`, `tires.none.lr`, `tires.none.rr` | do not change one wheel | none |
+| `windshield.tearoff`, `windshield.none` | tear-off / no tear-off | none |
+| `repair.fast`, `repair.none` | fast repair / no fast repair | none |
+| `pit.clear` | clear every pit command; cannot be combined | none |
+| `status.fuel` | fuel status; answered with `not_supported` until stage 8 | none |
+| `assistant.cancel` | cancel, nothing is sent; cannot be combined | none |
+
+Tire commands add wheels to what is already selected in the black box; the `tires.none.*` intents remove wheels. One
+phrase cannot both add and remove the same wheel ("меняй левые и не меняй переднее левое" is rejected), while
+different wheels combine ("меняй правые и не меняй левые"). Spell out every wheel and side the way drivers say it:
+the recognizer only hears words that appear in some pattern.
 
 ## Patterns
 
@@ -122,6 +140,18 @@ Matching rules you should keep in mind while writing patterns:
 that agrees with the number according to `plural_rules`. Only `fuel.add` may use these placeholders. Responses of a
 compound command are joined with commas in the order of speech. `responses.not_understood` is spoken for any
 rejected phrase and is required.
+
+The other required responses are spoken by execution outcome; a pack without any of them fails validation and the
+language cannot be selected:
+
+| Key | Spoken when |
+|---|---|
+| `not_connected` | the game is not running, nothing was sent |
+| `not_in_car` | the game runs but the driver is not in the car, nothing was sent |
+| `apply_failed` | the game did not confirm all commands within 1.5 s (not applied or partially applied) |
+| `not_supported` | the phrase asks for something this version cannot do yet (`status.fuel`) |
+
+`cancelled` is optional and not used by the code yet.
 
 ## Tests
 

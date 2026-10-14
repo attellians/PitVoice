@@ -1,4 +1,5 @@
 using PitVoice.Core.Intents;
+using PitVoice.Core.Pit;
 using Xunit;
 
 namespace PitVoice.Core.Tests.Intents;
@@ -8,7 +9,10 @@ public class IntentCatalogTests
     private static readonly string[] SpecIntentIds =
     [
         "fuel.add", "fuel.none",
-        "tires.all", "tires.left", "tires.right", "tires.front", "tires.rear", "tires.none",
+        "tires.all", "tires.left", "tires.right", "tires.front", "tires.rear",
+        "tires.lf", "tires.rf", "tires.lr", "tires.rr",
+        "tires.none", "tires.none.left", "tires.none.right", "tires.none.front", "tires.none.rear",
+        "tires.none.lf", "tires.none.rf", "tires.none.lr", "tires.none.rr",
         "windshield.tearoff", "windshield.none",
         "repair.fast", "repair.none",
         "pit.clear", "status.fuel", "assistant.cancel",
@@ -92,6 +96,47 @@ public class IntentCatalogTests
         var definition = IntentCatalog.Get(IntentCatalog.StatusFuel);
         Assert.Null(definition.ExclusionGroup);
         Assert.False(definition.IsStandalone);
+    }
+
+    [Fact]
+    public void Every_tire_intent_has_a_wheel_mask()
+    {
+        foreach (var definition in IntentCatalog.All)
+        {
+            var isTire = definition.ExclusionGroup == IntentCatalog.TiresGroup;
+            Assert.Equal(isTire, definition.Wheels != Wheels.None);
+            if (isTire)
+            {
+                Assert.True((definition.AddsWheels == Wheels.None) != (definition.RemovesWheels == Wheels.None), definition.Id.Value);
+            }
+        }
+    }
+
+    [Theory]
+    [InlineData("tires.all", Wheels.All, Wheels.None)]
+    [InlineData("tires.left", Wheels.LF | Wheels.LR, Wheels.None)]
+    [InlineData("tires.right", Wheels.RF | Wheels.RR, Wheels.None)]
+    [InlineData("tires.front", Wheels.LF | Wheels.RF, Wheels.None)]
+    [InlineData("tires.rear", Wheels.LR | Wheels.RR, Wheels.None)]
+    [InlineData("tires.lf", Wheels.LF, Wheels.None)]
+    [InlineData("tires.rf", Wheels.RF, Wheels.None)]
+    [InlineData("tires.lr", Wheels.LR, Wheels.None)]
+    [InlineData("tires.rr", Wheels.RR, Wheels.None)]
+    [InlineData("tires.none", Wheels.None, Wheels.All)]
+    [InlineData("tires.none.left", Wheels.None, Wheels.LF | Wheels.LR)]
+    [InlineData("tires.none.right", Wheels.None, Wheels.RF | Wheels.RR)]
+    [InlineData("tires.none.front", Wheels.None, Wheels.LF | Wheels.RF)]
+    [InlineData("tires.none.rear", Wheels.None, Wheels.LR | Wheels.RR)]
+    [InlineData("tires.none.lf", Wheels.None, Wheels.LF)]
+    [InlineData("tires.none.rf", Wheels.None, Wheels.RF)]
+    [InlineData("tires.none.lr", Wheels.None, Wheels.LR)]
+    [InlineData("tires.none.rr", Wheels.None, Wheels.RR)]
+    public void Tire_masks(string id, Wheels adds, Wheels removes)
+    {
+        var definition = IntentCatalog.Get(new IntentId(id));
+        Assert.Equal(adds, definition.AddsWheels);
+        Assert.Equal(removes, definition.RemovesWheels);
+        Assert.Equal(IntentCatalog.TiresGroup, definition.ExclusionGroup);
     }
 
     [Fact]

@@ -1,4 +1,5 @@
 using PitVoice.Core.Intents;
+using PitVoice.Core.Pit;
 
 namespace PitVoice.Core.Parsing;
 
@@ -11,7 +12,8 @@ public sealed record ConflictResolution(IReadOnlyList<ParsedCommand>? Commands, 
 }
 
 /// <summary>
-/// Applies FR-PARSE-7: mutually exclusive intents reject the phrase, standalone intents cannot be combined,
+/// Applies FR-PARSE-7: mutually exclusive intents reject the phrase (for tires: adding and removing a common wheel),
+/// standalone intents cannot be combined,
 /// duplicate commands collapse, and for <c>fuel.add</c> the last one wins.
 /// </summary>
 public static class ConflictResolver
@@ -37,6 +39,23 @@ public static class ConflictResolver
 
             foreach (var group in byGroup)
             {
+                if (group.Key == IntentCatalog.TiresGroup)
+                {
+                    // Tires conflict only when the same wheel is both added and removed.
+                    var adds = group.Where(d => d.AddsWheels != Wheels.None).ToList();
+                    var removes = group.Where(d => d.RemovesWheels != Wheels.None).ToList();
+                    foreach (var add in adds)
+                    {
+                        var clash = removes.FirstOrDefault(r => (add.AddsWheels & r.RemovesWheels) != 0);
+                        if (clash is not null)
+                        {
+                            return new ConflictResolution(null, $"'{add.Id}' conflicts with '{clash.Id}'");
+                        }
+                    }
+
+                    continue;
+                }
+
                 var negation = group.FirstOrDefault(d => d.IsNegation);
                 var positive = group.FirstOrDefault(d => !d.IsNegation);
                 if (negation is not null && positive is not null)

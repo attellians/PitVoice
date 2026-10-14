@@ -4,14 +4,18 @@ using PitVoice.Core.Pit;
 
 namespace PitVoice.IRacing.Recording;
 
-/// <summary>One line of a telemetry recording (design decision 10). Nothing else about the session is stored.</summary>
+/// <summary>
+/// One line of a telemetry recording (design decision 10). Nothing else about the session is stored. <c>fuelCapacity</c>
+/// is optional: recordings made before it was added do not have it.
+/// </summary>
 internal sealed record TelemetryRecord(
     [property: JsonPropertyName("t"), JsonRequired] long T,
     [property: JsonPropertyName("state"), JsonRequired] ConnectionState State,
     [property: JsonPropertyName("tick"), JsonRequired] int Tick,
     [property: JsonPropertyName("pitSvFlags"), JsonRequired] int? PitSvFlags,
     [property: JsonPropertyName("pitSvFuel"), JsonRequired] double? PitSvFuel,
-    [property: JsonPropertyName("fuelLevel"), JsonRequired] double? FuelLevel);
+    [property: JsonPropertyName("fuelLevel"), JsonRequired] double? FuelLevel,
+    [property: JsonPropertyName("fuelCapacity")] double? FuelCapacity = null);
 
 /// <summary>A snapshot and the time it was taken, from the start of the recording.</summary>
 public readonly record struct RecordedSnapshot(TimeSpan Time, TelemetrySnapshot Snapshot);
@@ -19,7 +23,7 @@ public readonly record struct RecordedSnapshot(TimeSpan Time, TelemetrySnapshot 
 /// <summary>JSON Lines format of telemetry recordings: one object per line with exactly the keys of <see cref="Keys"/>.</summary>
 public static class TelemetryRecordFormat
 {
-    public static IReadOnlyList<string> Keys { get; } = ["t", "state", "tick", "pitSvFlags", "pitSvFuel", "fuelLevel"];
+    public static IReadOnlyList<string> Keys { get; } = ["t", "state", "tick", "pitSvFlags", "pitSvFuel", "fuelLevel", "fuelCapacity"];
 
     public static string ToLine(RecordedSnapshot recorded)
     {
@@ -31,7 +35,8 @@ public static class TelemetryRecordFormat
             snapshot.Tick,
             pit is null ? null : (int)pit.Flags,
             pit?.FuelToAdd,
-            pit?.FuelLevel);
+            pit?.FuelLevel,
+            snapshot.FuelCapacity);
         return JsonSerializer.Serialize(record, TelemetryRecordContext.Default.TelemetryRecord);
     }
 
@@ -59,7 +64,7 @@ public static class TelemetryRecordFormat
             pit = new PitServiceState((PitServiceFlags)flags, record.PitSvFuel ?? 0, record.FuelLevel ?? 0);
         }
 
-        return new RecordedSnapshot(TimeSpan.FromMilliseconds(record.T), new TelemetrySnapshot(record.State, pit, record.Tick));
+        return new RecordedSnapshot(TimeSpan.FromMilliseconds(record.T), new TelemetrySnapshot(record.State, pit, record.Tick) { FuelCapacity = record.FuelCapacity });
     }
 
     /// <summary>Reads a whole recording. Empty lines are skipped; any damaged line fails the whole file.</summary>

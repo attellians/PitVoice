@@ -106,7 +106,7 @@ internal static class GameRunner
             sb.Append(CultureInfo.InvariantCulture, $"""
                 wheels:      {pit.Wheels.Describe()}
                 fuel:        {(pit.FuelFill ? "on" : "off")}, {pit.FuelToAdd:0.#} l to add
-                tank:        {pit.FuelLevel:0.#} l
+                tank:        {pit.FuelLevel:0.#} l of {(snapshot.FuelCapacity is { } capacity ? capacity.ToString("0.#", CultureInfo.InvariantCulture) + " l" : "unknown")}
                 tearoff:     {(pit.Tearoff ? "on" : "off")}
                 fast repair: {(pit.FastRepair ? "on" : "off")}
                 flags:       0x{(int)pit.Flags:X2}

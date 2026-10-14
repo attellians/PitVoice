@@ -59,7 +59,7 @@ public sealed class ResponseBuilder
         {
             ExecutionOutcome.Applied => string.Join(", ", accepted.Commands
                 .Where(c => c.Intent != IntentCatalog.StatusFuel)
-                .Select(Build)),
+                .Select(BuildApplied)),
             ExecutionOutcome.PartiallyApplied or ExecutionOutcome.NotApplied => _pack.Responses[ApplyFailedKey],
             ExecutionOutcome.NotConnected => _pack.Responses[NotConnectedKey],
             ExecutionOutcome.NotInCar => _pack.Responses[NotInCarKey],
@@ -67,6 +67,16 @@ public sealed class ResponseBuilder
             _ => throw new ArgumentOutOfRangeException(nameof(execution), execution.Outcome, "unknown outcome"),
         };
     }
+
+    /// <summary>
+    /// "Add zero" is executed as clearing refueling, so it is confirmed with the response of <c>fuel.none</c>
+    /// rather than "adding 0 liters".
+    /// </summary>
+    private string BuildApplied(ParsedCommand command) =>
+        command is { Amount: 0 } && command.Intent == IntentCatalog.FuelAdd
+            && _pack.Intents.TryGetValue(IntentCatalog.FuelNone, out var fuelNone)
+            ? fuelNone.Response
+            : Build(command);
 
     public string Build(ParsedCommand command)
     {

@@ -12,6 +12,12 @@ public sealed class PitExecutor
     /// <summary>How long the telemetry may take to show the requested state (FR-IR-5).</summary>
     public static readonly TimeSpan ConfirmationTimeout = TimeSpan.FromSeconds(1.5);
 
+    /// <summary>
+    /// How long the expected state must hold to count as confirmed. In iRacing a fast repair request without fast repairs
+    /// left shows the flag for one or two telemetry frames (~30 ms) before the game drops it.
+    /// </summary>
+    public static readonly TimeSpan SettleTime = TimeSpan.FromMilliseconds(100);
+
     /// <summary>Telemetry poll period; the game updates at 60 Hz.</summary>
     public static readonly TimeSpan PollInterval = TimeSpan.FromMilliseconds(16);
 
@@ -55,7 +61,7 @@ public sealed class PitExecutor
                 return ExecutionResult.Of(ExecutionOutcome.NotInCar);
         }
 
-        var plan = PitPlanner.Plan(commands, before.Pit ?? PitServiceState.Empty);
+        var plan = PitPlanner.Plan(commands, before.Pit ?? PitServiceState.Empty, before.FuelCapacity);
         var sent = new List<SentCommand>();
         foreach (var command in plan.Commands)
         {
@@ -63,6 +69,9 @@ public sealed class PitExecutor
             sent.Add(command);
         }
 
+        // A step is confirmed only while its state has held for SettleTime: the game may show a flag for a frame or
+        // two and then drop it (fast repair with none left), which must not count as applied.
+        var holdingSince = new TimeSpan?[plan.Steps.Count];
         var confirmed = new bool[plan.Steps.Count];
         var started = _time.GetTimestamp();
         PitServiceState? actual = before.Pit;
@@ -78,12 +87,22 @@ public sealed class PitExecutor
             }
 
             actual = snapshot.Pit;
+            var elapsed = _time.GetElapsedTime(started);
             for (var i = 0; i < confirmed.Length; i++)
             {
-                confirmed[i] |= plan.Steps[i].IsConfirmed(actual);
+                if (plan.Steps[i].IsConfirmed(actual))
+                {
+                    holdingSince[i] ??= elapsed;
+                }
+                else
+                {
+                    holdingSince[i] = null;
+                }
+
+                confirmed[i] = holdingSince[i] is { } since && elapsed - since >= SettleTime;
             }
 
-            if (confirmed.All(c => c) || _time.GetElapsedTime(started) >= ConfirmationTimeout)
+            if (confirmed.All(c => c) || elapsed >= ConfirmationTimeout)
             {
                 break;
             }

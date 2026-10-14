@@ -36,7 +36,13 @@ public static class PitPlanner
     /// <summary>Tolerance for comparing the requested fuel with the telemetry value (a float in liters).</summary>
     public const double FuelTolerance = 0.5;
 
-    public static PitPlan Plan(IReadOnlyList<ParsedCommand> commands, PitServiceState current)
+    /// <param name="commands">Parsed commands of the phrase.</param>
+    /// <param name="current">Black box state before sending.</param>
+    /// <param name="fuelCapacity">
+    /// Usable tank of the car in liters, if known. The game caps a fuel request to it, so the expected amount is exactly
+    /// <c>min(sent, capacity)</c>. Without it any amount <c>0 &lt; amount &lt;= sent</c> confirms.
+    /// </param>
+    public static PitPlan Plan(IReadOnlyList<ParsedCommand> commands, PitServiceState current, double? fuelCapacity = null)
     {
         ArgumentNullException.ThrowIfNull(commands);
         ArgumentNullException.ThrowIfNull(current);
@@ -66,7 +72,7 @@ public static class PitPlanner
                 continue;
             }
 
-            steps.Add(PlanOther(command));
+            steps.Add(PlanOther(command, fuelCapacity));
         }
 
         return new PitPlan(steps, skipped);
@@ -102,7 +108,7 @@ public static class PitPlanner
         return new PlannedStep(tires, commands, $"wheels are {target.Describe()}", s => s.Wheels == target);
     }
 
-    private static PlannedStep PlanOther(ParsedCommand command)
+    private static PlannedStep PlanOther(ParsedCommand command, double? fuelCapacity)
     {
         IReadOnlyList<ParsedCommand> sources = [command];
         var intent = command.Intent;
@@ -114,6 +120,18 @@ public static class PitPlanner
             {
                 // Fuel with parameter 0 means "keep the current amount" in the SDK, so zero liters clears refueling.
                 return Clear(sources, PitCommand.ClearFuel, PitServiceFlags.FuelFill, "fuel off");
+            }
+
+            if (fuelCapacity is > 0 and var capacity)
+            {
+                // The game caps the request to the tank, so the amount it shows is known exactly; a smaller amount
+                // left from before does not confirm the command.
+                var expected = Math.Min(liters, capacity);
+                return new PlannedStep(
+                    sources,
+                    [new SentCommand(PitCommand.Fuel, liters)],
+                    string.Create(CultureInfo.InvariantCulture, $"fuel on, {expected:0.#} l (tank {capacity:0.#} l)"),
+                    s => s.FuelFill && Math.Abs(s.FuelToAdd - expected) <= FuelTolerance);
             }
 
             return new PlannedStep(

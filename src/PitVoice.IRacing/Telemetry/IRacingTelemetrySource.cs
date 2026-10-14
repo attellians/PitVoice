@@ -23,6 +23,8 @@ public sealed unsafe class IRacingTelemetrySource : ITelemetrySource, IDisposabl
     private byte* _pointer;
     private int _length;
     private TimeSpan? _lastOpenAttempt;
+    private int _sessionInfoUpdate = -1;
+    private double? _fuelCapacity;
     private bool _disposed;
 
     public IRacingTelemetrySource(TimeProvider? time = null)
@@ -40,9 +42,13 @@ public sealed unsafe class IRacingTelemetrySource : ITelemetrySource, IDisposabl
                 ObjectDisposedException.ThrowIf(_disposed, this);
                 var now = _time.GetElapsedTime(_start);
                 RawTelemetry? raw = null;
-                if (EnsureOpen(now) && IRacingMemoryLayout.TryRead(new ReadOnlySpan<byte>(_pointer, _length), out var value))
+                if (EnsureOpen(now))
                 {
-                    raw = value;
+                    var memory = new ReadOnlySpan<byte>(_pointer, _length);
+                    if (IRacingMemoryLayout.TryRead(memory, out var value))
+                    {
+                        raw = value with { FuelCapacity = FuelCapacity(memory) };
+                    }
                 }
 
                 if (raw is not { IsConnected: true })
@@ -64,6 +70,19 @@ public sealed unsafe class IRacingTelemetrySource : ITelemetrySource, IDisposabl
             Close();
             _disposed = true;
         }
+    }
+
+    /// <summary>Tank capacity from session info, parsed again only when the session info changes.</summary>
+    private double? FuelCapacity(ReadOnlySpan<byte> memory)
+    {
+        var update = IRacingMemoryLayout.SessionInfoUpdate(memory);
+        if (update != _sessionInfoUpdate)
+        {
+            _sessionInfoUpdate = update;
+            _fuelCapacity = IRacingMemoryLayout.TryReadFuelCapacity(memory, out var liters) ? liters : null;
+        }
+
+        return _fuelCapacity;
     }
 
     private bool EnsureOpen(TimeSpan now)
@@ -113,5 +132,7 @@ public sealed unsafe class IRacingTelemetrySource : ITelemetrySource, IDisposabl
         _file = null;
         _pointer = null;
         _length = 0;
+        _sessionInfoUpdate = -1;
+        _fuelCapacity = null;
     }
 }

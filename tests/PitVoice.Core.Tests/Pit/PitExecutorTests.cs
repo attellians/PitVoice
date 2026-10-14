@@ -147,6 +147,32 @@ public class PitExecutorTests
     }
 
     [Fact]
+    public async Task Lost_fuel_command_is_not_confirmed_by_a_smaller_amount_left_from_before()
+    {
+        // The situation from Test Drive: 38 l selected, "200 l" requested, 96 l tank.
+        _game.TankCapacity = 96;
+        _game.Pit = new PitServiceState(PitServiceFlags.FuelFill, 38, 61);
+        _game.Ignored.Add(PitCommand.Fuel);
+
+        var result = await Execute("залей двести литров");
+
+        Assert.Equal(ExecutionOutcome.NotApplied, result.Outcome);
+        Assert.Contains("96 l (tank 96 l)", Assert.Single(_log.Failures).ToString(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Fuel_capped_to_the_tank_is_confirmed_exactly()
+    {
+        _game.TankCapacity = 96;
+        _game.Pit = new PitServiceState(PitServiceFlags.FuelFill, 38, 61);
+
+        var result = await Execute("залей двести литров");
+
+        Assert.Equal(ExecutionOutcome.Applied, result.Outcome);
+        Assert.Equal(96, _game.Pit.FuelToAdd);
+    }
+
+    [Fact]
     public async Task Zero_fuel_turns_refueling_off()
     {
         _game.Pit = new PitServiceState(PitServiceFlags.FuelFill, 30, 20);
@@ -217,9 +243,41 @@ public class PitExecutorTests
     }
 
     [Fact]
+    public async Task Fast_repair_that_flashes_and_drops_is_not_applied()
+    {
+        // iRacing with no fast repairs left: the flag shows for ~31 ms, then the game clears it.
+        _game.Flashing.Add(PitCommand.FR);
+
+        var result = await Execute("быстрый ремонт");
+
+        Assert.Equal(ExecutionOutcome.NotApplied, result.Outcome);
+        Assert.False(_game.Pit.FastRepair);
+    }
+
+    [Fact]
+    public async Task Flashing_fast_repair_with_tires_is_partial()
+    {
+        _game.Flashing.Add(PitCommand.FR);
+
+        var result = await Execute("меняй шины и быстрый ремонт");
+
+        Assert.Equal(ExecutionOutcome.PartiallyApplied, result.Outcome);
+        Assert.Equal(IntentCatalog.RepairFast, Assert.Single(result.Unconfirmed).Intent);
+    }
+
+    [Fact]
+    public async Task Confirmation_waits_for_the_state_to_hold()
+    {
+        var result = await Execute("протри стекло");
+
+        Assert.Equal(ExecutionOutcome.Applied, result.Outcome);
+        Assert.InRange(_time.Elapsed, _game.Delay + PitExecutor.SettleTime, _game.Delay + PitExecutor.SettleTime + TimeSpan.FromMilliseconds(40));
+    }
+
+    [Fact]
     public async Task Confirmed_just_before_the_timeout()
     {
-        _game.Delay = TimeSpan.FromMilliseconds(1400);
+        _game.Delay = TimeSpan.FromMilliseconds(1300);
 
         Assert.Equal(ExecutionOutcome.Applied, (await Execute("протри стекло")).Outcome);
         Assert.Empty(_log.Failures);

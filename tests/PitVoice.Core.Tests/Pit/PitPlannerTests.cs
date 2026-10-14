@@ -166,6 +166,30 @@ public class PitPlannerTests
         Assert.Equal(confirmed, step.IsConfirmed(state));
     }
 
+    [Theory]
+    [InlineData("залей двести литров", 96.0, true)]     // capped to the tank, as the game did in Test Drive
+    [InlineData("залей двести литров", 96.4, true)]     // float noise
+    [InlineData("залей двести литров", 38.0, false)]    // smaller amount left from before: not the command's effect
+    [InlineData("залей двести литров", 110.0, false)]
+    [InlineData("залей тридцать литров", 30.000002, true)]
+    [InlineData("залей тридцать литров", 20.0, false)]
+    public void Fuel_confirmation_with_known_tank_is_exact(string phrase, double amount, bool confirmed)
+    {
+        var step = PitPlanner.Plan(Parse("ru", phrase), PitServiceState.Empty, fuelCapacity: 96).Steps[0];
+
+        Assert.Equal(confirmed, step.IsConfirmed(new PitServiceState(PitServiceFlags.FuelFill, amount, 60)));
+        Assert.False(step.IsConfirmed(new PitServiceState(PitServiceFlags.None, amount, 60)));
+    }
+
+    [Fact]
+    public void Gallons_with_known_tank()
+    {
+        var step = PitPlanner.Plan(Parse("en", "add ten gallons"), PitServiceState.Empty, fuelCapacity: 96).Steps[0];
+
+        Assert.True(step.IsConfirmed(new PitServiceState(PitServiceFlags.FuelFill, 38, 60)));
+        Assert.False(step.IsConfirmed(new PitServiceState(PitServiceFlags.FuelFill, 37, 60)));
+    }
+
     // --- Other commands
 
     [Fact]

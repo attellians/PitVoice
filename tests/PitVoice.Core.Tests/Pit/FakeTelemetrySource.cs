@@ -11,6 +11,7 @@ internal sealed class FakeTelemetrySource : ITelemetrySource
     private readonly TimeProvider _time;
     private readonly long _start;
     private readonly List<(TimeSpan At, PitCommand Command, int Parameter)> _pending = [];
+    private readonly Dictionary<TimeSpan, PitServiceFlags> _reverts = [];
     private int _tick;
 
     public FakeTelemetrySource(TimeProvider time)
@@ -29,7 +30,18 @@ internal sealed class FakeTelemetrySource : ITelemetrySource
     /// <summary>Commands the game accepts but never applies (e.g. FR without fast repairs left).</summary>
     public HashSet<PitCommand> Ignored { get; } = [];
 
-    /// <summary>When set, a fuel request above this many liters is reduced to it.</summary>
+    /// <summary>
+    /// Commands the game shows for <see cref="FlashDuration"/> and then drops, as iRacing does with fast repair when none
+    /// are left.
+    /// </summary>
+    public HashSet<PitCommand> Flashing { get; } = [];
+
+    public TimeSpan FlashDuration { get; set; } = TimeSpan.FromMilliseconds(31);
+
+    /// <summary>
+    /// Usable tank in liters. When set, the snapshot reports it and a fuel request above it is reduced to it, as
+    /// iRacing does (the request is capped to the tank, not to the free volume).
+    /// </summary>
     public double? TankCapacity { get; set; }
 
     /// <summary>When set, the game closes at this point of virtual time.</summary>
@@ -57,15 +69,31 @@ internal sealed class FakeTelemetrySource : ITelemetrySource
 
                 while (_pending.Count > 0 && _pending[0].At <= now)
                 {
-                    var (_, command, parameter) = _pending[0];
+                    var (at, command, parameter) = _pending[0];
                     _pending.RemoveAt(0);
-                    if (!Ignored.Contains(command))
+                    if (_reverts.Remove(at, out var flags))
                     {
-                        Pit = Apply(Pit, command, parameter);
+                        Pit = Pit with { Flags = flags };
+                        continue;
                     }
+
+                    if (Ignored.Contains(command))
+                    {
+                        continue;
+                    }
+
+                    if (Flashing.Contains(command))
+                    {
+                        var revertAt = at + FlashDuration;
+                        _reverts[revertAt] = Pit.Flags;
+                        var index = _pending.FindLastIndex(p => p.At <= revertAt) + 1;
+                        _pending.Insert(index, (revertAt, command, parameter));
+                    }
+
+                    Pit = Apply(Pit, command, parameter);
                 }
 
-                return new TelemetrySnapshot(State, Pit, ++_tick);
+                return new TelemetrySnapshot(State, Pit, ++_tick) { FuelCapacity = TankCapacity };
             }
         }
     }

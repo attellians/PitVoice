@@ -29,6 +29,56 @@ public class MemoryLayoutTests
         Assert.Equal(0, raw.PitSvFlags);
     }
 
+    // Lines as the game writes them (Test Drive, 2026-10-14), with a driver block around them.
+    private const string SessionYaml = """
+        ---
+        WeekendInfo:
+         TrackName: some track
+        DriverInfo:
+         DriverCarIdx: 0
+         DriverCarFuelKgPerLtr: 0.750
+         DriverCarFuelMaxLtr: 96.000
+         DriverCarMaxFuelPct: 1.000
+         Drivers:
+         - CarIdx: 0
+           UserName: Jörg Müller
+           CarClassMaxFuelPct: 1.000 %
+        ...
+        """;
+
+    [Fact]
+    public void Fuel_capacity_from_session_info()
+    {
+        var image = new MemoryImage().SessionInfo(SessionYaml, update: 28);
+
+        Assert.True(IRacingMemoryLayout.TryReadFuelCapacity(image.Bytes, out var liters));
+        Assert.Equal(96.0, liters, 3);
+        Assert.Equal(28, IRacingMemoryLayout.SessionInfoUpdate(image.Bytes));
+    }
+
+    [Theory]
+    [InlineData("0.900", 86.4)]   // restricted car, written as a fraction
+    [InlineData("90.0 %", 86.4)]  // the same written as a percentage
+    [InlineData("0.000", 96.0)]   // nonsense restriction is ignored
+    public void Fuel_capacity_applies_the_max_fuel_restriction(string pct, double expected)
+    {
+        var image = new MemoryImage().SessionInfo(SessionYaml.Replace("DriverCarMaxFuelPct: 1.000", $"DriverCarMaxFuelPct: {pct}", StringComparison.Ordinal));
+
+        Assert.True(IRacingMemoryLayout.TryReadFuelCapacity(image.Bytes, out var liters));
+        Assert.Equal(expected, liters, 3);
+    }
+
+    [Theory]
+    [InlineData(" DriverCarFuelMaxLtr: 96.000", "")]
+    [InlineData(" DriverCarFuelMaxLtr: 96.000", " DriverCarFuelMaxLtr: n/a")]
+    public void Fuel_capacity_missing_or_unreadable(string line, string replacement)
+    {
+        var image = new MemoryImage().SessionInfo(SessionYaml.Replace(line, replacement, StringComparison.Ordinal));
+
+        Assert.False(IRacingMemoryLayout.TryReadFuelCapacity(image.Bytes, out _));
+        Assert.False(IRacingMemoryLayout.TryReadFuelCapacity(new MemoryImage().Bytes, out _));
+    }
+
     [Fact]
     public void Too_small_image_is_unreadable()
     {
@@ -86,6 +136,10 @@ public class ConnectionStateTrackerTests
         Assert.Equal(20, snapshot.Pit.FuelToAdd);
         Assert.Equal(33, snapshot.Pit.FuelLevel);
         Assert.Equal(1, snapshot.Tick);
+        Assert.Null(snapshot.FuelCapacity);
+
+        var withTank = new ConnectionStateTracker().Evaluate(Raw(1) with { FuelCapacity = 96 }, TimeSpan.Zero);
+        Assert.Equal(96, withTank.FuelCapacity);
     }
 
     [Fact]

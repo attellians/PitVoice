@@ -1,4 +1,5 @@
 using System.Buffers.Binary;
+using System.Globalization;
 using System.Text;
 
 namespace PitVoice.IRacing.Telemetry;
@@ -10,7 +11,8 @@ namespace PitVoice.IRacing.Telemetry;
 /// <param name="PitSvFlags">Black box selection bits.</param>
 /// <param name="PitSvFuel">Fuel to add, liters.</param>
 /// <param name="FuelLevel">Fuel in the tank, liters.</param>
-public readonly record struct RawTelemetry(int Status, int Tick, bool IsOnTrack, int PitSvFlags, float PitSvFuel, float FuelLevel)
+/// <param name="FuelCapacity">Usable tank of the car from session info, liters; filled in by the telemetry source.</param>
+public readonly record struct RawTelemetry(int Status, int Tick, bool IsOnTrack, int PitSvFlags, float PitSvFuel, float FuelLevel, double? FuelCapacity = null)
 {
     public bool IsConnected => (Status & IRacingMemoryLayout.StatusConnected) != 0;
 }
@@ -25,6 +27,9 @@ public static class IRacingMemoryLayout
     public const int StatusConnected = 1;
 
     internal const int StatusOffset = 4;
+    internal const int SessionInfoUpdateOffset = 12;
+    internal const int SessionInfoLenOffset = 16;
+    internal const int SessionInfoOffsetOffset = 20;
     internal const int NumVarsOffset = 24;
     internal const int VarHeaderOffsetOffset = 28;
     internal const int NumBufOffset = 32;
@@ -127,6 +132,81 @@ public static class IRacingMemoryLayout
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// The session info update counter (<c>sessionInfoUpdate</c>); it changes whenever the session YAML is rewritten.
+    /// </summary>
+    public static int SessionInfoUpdate(ReadOnlySpan<byte> memory) =>
+        memory.Length < HeaderSize ? -1 : ReadInt(memory, SessionInfoUpdateOffset);
+
+    /// <summary>
+    /// Usable fuel tank of the driver's car in liters: <c>DriverCarFuelMaxLtr × DriverCarMaxFuelPct</c> from the session
+    /// YAML. Only these two lines are read; nothing else of the session (names, results) is decoded.
+    /// </summary>
+    public static bool TryReadFuelCapacity(ReadOnlySpan<byte> memory, out double liters)
+    {
+        liters = 0;
+        if (memory.Length < HeaderSize)
+        {
+            return false;
+        }
+
+        var length = ReadInt(memory, SessionInfoLenOffset);
+        var offset = ReadInt(memory, SessionInfoOffsetOffset);
+        if (length <= 0 || offset < 0 || (long)offset + length > memory.Length)
+        {
+            return false;
+        }
+
+        var yaml = memory.Slice(offset, length);
+        var end = yaml.IndexOf((byte)0);
+        if (end >= 0)
+        {
+            yaml = yaml[..end];
+        }
+
+        if (!TryReadNumber(yaml, " DriverCarFuelMaxLtr:"u8, out var maxLiters, out _) || maxLiters <= 0)
+        {
+            return false;
+        }
+
+        var fraction = 1.0;
+        if (TryReadNumber(yaml, " DriverCarMaxFuelPct:"u8, out var pct, out var percentSign))
+        {
+            fraction = percentSign ? pct / 100 : pct;
+        }
+
+        if (fraction <= 0 || fraction > 1)
+        {
+            fraction = 1.0;
+        }
+
+        liters = maxLiters * fraction;
+        return true;
+    }
+
+    /// <summary>Reads the number after <paramref name="key"/> up to the end of the line; notes a trailing <c>%</c>.</summary>
+    private static bool TryReadNumber(ReadOnlySpan<byte> yaml, ReadOnlySpan<byte> key, out double value, out bool percent)
+    {
+        value = 0;
+        percent = false;
+        var at = yaml.IndexOf(key);
+        if (at < 0)
+        {
+            return false;
+        }
+
+        var rest = yaml[(at + key.Length)..];
+        var newline = rest.IndexOf((byte)'\n');
+        var text = Encoding.ASCII.GetString(newline < 0 ? rest : rest[..newline]).Trim();
+        if (text.EndsWith('%'))
+        {
+            percent = true;
+            text = text[..^1].TrimEnd();
+        }
+
+        return double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out value);
     }
 
     private readonly record struct Variable(VarType Type, int Offset);

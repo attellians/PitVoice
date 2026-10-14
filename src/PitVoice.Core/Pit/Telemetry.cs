@@ -20,6 +20,12 @@ public enum ConnectionState
 public sealed record TelemetrySnapshot(ConnectionState State, PitServiceState? Pit, int Tick)
 {
     public static TelemetrySnapshot NotRunning { get; } = new(ConnectionState.NotRunning, null, 0);
+
+    /// <summary>
+    /// Usable fuel tank of the car in liters (session info), or <c>null</c> when unknown. The game caps a fuel request
+    /// to this amount.
+    /// </summary>
+    public double? FuelCapacity { get; init; }
 }
 
 /// <summary>Source of telemetry snapshots: the game, a fake or a replayed recording. Polled by the caller.</summary>

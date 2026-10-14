@@ -91,8 +91,21 @@ public class RecordingTests
     {
         var line = TelemetryRecordFormat.ToLine(new RecordedSnapshot(TimeSpan.FromMilliseconds(42), TelemetrySnapshot.NotRunning));
 
-        Assert.Equal("""{"t":42,"state":"NotRunning","tick":0,"pitSvFlags":null,"pitSvFuel":null,"fuelLevel":null}""", line);
+        Assert.Equal("""{"t":42,"state":"NotRunning","tick":0,"pitSvFlags":null,"pitSvFuel":null,"fuelLevel":null,"fuelCapacity":null}""", line);
         Assert.Equal(TelemetrySnapshot.NotRunning, TelemetryRecordFormat.FromLine(line, "x", 1).Snapshot);
+    }
+
+    [Fact]
+    public void Tank_capacity_round_trips_and_old_recordings_without_it_still_read()
+    {
+        var snapshot = new TelemetrySnapshot(ConnectionState.InCar, new PitServiceState(PitServiceFlags.FuelFill, 96, 61.5), 7) { FuelCapacity = 96 };
+        var line = TelemetryRecordFormat.ToLine(new RecordedSnapshot(TimeSpan.FromMilliseconds(5), snapshot));
+
+        Assert.Equal(snapshot, TelemetryRecordFormat.FromLine(line, "x", 1).Snapshot);
+
+        var old = TelemetryRecordFormat.FromLine("""{"t":5,"state":"InCar","tick":7,"pitSvFlags":16,"pitSvFuel":96,"fuelLevel":61.5}""", "old", 1);
+        Assert.Null(old.Snapshot.FuelCapacity);
+        Assert.Equal(96, old.Snapshot.Pit!.FuelToAdd);
     }
 
     [Fact]

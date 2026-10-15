@@ -16,6 +16,7 @@
     <ProjectReference Include="..\..\src\PitVoice.IRacing\PitVoice.IRacing.csproj" />
     <ProjectReference Include="..\..\src\PitVoice.Models\PitVoice.Models.csproj" />
     <ProjectReference Include="..\..\src\PitVoice.Speech\PitVoice.Speech.csproj" />
+    <ProjectReference Include="..\..\src\PitVoice.Input\PitVoice.Input.csproj" />
   </ItemGroup>
 
   <ItemGroup>

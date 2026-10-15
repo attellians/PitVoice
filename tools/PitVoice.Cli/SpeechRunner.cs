@@ -5,9 +5,11 @@ using PitVoice.Core.Audio;
 using PitVoice.Core.Languages;
 using PitVoice.Core.Parsing;
 using PitVoice.Core.Responses;
+using PitVoice.Input;
 using PitVoice.Models;
 using PitVoice.Speech.Asr;
 using PitVoice.Speech.Audio;
+using PitVoice.Speech.Cues;
 
 namespace PitVoice.Cli;
 
@@ -26,19 +28,46 @@ internal static class SpeechRunner
         }
 
         using var capture = new NAudioCapture();
-        var devices = capture.GetInputDevices();
+        var microphones = capture.GetInputDevices();
+        Console.WriteLine("Microphones:");
+        PrintDevices(microphones, "no microphones found");
+
+        using var cues = new NAudioCuePlayer(null, 0);
+        Console.WriteLine();
+        Console.WriteLine("Output devices (cues):");
+        PrintDevices(cues.GetOutputDevices(), "no output devices found");
+
+        Console.WriteLine();
+        Console.WriteLine("Game devices (PTT):");
+        var gameDevices = SdlJoystickSource.ListDevices(out var error);
+        if (error is not null)
+        {
+            Console.WriteLine($"  {error}");
+        }
+        else if (gameDevices.Count == 0)
+        {
+            Console.WriteLine("  none connected");
+        }
+
+        foreach (var device in gameDevices)
+        {
+            Console.WriteLine($"  {device.Name}  [{device.Guid}]");
+        }
+
+        return microphones.Count == 0 ? 1 : 0;
+    }
+
+    private static void PrintDevices(IReadOnlyList<AudioDevice> devices, string none)
+    {
         if (devices.Count == 0)
         {
-            Console.WriteLine("No microphones found.");
-            return 1;
+            Console.WriteLine($"  {none}");
         }
 
         foreach (var device in devices)
         {
-            Console.WriteLine(device.IsDefault ? $"{device.Name}  (default)" : device.Name);
+            Console.WriteLine(device.IsDefault ? $"  {device.Name}  (default)" : $"  {device.Name}");
         }
-
-        return 0;
     }
 
     public static async Task<int> RecognizeAsync(SpeechSettings settings, string wavPath, CancellationToken cancellationToken)

@@ -1,15 +1,20 @@
 # PitVoice
 
-PitVoice is a free, open-source Windows tray utility that gives iRacing drivers voice control over pit commands. Hold a wheel button, say "change tires and add thirty liters", release: the phrase is recognized locally, parsed into deterministic pit commands, sent to iRacing through the official SDK and confirmed by voice. Russian and English are supported from the start; a new language is a single YAML pack plus models. No cloud, no telemetry.
+PitVoice is a free, open-source Windows tray utility that gives iRacing drivers voice control over pit commands. Hold a wheel button, say "change tires and add thirty liters", release: the phrase is recognized locally, parsed into deterministic pit commands, sent to iRacing through the official SDK and confirmed by a short sound cue. Russian and English are supported from the start; a new language is a single YAML pack plus models. No cloud, no telemetry.
 
 ## Repository layout
 
 ```
-src/PitVoice.Core/                 intents, language packs, numbers, normalization, parsing, ASR/audio interfaces (no platform deps)
+src/PitVoice.Core/                 intents, language packs, numbers, normalization, parsing, PTT state machine, pipeline,
+                                   event bus, settings, ASR/audio/cue interfaces (no platform deps)
 src/PitVoice.Models/               model manifest, download with sha256 check, per-user model store
-src/PitVoice.Speech/               microphone capture (NAudio), WAV loading, resampling, Vosk recognizer
-tools/PitVoice.Cli/                pitvoice-cli: parse, validate, models, devices, recognize, listen
+src/PitVoice.Speech/               microphone capture and cue playback (NAudio), WAV loading, resampling, Vosk recognizer
+src/PitVoice.Input/                PTT sources: game device buttons (SDL3) and a low-level keyboard hook
+src/PitVoice.IRacing/              iRacing SDK: telemetry, pit commands, telemetry recording and replay
+tools/PitVoice.Cli/                pitvoice-cli: run, ptt, cues, parse, validate, models, devices, recognize, listen, status, send, record
+tools/cue-gen/                     generates the three built-in cue sounds
 tests/PitVoice.Core.Tests/         unit tests for the core
+tests/PitVoice.Input.Tests/        language detection, smoke tests of the PTT sources (Windows)
 tests/PitVoice.LanguagePacks.Tests/ data-driven tests from the `tests:` section of every language pack
 tests/PitVoice.Models.Tests/       manifest, license allowlist, store and downloader tests
 tests/PitVoice.Speech.Tests/       audio conversion, capture logic, grammar, Vosk engine, recorded sample set
@@ -69,6 +74,63 @@ Tests that need a real model are skipped when it is not installed and say which 
 - `model directory corrupted`: an interrupted copy or a damaged disk. Run `models delete <id>` and download again.
 - `speech recognition library failed to load`: the native `libvosk.dll` next to the executable could not be loaded. Install the latest [Microsoft Visual C++ Redistributable (x64)](https://learn.microsoft.com/cpp/windows/latest-supported-vc-redist), make sure `libvosk.dll`, `libgcc_s_seh-1.dll`, `libstdc++-6.dll` and `libwinpthread-1.dll` were not removed by an antivirus, and use a 64-bit Windows.
 - `no microphone`: Windows sees no active input device. Check *Settings → System → Sound → Input* and the microphone privacy setting for desktop apps.
+
+## Push-to-talk: from the wheel button to the game
+
+`run` is the whole pipeline without a window: PTT button → microphone → recognition → parsing → iRacing → sound cue. It takes everything from the settings file, so set it up once:
+
+```bash
+dotnet run --project tools/PitVoice.Cli -- models download vosk-model-small-ru-0.22   # the model of your language
+dotnet run --project tools/PitVoice.Cli -- devices                                   # microphones, output devices, game devices
+dotnet run --project tools/PitVoice.Cli -- ptt bind                                  # press the wheel button (or a key) to use as PTT
+dotnet run --project tools/PitVoice.Cli -- cues play                                 # hear the three cues on the output device
+dotnet run --project tools/PitVoice.Cli -- run                                       # Ctrl+C stops
+```
+
+`run` prints the language, the PTT button, the devices and the game state, then one line per pipeline event: recording, recognized words with confidence, parsed or rejected commands, the outcome in the game, the cue with the time from the end of the recording, and the text response of the language pack. Without the model of the language it exits with the `models download` command to run; without a PTT button it says to run `ptt bind`.
+
+The PTT works while iRacing has the focus. In **hold** mode (default) the recording lasts while the button is held; presses shorter than 250 ms are ignored. In **toggle** mode the first press starts and the second stops (a second press within 300 ms is ignored as a bounce); without a second press the recording stops by itself after 8 s. A press while the previous phrase is still being processed cuts its result cue and starts a new recording; commands already sent to the game stay. A wheel button is stored by the device model id and button number, so it survives reconnecting the wheel and a different device order. `ptt watch` shows raw presses of every game device and key, also while another window has the focus.
+
+If iRacing runs as administrator and PitVoice does not, Windows blocks pit commands and hides keys pressed in the game window from the keyboard hook; `run` warns about it. Start both normally.
+
+### Cues
+
+There is no voice. Three short built-in sounds tell what happened:
+
+| Cue | When |
+| --- | --- |
+| start (short rising tone) | the recording started |
+| success (two rising tones) | the phrase was applied in the game, or it was "cancel" |
+| error (two low falling tones) | anything else: not understood, game not running, not in the car, not (fully) applied, not supported yet, a failed stage |
+
+The reason of an error is in the `run` output. `cues play [start|success|error|all] [--volume 0-100] [--device <name>]` plays them without the game or a microphone. The sounds are generated by `tools/cue-gen` (`dotnet run --project tools/cue-gen` rewrites `src/PitVoice.Speech/Cues/*.wav` byte for byte).
+
+### Settings file
+
+`%AppData%\PitVoice\settings.json`; `--settings <path>` or the `PITVOICE_SETTINGS` environment variable point elsewhere. `ptt bind` writes it; everything else is edited by hand and read when `run` starts:
+
+```json
+{
+  "version": 1,
+  "language": "ru",
+  "ptt": {
+    "binding": { "kind": "joystick", "guid": "0300bee1703600000508000000000000", "button": 5, "name": "SIMAGIC GT Neo" },
+    "mode": "hold"
+  },
+  "microphone": null,
+  "outputDevice": null,
+  "cueVolume": 100,
+  "defaultUnit": "liters",
+  "threshold": 0.6
+}
+```
+
+- `language`: `ru` or `en`; by default the language of Windows.
+- `ptt.binding`: a game device button (`kind: joystick`, `guid`, `button` from 1) or a key (`kind: keyboard`, `vk` virtual-key code); `null` until assigned. `ptt.mode`: `hold` or `toggle`.
+- `microphone`, `outputDevice`: device names as `devices` prints them; `null` is the system default. A missing device falls back to the default with a warning.
+- `cueVolume`: 0 to 100; 0 mutes the cues. `defaultUnit`: `liters` or `gallons`. `threshold`: confidence threshold 0 to 1.
+
+A missing field gets its default; an invalid value gets its default (the volume is clamped to 0..100) with a warning. A file that is not valid JSON is renamed to `settings.json.bak` and the defaults are used.
 
 ## Versioning
 

@@ -116,7 +116,7 @@ internal static class GameRunner
         return sb.ToString();
     }
 
-    private static string Describe(ConnectionState state) => state switch
+    internal static string Describe(ConnectionState state) => state switch
     {
         ConnectionState.NotRunning => "game not running",
         ConnectionState.Connected => "game running, driver not in the car",
@@ -124,7 +124,7 @@ internal static class GameRunner
         _ => state.ToString(),
     };
 
-    private static string Describe(ExecutionOutcome outcome) => outcome switch
+    internal static string Describe(ExecutionOutcome outcome) => outcome switch
     {
         ExecutionOutcome.Applied => "applied",
         ExecutionOutcome.PartiallyApplied => "partially applied",
@@ -136,7 +136,7 @@ internal static class GameRunner
     };
 
     /// <summary>The real game on Windows; elsewhere a game that is never running.</summary>
-    private static class Game
+    internal static class Game
     {
         public static TelemetryHandle OpenTelemetry()
         {
@@ -158,7 +158,7 @@ internal static class GameRunner
                 : ConsoleExecutionLog.Instance;
     }
 
-    private sealed class TelemetryHandle(ITelemetrySource source, IDisposable? owner) : IDisposable
+    internal sealed class TelemetryHandle(ITelemetrySource source, IDisposable? owner) : IDisposable
     {
         public ITelemetrySource Source { get; } = source;
 

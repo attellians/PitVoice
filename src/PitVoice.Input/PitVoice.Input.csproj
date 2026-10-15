@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>PitVoice.Input</RootNamespace>
+    <!-- The SDL3 bindings expose raw pointers; the keyboard hook uses LibraryImport marshalling. -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Description>Push-to-talk sources: game device buttons through SDL3 with background events and a low-level keyboard hook.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ppy.SDL3-CS" Version="2026.722.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\PitVoice.Core\PitVoice.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="PitVoice.Input.Tests" />
+  </ItemGroup>
+
+</Project>

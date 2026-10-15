@@ -4,6 +4,7 @@ using System.Text;
 using PitVoice.Cli;
 using PitVoice.Core;
 using PitVoice.Core.Parsing;
+using PitVoice.Core.Settings;
 using PitVoice.Models;
 using PitVoice.Speech.Asr;
 
@@ -100,7 +101,7 @@ var modelsCommand = new Command("models", "Manage speech models.")
     modelsVerifyCommand,
 };
 
-var devicesCommand = new Command("devices", "List microphones.");
+var devicesCommand = new Command("devices", "List microphones, output devices for the cues and game devices for PTT.");
 devicesCommand.SetAction(_ => SpeechRunner.Devices());
 
 var grammarOption = new Option<GrammarMode>("--grammar")
@@ -190,8 +191,62 @@ var outOption = new Option<string>("--out", "-o")
 var recordCommand = new Command("record", "Record connection and black box telemetry to a file for replay tests, until Ctrl+C.") { outOption };
 recordCommand.SetAction((result, cancellationToken) => GameRunner.RecordAsync(result.GetValue(outOption)!, cancellationToken));
 
+var settingsOption = new Option<string?>("--settings")
+{
+    Description = $"Settings file (default: ${JsonSettingsStore.EnvironmentVariable} or {JsonSettingsStore.DefaultPath}).",
+};
+
+var runCommand = new Command("run", "Run the whole pipeline with the settings file: PTT, microphone, recognition, iRacing and cues. Ctrl+C stops.")
+{
+    settingsOption,
+    modelsDirOption,
+    dirOption,
+};
+runCommand.SetAction((result, cancellationToken) => HostRunner.RunAsync(
+    result.GetValue(settingsOption),
+    Packs.ResolveDirectory(result.GetValue(dirOption)),
+    new ModelStore(result.GetValue(modelsDirOption)),
+    cancellationToken));
+
+var pttBindCommand = new Command("bind", "Assign the PTT: press a game device button or a key (15 s, Esc cancels); saved to the settings file.") { settingsOption };
+pttBindCommand.SetAction((result, cancellationToken) => PttRunner.BindAsync(result.GetValue(settingsOption), cancellationToken));
+
+var pttWatchCommand = new Command("watch", "Show raw presses of every game device and key, also while another window has the focus, until Ctrl+C.");
+pttWatchCommand.SetAction((_, cancellationToken) => PttRunner.WatchAsync(cancellationToken));
+
+var pttCommand = new Command("ptt", "Push-to-talk button.") { pttBindCommand, pttWatchCommand };
+
+var cueArgument = new Argument<string>("cue")
+{
+    Description = "Cue to play.",
+    DefaultValueFactory = _ => CuesRunner.All,
+};
+cueArgument.AcceptOnlyFromAmong([.. CuesRunner.Names]);
+
+var volumeOption = new Option<int?>("--volume") { Description = "Volume 0-100 (default: from the settings file)." };
+var outputDeviceOption = new Option<string?>("--device") { Description = "Output device name as shown by 'devices' (default: from the settings file)." };
+
+var cuesPlayCommand = new Command("play", "Play a cue or all three to check the output device and volume.")
+{
+    cueArgument,
+    volumeOption,
+    outputDeviceOption,
+    settingsOption,
+};
+cuesPlayCommand.SetAction((result, cancellationToken) => CuesRunner.PlayAsync(
+    result.GetValue(cueArgument)!,
+    result.GetValue(volumeOption),
+    result.GetValue(outputDeviceOption),
+    result.GetValue(settingsOption),
+    cancellationToken));
+
+var cuesCommand = new Command("cues", "Built-in sound cues.") { cuesPlayCommand };
+
 var root = new RootCommand("PitVoice command-line tool.")
 {
+    runCommand,
+    pttCommand,
+    cuesCommand,
     parseCommand,
     statusCommand,
     sendCommand,

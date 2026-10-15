@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>cue-gen</AssemblyName>
+    <RootNamespace>PitVoice.CueGen</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <Description>Generates the three built-in cue sounds (start, success, error) as WAV files. Output is deterministic.</Description>
+  </PropertyGroup>
+
+</Project>

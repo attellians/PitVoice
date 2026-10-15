@@ -51,8 +51,8 @@ Both PitVoice and iRacing run **without** administrator rights unless an item sa
 | # | Setup | Action | Expected | Result |
 |---|---|---|---|---|
 | 2.1 | no wheel selected | `send "меняй переднее левое"` | only LF selected, outcome `applied` | ok |
-| 2.2 | only LF selected | `send "меняй левую сторону"` | LF and LR | not checked |
-| 2.3 | no wheel selected | `send "меняй левые и меняй передние"` | LF, LR and RF | not checked in the game; the phrase without the second verb is rejected (see design.md) |
+| 2.2 | only LF selected | `send "меняй левую сторону"` | LF and LR | ok: LF → LF+LR (recording iracing-check-4) |
+| 2.3 | no wheel selected | `send "меняй левые и меняй передние"` | LF, LR and RF | ok with «меняй левые и меняй передние»: LF+RF+LR; the phrase without the second verb is rejected (see design.md) |
 | 2.4 | LF pressure set to 170 kPa by hand | `send "меняй переднее левое"` | LF selected, pressure still 170 kPa | ok: pressures stayed 152 kPa |
 | 2.5 | no wheel selected | `send "меняй шины"` | all four | ok |
 | 2.6 | no wheel selected | `send --lang en "front left tire"` | only LF | ok |
@@ -87,9 +87,9 @@ Both PitVoice and iRacing run **without** administrator rights unless an item sa
 |---|---|---|---|---|
 | 5.1 | nothing selected | `send "протри стекло"` | tear-off on | ok |
 | 5.2 | tear-off on | `send "стекло не трогай"` | tear-off off | ok |
-| 5.3 | fast repair available | `send "быстрый ремонт"` | fast repair on | not checked: no fast repairs in this session |
-| 5.4 | fast repair on | `send "без ремонта"` | fast repair off | not checked |
-| 5.5 | nothing selected | `send "протри стекло и быстрый ремонт"` | both on, sent in this order | not checked as one phrase (WS ok in 5.1; no fast repairs left) |
+| 5.3 | fast repair available | `send "быстрый ремонт"` | fast repair on | skipped: Test Drive has no fast repairs; covered by tests on the fake only |
+| 5.4 | fast repair on | `send "без ремонта"` | fast repair off | skipped: needs fast repair on, see 5.3 |
+| 5.5 | nothing selected | `send "протри стекло и быстрый ремонт"` | both on, sent in this order | skipped as one phrase: no fast repairs (WS ok in 5.1) |
 | 5.6 | tires, fuel and tear-off selected | `send "сбрось всё"` | nothing selected | ok |
 | 5.7 | no fast repairs left (a session with 0 fast repairs, or after using them) | `send "быстрый ремонт"` | outcome `not applied`, response «команда не применилась», log line with phrase, sent, expected and actual | mismatch → fixed: game flashes the FR flag for ~31 ms; confirmation now requires the state to hold 100 ms |
 | 5.8 | fast repairs left = 0 | `send "меняй шины и быстрый ремонт"` | outcome `partially applied`, unconfirmed `repair.fast`, tires stay selected, FR sent once | ok |
@@ -102,8 +102,8 @@ Both PitVoice and iRacing run **without** administrator rights unless an item sa
 
 | # | Setup | Action | Expected | Result |
 |---|---|---|---|---|
-| 6.1 | driver in the car | run `send "меняй шины"` and close iRacing within a second | outcome `not applied` | not checked (covered by replay of leaving the car) |
-| 6.2 | iRacing started **as administrator**, PitVoice not | `send "меняй шины"` | outcome `not applied`; a `warn:` line with the hint about different rights; no elevation prompt | not checked |
+| 6.1 | driver in the car | run `send "меняй шины"` and close iRacing within a second | outcome `not applied` | ok: «быстрый ремонт» repeated while leaving to the garage; the send in flight gave `not applied` with `actual [no data (connection lost)]`, later ones `not in the car` (recording iracing-check-5) |
+| 6.2 | iRacing started **as administrator**, PitVoice not | `send "меняй шины"` | outcome `not applied`; a `warn:` line with the hint about different rights; no elevation prompt | not reproducible: with iRacing UI run as administrator the sim still runs non-elevated (WindowsGameElevationProbe: NotElevated, sim restarted 18:33:39); `send` applied. Hint covered by tests with a substituted probe |
 | 6.3 | both without administrator rights | `status` | state and black box are read | ok |
 
 ## Findings of the run on 2026-10-14

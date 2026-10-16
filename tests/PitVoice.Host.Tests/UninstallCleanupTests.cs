@@ -18,7 +18,7 @@ public sealed class UninstallCleanupTests : IDisposable
         Write(Local, "logs", "pitvoice-20261016.log");
         Write(Local, "logs", "crash-20261016-120000.log");
         Write(Local, "diagnostics", "pitvoice-diagnostics-20261016-120000.zip");
-        Write(Local, "current", "PitVoice.exe"); // the installer's own files; it removes them itself
+        Write(_root, "Local", "PitVoiceApp", "current", "PitVoice.exe"); // the program; the installer removes it itself
     }
 
     private string Roaming { get; }
@@ -40,7 +40,8 @@ public sealed class UninstallCleanupTests : IDisposable
 
         Assert.Empty(failures);
         Assert.False(Directory.Exists(Roaming));
-        Assert.Equal([Path.Combine(Local, "current")], Directory.GetDirectories(Local));
+        Assert.False(Directory.Exists(Local));
+        Assert.True(File.Exists(Path.Combine(_root, "Local", "PitVoiceApp", "current", "PitVoice.exe")));
     }
 
     [Fact]
@@ -100,7 +101,7 @@ public sealed class UninstallCleanupTests : IDisposable
         var local = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PitVoice");
 
         Assert.Equal(
-            [roaming, Path.Combine(local, "models"), Path.Combine(local, "logs"), Path.Combine(local, "diagnostics")],
+            [roaming, local],
             UninstallCleanup.Default.Directories);
     }
 

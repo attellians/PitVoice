@@ -96,11 +96,26 @@ jobs:
           git tag -l --format='%(contents)' "$GITHUB_REF_NAME" > release-notes.md
           cat release-notes.md
 
+      # The package id is the install directory, %LocalAppData%\PitVoiceApp. It must differ from the data directory
+      # %LocalAppData%\PitVoice: the installer treats a non-empty directory as an installation and its "Repair" deletes
+      # it whole, models included. The title is what the user sees: shortcuts and "Installed apps" say "PitVoice".
       - name: Pack
         run: >
-          vpk pack --packId PitVoice --packVersion $env:VERSION --runtime win-x64 --packDir publish --mainExe PitVoice.exe
+          vpk pack --packId PitVoiceApp --packVersion $env:VERSION --runtime win-x64 --packDir publish --mainExe PitVoice.exe
           --packTitle PitVoice --packAuthors "Artem Lebedko" --icon src/PitVoice.App/Assets/pitvoice.ico
           --releaseNotes release-notes.md --outputDir Releases
+
+      # Users download PitVoice-win-Setup.exe; the portable zip is not supported, so it is not uploaded. Updates only
+      # use releases.win.json and the .nupkg files, which stay as they are.
+      - name: Name the installer
+        shell: pwsh
+        run: |
+          Move-Item Releases/PitVoiceApp-win-Setup.exe Releases/PitVoice-win-Setup.exe
+          Remove-Item Releases/PitVoiceApp-win-Portable.zip
+          $assets = (Get-Content Releases/assets.win.json -Raw | ConvertFrom-Json) | Where-Object Type -ne 'Portable'
+          foreach ($asset in $assets) { if ($asset.Type -eq 'Installer') { $asset.RelativeFileName = 'PitVoice-win-Setup.exe' } }
+          ConvertTo-Json @($assets) -Compress | Set-Content Releases/assets.win.json -Encoding utf8NoBOM
+          Get-Content Releases/assets.win.json
 
       - name: Installer size
         shell: bash

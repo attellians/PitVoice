@@ -5,13 +5,13 @@ PitVoice is a free, open-source Windows tray utility that gives iRacing drivers 
 ## Install
 
 1. Download `PitVoice-win-Setup.exe` from the [latest release](https://github.com/attellians/PitVoice/releases/latest) (Windows 10/11 x64).
-2. Run it. It needs no administrator rights and nothing from the network: PitVoice and the .NET runtime it needs go into your profile (`%LocalAppData%\PitVoice`), shortcuts appear in the Start menu and on the desktop, and the app starts.
+2. Run it. It needs no administrator rights and nothing from the network: PitVoice and the .NET runtime it needs go into your profile (`%LocalAppData%\PitVoiceApp`; your models, logs and diagnostics live apart, in `%LocalAppData%\PitVoice`), shortcuts appear in the Start menu and on the desktop, and the app starts.
    The installer is not signed yet, so Windows SmartScreen may say "Windows protected your PC": click **More info → Run anyway**.
 3. First setup: the home page lists what is left. Download the speech model of your language on the "Models" page, assign the push-to-talk button in "Settings", and try a phrase on the "Check" page. The models are not in the installer; they are downloaded only when you ask for it.
 
 **Updates.** At start and once a day the app looks for a newer version in the [releases](https://github.com/attellians/PitVoice/releases) (turn it off in "Settings → Updates"; "About → Check for updates" works anyway). A new version shows a block on the home page; nothing is downloaded until you press **Update and restart**. Settings, models and phrase additions stay. No data about you is sent.
 
-**Uninstall.** "Settings → Apps → Installed apps → PitVoice → Uninstall" closes the app and removes everything: the program, the shortcuts, `%LocalAppData%\PitVoice` (models, logs, crash reports, diagnostics archives) and `%AppData%\PitVoice` (settings, phrase additions).
+**Uninstall.** "Settings → Apps → Installed apps → PitVoice → Uninstall" closes the app and removes everything: the program (`%LocalAppData%\PitVoiceApp`), the shortcuts, `%LocalAppData%\PitVoice` (models, logs, crash reports, diagnostics archives) and `%AppData%\PitVoice` (settings, phrase additions).
 
 **About the GCC runtime.** The speech recognizer (Vosk) for Windows is built with MinGW-w64, so it comes with `libstdc++-6.dll` and `libgcc_s_seh-1.dll`. They are under GPL-3.0 with the GCC Runtime Library Exception, which allows shipping them with programs under any license; PitVoice itself stays MIT. Every component and its license are in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
 
@@ -219,7 +219,7 @@ Regenerate and commit both files whenever a package of the app or of any project
 
 ## Releasing
 
-A release is one tag; GitHub Actions does the rest (`.github/workflows/release.yml`): it checks that the tag matches `VERSION` in the tagged commit and that the version is not released yet, runs the full CI, publishes the app and the CLI self-contained for win-x64, checks the notices, packs `PitVoice-win-Setup.exe` with the full and delta update packages (Velopack), fails if the installer is above 90 MB, and publishes the release.
+A release is one tag; GitHub Actions does the rest (`.github/workflows/release.yml`): it checks that the tag matches `VERSION` in the tagged commit and that the version is not released yet, runs the full CI, publishes the app and the CLI self-contained for win-x64, checks the notices, packs the installer with the full and delta update packages (Velopack, package id `PitVoiceApp`, so the program goes into `%LocalAppData%\PitVoiceApp` and never shares a directory with the data in `%LocalAppData%\PitVoice`), uploads it as `PitVoice-win-Setup.exe` without the portable zip, fails if the installer is above 90 MB, and publishes the release.
 
 1. Commit everything that goes into the release (the pre-commit hook bumps `VERSION`) and push the branch.
 2. Read the version of that commit: `git show HEAD:VERSION`.

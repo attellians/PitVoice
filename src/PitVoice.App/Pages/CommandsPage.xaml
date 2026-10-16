@@ -1,0 +1,75 @@
+<Page
+    x:Class="PitVoice.App.Pages.CommandsPage"
+    x:ClassModifier="internal"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:loc="clr-namespace:PitVoice.App.Localization"
+    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+    Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+        <StackPanel Margin="24,16,24,24">
+            <TextBlock Style="{StaticResource PageTitle}" Text="{loc:Tr NavCommands}" />
+
+            <ui:InfoBar
+                Margin="0,0,0,12"
+                IsClosable="False"
+                IsOpen="{Binding PackError, Converter={StaticResource NotEmpty}}"
+                Message="{Binding PackError}"
+                Severity="Error" />
+
+            <ui:Card Margin="0,0,0,12">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource SectionTitle}" Text="{loc:Tr AdditionsTitle}" />
+                    <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="{Binding AdditionsFile}" TextWrapping="Wrap" />
+                    <TextBlock Margin="0,4,0,0" Text="{Binding AdditionsState}" TextWrapping="Wrap" />
+                    <ItemsControl Margin="0,4,0,0" ItemsSource="{Binding AdditionIssues}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Foreground="{DynamicResource SystemFillColorCriticalBrush}" Text="{Binding}" TextWrapping="Wrap" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock Foreground="{DynamicResource SystemFillColorCautionBrush}" Text="{Binding MissingWords}" TextWrapping="Wrap" />
+                    <StackPanel Margin="0,8,0,0" Orientation="Horizontal">
+                        <ui:Button Command="{Binding OpenFileCommand}" Content="{loc:Tr OpenFileButton}" />
+                        <ui:Button Margin="8,0,0,0" Command="{Binding ReloadCommand}" Content="{loc:Tr ReloadButton}" />
+                    </StackPanel>
+                    <TextBlock Foreground="{DynamicResource SystemFillColorCriticalBrush}" Text="{Binding Message}" TextWrapping="Wrap" />
+                </StackPanel>
+            </ui:Card>
+
+            <ItemsControl ItemsSource="{Binding Groups}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel Margin="0,0,0,12">
+                            <TextBlock Style="{StaticResource SectionTitle}" Text="{Binding Name}" />
+                            <ItemsControl ItemsSource="{Binding Commands}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <ui:Card Margin="0,0,0,6" Padding="12,8">
+                                            <StackPanel>
+                                                <TextBlock FontWeight="SemiBold" Text="{Binding Name}" />
+                                                <ItemsControl ItemsSource="{Binding Phrases}">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <WrapPanel>
+                                                                <TextBlock Text="{Binding Text}" />
+                                                                <TextBlock
+                                                                    Margin="8,0,0,0"
+                                                                    Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}"
+                                                                    Text="{loc:Tr OwnPhrase}"
+                                                                    Visibility="{Binding IsOwn, Converter={StaticResource Visible}}" />
+                                                            </WrapPanel>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </StackPanel>
+                                        </ui:Card>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
+</Page>

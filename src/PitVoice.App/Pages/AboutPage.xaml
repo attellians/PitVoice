@@ -1,0 +1,66 @@
+<Page
+    x:Class="PitVoice.App.Pages.AboutPage"
+    x:ClassModifier="internal"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:loc="clr-namespace:PitVoice.App.Localization"
+    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+    Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+    x:Name="Root">
+        <StackPanel Margin="24,16,24,24">
+            <TextBlock Style="{StaticResource PageTitle}" Text="{loc:Tr NavAbout}" />
+
+            <ui:Card Margin="0,0,0,12">
+                <StackPanel>
+                    <TextBlock FontSize="18" FontWeight="SemiBold">
+                        <Run Text="PitVoice" />
+                        <Run Text="{Binding Version, Mode=OneTime}" />
+                    </TextBlock>
+                    <TextBlock Margin="0,6,0,0" Text="{loc:Tr ProjectLicense}" TextWrapping="Wrap" />
+                    <ui:HyperlinkButton
+                        Margin="-8,4,0,0"
+                        Command="{Binding OpenCommand}"
+                        CommandParameter="{Binding Repository, Mode=OneTime}"
+                        Content="{Binding Repository, Mode=OneTime}" />
+                    <StackPanel Margin="0,4,0,0" Visibility="{Binding CopyAddress, Converter={StaticResource NotEmptyVisible}}">
+                        <TextBlock Text="{loc:Tr BrowserFailed}" TextWrapping="Wrap" />
+                        <ui:TextBox IsReadOnly="True" Text="{Binding CopyAddress, Mode=OneWay}" />
+                    </StackPanel>
+                </StackPanel>
+            </ui:Card>
+
+            <TextBlock Style="{StaticResource SectionTitle}" Text="{loc:Tr ModelsLicenses}" />
+            <ItemsControl Margin="0,0,0,12" ItemsSource="{Binding Models, Mode=OneTime}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <WrapPanel Margin="0,2">
+                            <TextBlock Width="260" Text="{Binding Name}" />
+                            <TextBlock Width="120" Text="{Binding License}" />
+                            <ui:HyperlinkButton
+                                Padding="4,0"
+                                Command="{Binding DataContext.OpenCommand, ElementName=Root}"
+                                CommandParameter="{Binding Url}"
+                                Content="{Binding Url}" />
+                        </WrapPanel>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <TextBlock Style="{StaticResource SectionTitle}" Text="{loc:Tr ComponentsLicenses}" />
+            <ItemsControl ItemsSource="{Binding Components, Mode=OneTime}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <WrapPanel Margin="0,2">
+                            <TextBlock Width="260" Text="{Binding Name}" />
+                            <TextBlock Width="120" Text="{Binding License}" />
+                            <ui:HyperlinkButton
+                                Padding="4,0"
+                                Command="{Binding DataContext.OpenCommand, ElementName=Root}"
+                                CommandParameter="{Binding Url}"
+                                Content="{Binding Url}" />
+                        </WrapPanel>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
+</Page>

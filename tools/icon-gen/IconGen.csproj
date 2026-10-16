@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <UseWPF>true</UseWPF>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <!-- WPF bindings need real cultures (en-US at least); Directory.Build.props switches them off for the rest. -->
+    <InvariantGlobalization>false</InvariantGlobalization>
+    <AssemblyName>icon-gen</AssemblyName>
+    <RootNamespace>PitVoice.IconGen</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <Description>Renders the PitVoice sign into the .ico of the app (exe and window). Output depends only on the drawing.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The same drawing as the tray icon. -->
+    <Compile Include="..\..\src\PitVoice.App\Tray\IconArt.cs" Link="IconArt.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\PitVoice.Host\PitVoice.Host.csproj" />
+  </ItemGroup>
+
+</Project>

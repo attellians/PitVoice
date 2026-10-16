@@ -100,6 +100,46 @@ public sealed class JsonSettingsStoreTests : IDisposable
         Assert.Equal(40, settings.CueVolume);
         Assert.Equal(FuelUnits.Gallons, settings.DefaultUnit);
         Assert.Equal(0.7, settings.Threshold);
+        Assert.False(settings.SetupCheckDone); // a stage 4 file has no checklist flag
+    }
+
+    [Fact]
+    public void SetupCheckDone_RoundTrips_AndInvalidValueWarns()
+    {
+        Store().Save(AppSettings.Defaults("ru") with { SetupCheckDone = true });
+        Assert.Contains("\"setupCheckDone\": true", File.ReadAllText(FilePath), StringComparison.Ordinal);
+        Assert.True(Store().Load().Settings.SetupCheckDone);
+
+        var invalid = LoadFrom("""{ "language": "ru", "setupCheckDone": "yes" }""");
+
+        Assert.False(invalid.Settings.SetupCheckDone);
+        Assert.Contains("setupCheckDone", Assert.Single(invalid.Warnings), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void InterfaceLanguageAndTheme_RoundTrip_AndDefaultToCommandsLanguageAndSystem()
+    {
+        var old = LoadFrom("""{ "language": "en" }""");
+        Assert.Null(old.Settings.InterfaceLanguage);
+        Assert.Equal("en", old.Settings.EffectiveInterfaceLanguage);
+        Assert.Equal(AppTheme.System, old.Settings.Theme);
+
+        Store().Save(AppSettings.Defaults("en") with { InterfaceLanguage = "ru", Theme = AppTheme.Light });
+        var loaded = Store().Load();
+
+        Assert.Empty(loaded.Warnings);
+        Assert.Equal("ru", loaded.Settings.EffectiveInterfaceLanguage);
+        Assert.Equal(AppTheme.Light, loaded.Settings.Theme);
+        Assert.Contains("\"theme\": \"light\"", File.ReadAllText(FilePath), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void UnknownTheme_IsSystem_WithWarning()
+    {
+        var result = LoadFrom("""{ "theme": "pink" }""");
+
+        Assert.Equal(AppTheme.System, result.Settings.Theme);
+        Assert.Contains("theme", Assert.Single(result.Warnings), StringComparison.Ordinal);
     }
 
     [Fact]

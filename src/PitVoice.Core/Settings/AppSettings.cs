@@ -32,9 +32,29 @@ public sealed record AppSettings
     /// <summary>Confidence threshold of the parser, 0..1.</summary>
     public double Threshold { get; init; } = ParseOptions.DefaultConfidenceThreshold;
 
+    /// <summary>True once the user checked a phrase in the window; the setup checklist then hides its last item.</summary>
+    public bool SetupCheckDone { get; init; }
+
+    /// <summary>Language of the window and the tray menu; null follows <see cref="Language"/>.</summary>
+    public string? InterfaceLanguage { get; init; }
+
+    /// <summary>Colors of the window.</summary>
+    public AppTheme Theme { get; init; } = AppTheme.System;
+
+    /// <summary>The interface language in effect.</summary>
+    public string EffectiveInterfaceLanguage => InterfaceLanguage ?? Language;
+
     public static AppSettings Defaults(string language) => new() { Language = language };
 
     public ParseOptions ToParseOptions() => new() { DefaultUnit = DefaultUnit, ConfidenceThreshold = Threshold };
+}
+
+/// <summary>Window theme: follow Windows, or always light or dark.</summary>
+public enum AppTheme
+{
+    System,
+    Light,
+    Dark,
 }
 
 /// <summary>Result of <see cref="ISettingsStore.Load"/>: usable settings plus what was wrong with the file.</summary>

@@ -11,13 +11,19 @@ src/PitVoice.Models/               model manifest, download with sha256 check, p
 src/PitVoice.Speech/               microphone capture and cue playback (NAudio), WAV loading, resampling, Vosk recognizer
 src/PitVoice.Input/                PTT sources: game device buttons (SDL3) and a low-level keyboard hook
 src/PitVoice.IRacing/              iRacing SDK: telemetry, pit commands, telemetry recording and replay
+src/PitVoice.Host/                 the pipeline host shared by the app and `run`: composition from settings, live apply,
+                                   tray status, recent phrases, command check, models, PTT assignment, one host per user
+src/PitVoice.App/                  the tray app (WPF, WPF-UI): window, pages, tray icon, interface strings ru/en
 tools/PitVoice.Cli/                pitvoice-cli: run, ptt, cues, parse, validate, models, devices, recognize, listen, status, send, record
 tools/cue-gen/                     generates the three built-in cue sounds
+tools/icon-gen/                    renders the app icon (.ico) from the same vector sign as the tray icon
 tests/PitVoice.Core.Tests/         unit tests for the core
 tests/PitVoice.Input.Tests/        language detection, smoke tests of the PTT sources (Windows)
 tests/PitVoice.LanguagePacks.Tests/ data-driven tests from the `tests:` section of every language pack
 tests/PitVoice.Models.Tests/       manifest, license allowlist, store and downloader tests
 tests/PitVoice.Speech.Tests/       audio conversion, capture logic, grammar, Vosk engine, recorded sample set
+tests/PitVoice.Host.Tests/         the app logic on fakes: live apply, status, journal, check, models, assignment
+tests/PitVoice.App.Tests/          interface dictionaries and the components list (Windows only)
 languages/                         ru.yaml, en.yaml
 models/                            manifest.json: downloadable models with URL, size, sha256 and license
 docs/                              adding-a-language.md
@@ -75,6 +81,25 @@ Tests that need a real model are skipped when it is not installed and say which 
 - `speech recognition library failed to load`: the native `libvosk.dll` next to the executable could not be loaded. Install the latest [Microsoft Visual C++ Redistributable (x64)](https://learn.microsoft.com/cpp/windows/latest-supported-vc-redist), make sure `libvosk.dll`, `libgcc_s_seh-1.dll`, `libstdc++-6.dll` and `libwinpthread-1.dll` were not removed by an antivirus, and use a 64-bit Windows.
 - `no microphone`: Windows sees no active input device. Check *Settings → System → Sound → Input* and the microphone privacy setting for desktop apps.
 
+## The tray app
+
+```bash
+dotnet run --project src/PitVoice.App    # opens the window; the icon stays in the notification area
+```
+
+The window walks through the first setup: a "What is left to set up" block on the home page leads to the model
+download, the PTT button assignment and a phrase check. Every setting is saved at once and applies from the next PTT
+press, without a restart; a phrase in flight finishes with the old settings. Switching the language switches the
+interface, the commands and the speech model. The home page shows the game and button state and the last 20 phrases
+of this run (kept in memory only). "Check" parses a typed or spoken phrase without touching the game; "Commands" lists
+the phrases of the language, including your own (`%AppData%\PitVoice\languages\<code>.yaml`, see
+[docs/adding-a-language.md](docs/adding-a-language.md#own-phrases-user-additions)).
+
+The icon shows one state: no model, error (button not assigned or unplugged, pack failed), no connection to iRacing,
+ready; the tooltip names the reason. Closing the window keeps PitVoice running; "Exit" in the icon menu stops it.
+A second start opens the window of the running app. The app and `pitvoice-cli run` never run at the same time: one
+press would otherwise be executed twice.
+
 ## Push-to-talk: from the wheel button to the game
 
 `run` is the whole pipeline without a window: PTT button → microphone → recognition → parsing → iRacing → sound cue. It takes everything from the settings file, so set it up once:
@@ -107,7 +132,7 @@ The reason of an error is in the `run` output. `cues play [start|success|error|a
 
 ### Settings file
 
-`%AppData%\PitVoice\settings.json`; `--settings <path>` or the `PITVOICE_SETTINGS` environment variable point elsewhere. `ptt bind` writes it; everything else is edited by hand and read when `run` starts:
+`%AppData%\PitVoice\settings.json`; `--settings <path>` or the `PITVOICE_SETTINGS` environment variable point elsewhere. The tray app and `ptt bind` write it; `run` reads it when it starts:
 
 ```json
 {
@@ -121,7 +146,10 @@ The reason of an error is in the `run` output. `cues play [start|success|error|a
   "outputDevice": null,
   "cueVolume": 100,
   "defaultUnit": "liters",
-  "threshold": 0.6
+  "threshold": 0.6,
+  "setupCheckDone": false,
+  "interfaceLanguage": null,
+  "theme": "system"
 }
 ```
 
@@ -129,6 +157,8 @@ The reason of an error is in the `run` output. `cues play [start|success|error|a
 - `ptt.binding`: a game device button (`kind: joystick`, `guid`, `button` from 1) or a key (`kind: keyboard`, `vk` virtual-key code); `null` until assigned. `ptt.mode`: `hold` or `toggle`.
 - `microphone`, `outputDevice`: device names as `devices` prints them; `null` is the system default. A missing device falls back to the default with a warning.
 - `cueVolume`: 0 to 100; 0 mutes the cues. `defaultUnit`: `liters` or `gallons`. `threshold`: confidence threshold 0 to 1.
+- `setupCheckDone`: set by the app after the first phrase check; hides the last item of the setup checklist.
+- `interfaceLanguage`: `ru` or `en` for the window and the tray menu; `null` follows `language`. `theme`: `system`, `light` or `dark`.
 
 A missing field gets its default; an invalid value gets its default (the volume is clamped to 0..100) with a warning. A file that is not valid JSON is renamed to `settings.json.bak` and the defaults are used.
 

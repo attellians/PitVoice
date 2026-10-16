@@ -1,0 +1,60 @@
+<Page
+    x:Class="PitVoice.App.Pages.ModelsPage"
+    x:ClassModifier="internal"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:loc="clr-namespace:PitVoice.App.Localization"
+    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+    Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+        <StackPanel Margin="24,16,24,24">
+            <TextBlock Style="{StaticResource PageTitle}" Text="{loc:Tr NavModels}" />
+            <TextBlock Margin="0,0,0,12" Text="{Binding LanguageTitle}" />
+            <ui:InfoBar
+                Margin="0,0,0,12"
+                IsClosable="False"
+                IsOpen="{Binding Message, Converter={StaticResource NotEmpty}}"
+                Message="{Binding Message}"
+                Severity="Error" />
+            <ItemsControl ItemsSource="{Binding Rows}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <ui:Card Margin="0,0,0,8">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock FontWeight="SemiBold" Text="{Binding Id}" />
+                                    <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="{Binding Details}" />
+                                    <TextBlock Margin="0,4,0,0" Text="{Binding State}" />
+                                    <ProgressBar
+                                        Height="4"
+                                        Margin="0,6,0,0"
+                                        Maximum="100"
+                                        Visibility="{Binding IsDownloading, Converter={StaticResource Visible}}"
+                                        Value="{Binding Percent, Mode=OneWay}" />
+                                    <TextBlock Foreground="{DynamicResource SystemFillColorCriticalBrush}" Text="{Binding Error}" TextWrapping="Wrap" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Orientation="Horizontal">
+                                    <ui:Button
+                                        Appearance="Primary"
+                                        Command="{Binding DownloadCommand}"
+                                        Content="{loc:Tr DownloadButton}"
+                                        Visibility="{Binding CanDownload, Converter={StaticResource Visible}}" />
+                                    <ui:Button
+                                        Command="{Binding CancelCommand}"
+                                        Content="{loc:Tr CancelButton}"
+                                        Visibility="{Binding IsDownloading, Converter={StaticResource Visible}}" />
+                                    <ui:Button
+                                        Command="{Binding DeleteCommand}"
+                                        Content="{loc:Tr DeleteButton}"
+                                        Visibility="{Binding CanDelete, Converter={StaticResource Visible}}" />
+                                </StackPanel>
+                            </Grid>
+                        </ui:Card>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
+</Page>

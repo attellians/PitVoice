@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>PitVoice.Host</RootNamespace>
+    <Description>Pipeline host shared by the tray app and the console host: composition from settings, live apply, status, recent phrases, command check, models and PTT assignment.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\PitVoice.Core\PitVoice.Core.csproj" />
+    <ProjectReference Include="..\PitVoice.Speech\PitVoice.Speech.csproj" />
+    <ProjectReference Include="..\PitVoice.IRacing\PitVoice.IRacing.csproj" />
+    <ProjectReference Include="..\PitVoice.Input\PitVoice.Input.csproj" />
+    <ProjectReference Include="..\PitVoice.Models\PitVoice.Models.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="PitVoice.Host.Tests" />
+  </ItemGroup>
+
+</Project>

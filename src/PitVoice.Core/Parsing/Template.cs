@@ -67,5 +67,8 @@ public sealed record Template(IntentId Intent, string Source, IReadOnlyList<Temp
     /// <summary>Number of tokens that must be present in the phrase.</summary>
     public int RequiredLength => Tokens.Count(t => t is not UnitSlot { Optional: true });
 
+    /// <summary>True for a pattern from the user's additions file (FR-LANG-5), false for a built-in one.</summary>
+    public bool IsUserAddition { get; init; }
+
     public override string ToString() => $"{Intent}: \"{Source}\"";
 }

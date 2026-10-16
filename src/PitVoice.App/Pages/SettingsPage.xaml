@@ -1,0 +1,131 @@
+<Page
+    x:Class="PitVoice.App.Pages.SettingsPage"
+    x:ClassModifier="internal"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:loc="clr-namespace:PitVoice.App.Localization"
+    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+    Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+        <StackPanel Margin="24,16,24,24">
+            <TextBlock Style="{StaticResource PageTitle}" Text="{loc:Tr NavSettings}" />
+
+            <ui:InfoBar
+                Margin="0,0,0,12"
+                IsClosable="False"
+                IsOpen="{Binding SaveError, Converter={StaticResource NotEmpty}}"
+                Message="{Binding SaveError}"
+                Severity="Error" />
+
+            <ui:Card Margin="0,0,0,12">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource SectionTitle}" Text="{loc:Tr LanguageLabel}" />
+                    <ComboBox
+                        Width="320"
+                        HorizontalAlignment="Left"
+                        DisplayMemberPath="Display"
+                        ItemsSource="{Binding Languages}"
+                        SelectedValue="{Binding Language}"
+                        SelectedValuePath="Key" />
+                    <StackPanel Margin="0,8,0,0" Orientation="Horizontal" Visibility="{Binding ModelMissing, Converter={StaticResource Visible}}">
+                        <TextBlock VerticalAlignment="Center" Text="{loc:Tr LanguageNoModel}" />
+                        <ui:Button Margin="8,0,0,0" Command="{Binding OpenModelsCommand}" Content="{loc:Tr DownloadModel}" />
+                    </StackPanel>
+                    <TextBlock Margin="0,12,0,4" Text="{loc:Tr InterfaceLanguageLabel}" />
+                    <ComboBox
+                        Width="320"
+                        HorizontalAlignment="Left"
+                        DisplayMemberPath="Display"
+                        ItemsSource="{Binding InterfaceLanguages}"
+                        SelectedValue="{Binding InterfaceLanguage}"
+                        SelectedValuePath="Key" />
+                    <TextBlock Margin="0,12,0,4" Text="{loc:Tr ThemeLabel}" />
+                    <ComboBox
+                        Width="320"
+                        HorizontalAlignment="Left"
+                        DisplayMemberPath="Display"
+                        ItemsSource="{Binding Themes}"
+                        SelectedValue="{Binding Theme}"
+                        SelectedValuePath="Key" />
+                </StackPanel>
+            </ui:Card>
+
+            <ui:Card Margin="0,0,0,12">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource SectionTitle}" Text="{loc:Tr PttSection}" />
+                    <TextBlock Text="{Binding PttText}" TextWrapping="Wrap" />
+                    <StackPanel Margin="0,8,0,0" Orientation="Horizontal">
+                        <ui:Button Appearance="Primary" Command="{Binding AssignCommand}" Content="{loc:Tr AssignButton}" />
+                        <TextBlock Margin="12,0,0,0" VerticalAlignment="Center" Text="{Binding AssignMessage}" TextWrapping="Wrap" />
+                    </StackPanel>
+                    <TextBlock Margin="0,12,0,4" Text="{loc:Tr ModeLabel}" />
+                    <ComboBox
+                        Width="320"
+                        HorizontalAlignment="Left"
+                        DisplayMemberPath="Display"
+                        ItemsSource="{Binding Modes}"
+                        SelectedValue="{Binding Mode}"
+                        SelectedValuePath="Key" />
+                </StackPanel>
+            </ui:Card>
+
+            <ui:Card Margin="0,0,0,12">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource SectionTitle}" Text="{loc:Tr AudioSection}" />
+                    <TextBlock Margin="0,0,0,4" Text="{loc:Tr MicrophoneLabel}" />
+                    <ComboBox
+                        Width="420"
+                        HorizontalAlignment="Left"
+                        DisplayMemberPath="Display"
+                        DropDownOpened="OnDevicesOpened"
+                        ItemsSource="{Binding Microphones}"
+                        SelectedValue="{Binding Microphone}"
+                        SelectedValuePath="Key" />
+                    <TextBlock Margin="0,12,0,4" Text="{loc:Tr OutputLabel}" />
+                    <ComboBox
+                        Width="420"
+                        HorizontalAlignment="Left"
+                        DisplayMemberPath="Display"
+                        DropDownOpened="OnDevicesOpened"
+                        ItemsSource="{Binding Outputs}"
+                        SelectedValue="{Binding Output}"
+                        SelectedValuePath="Key" />
+                    <TextBlock Margin="0,12,0,4" Text="{loc:Tr VolumeLabel}" />
+                    <StackPanel Orientation="Horizontal">
+                        <Slider
+                            Width="320"
+                            IsSnapToTickEnabled="True"
+                            Maximum="100"
+                            Minimum="0"
+                            TickFrequency="5"
+                            Value="{Binding Volume}" />
+                        <TextBlock Width="48" Margin="8,0,0,0" VerticalAlignment="Center" Text="{Binding Volume, StringFormat={}{0}%}" />
+                        <ui:Button Margin="8,0,0,0" Command="{Binding PreviewCommand}" Content="{loc:Tr PreviewButton}" />
+                    </StackPanel>
+                    <TextBlock Margin="0,6,0,0" Text="{Binding PreviewMessage}" TextWrapping="Wrap" />
+                </StackPanel>
+            </ui:Card>
+
+            <ui:Card Margin="0,0,0,12">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource SectionTitle}" Text="{loc:Tr RecognitionSection}" />
+                    <TextBlock Margin="0,0,0,4" Text="{loc:Tr UnitLabel}" />
+                    <ComboBox
+                        Width="320"
+                        HorizontalAlignment="Left"
+                        DisplayMemberPath="Display"
+                        ItemsSource="{Binding Units}"
+                        SelectedValue="{Binding Unit}"
+                        SelectedValuePath="Key" />
+                    <TextBlock Margin="0,12,0,4" Text="{loc:Tr ThresholdLabel}" />
+                    <StackPanel Orientation="Horizontal">
+                        <ui:TextBox Width="120" LostFocus="OnThresholdLostFocus" Text="{Binding ThresholdText, UpdateSourceTrigger=PropertyChanged}">
+                            <ui:TextBox.InputBindings>
+                                <KeyBinding Key="Enter" Command="{Binding ApplyThresholdCommand}" />
+                            </ui:TextBox.InputBindings>
+                        </ui:TextBox>
+                        <TextBlock Margin="12,0,0,0" VerticalAlignment="Center" Foreground="{DynamicResource SystemFillColorCriticalBrush}" Text="{Binding ThresholdError}" />
+                    </StackPanel>
+                </StackPanel>
+            </ui:Card>
+        </StackPanel>
+</Page>

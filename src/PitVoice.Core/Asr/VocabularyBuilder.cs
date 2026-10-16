@@ -44,4 +44,30 @@ public static class VocabularyBuilder
         words.RemoveWhere(string.IsNullOrWhiteSpace);
         return words.Order(StringComparer.Ordinal).ToArray();
     }
+
+    /// <summary>Words that only the user's additions bring into the vocabulary (FR-LANG-5), sorted.</summary>
+    public static IReadOnlyList<string> BuildUserAdditionWords(LanguagePack pack)
+    {
+        ArgumentNullException.ThrowIfNull(pack);
+        var builtIn = new HashSet<string>(StringComparer.Ordinal);
+        var added = new SortedSet<string>(StringComparer.Ordinal);
+        foreach (var template in pack.Templates)
+        {
+            foreach (var word in template.Tokens.OfType<WordLiteral>())
+            {
+                if (template.IsUserAddition)
+                {
+                    added.Add(word.Text);
+                }
+                else
+                {
+                    builtIn.Add(word.Text);
+                }
+            }
+        }
+
+        added.ExceptWith(builtIn);
+        added.ExceptWith(pack.NumberParser.Words);
+        return [.. added];
+    }
 }

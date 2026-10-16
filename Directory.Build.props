@@ -17,6 +17,8 @@
   </PropertyGroup>
 
   <PropertyGroup>
+    <!-- One version for every assembly, from the VERSION file; "About" shows it. -->
+    <Version>$([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory)VERSION').Trim())</Version>
     <Authors>PitVoice contributors</Authors>
     <Product>PitVoice</Product>
     <RepositoryType>git</RepositoryType>

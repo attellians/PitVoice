@@ -11,6 +11,7 @@ internal static class ValidateRunner
     {
         Console.WriteLine($"Validating language packs in {directory}");
         var results = LanguagePackLoader.LoadDirectory(directory);
+        var additionsDirectory = UserAdditionsLoader.ResolveDirectory(null);
         var errors = 0;
         var warnings = 0;
         var failures = 0;
@@ -47,7 +48,28 @@ internal static class ValidateRunner
             passed += pack.Tests.Count - packFailures.Count;
             Console.WriteLine($"{result.File}: {pack.Language} ({pack.Name}), {pack.Intents.Count} intents, {pack.Templates.Count} templates, {pack.Tests.Count - packFailures.Count}/{pack.Tests.Count} tests passed");
 
-            warnings += await CheckModelVocabularyAsync(pack, result.File, store, cancellationToken).ConfigureAwait(false);
+            var additions = UserAdditions.Apply(pack, additionsDirectory);
+            if (additions.Exists)
+            {
+                foreach (var issue in additions.Issues)
+                {
+                    Console.WriteLine(issue);
+                }
+
+                errors += additions.Errors.Count();
+                warnings += additions.Warnings.Count();
+                Console.WriteLine(additions.Applied
+                    ? $"{additions.File}: {additions.Pack.Templates.Count(t => t.IsUserAddition)} own pattern(s) added to {pack.Language}"
+                    : $"{additions.File}: FAILED validation, the built-in {pack.Language} pack is used");
+            }
+
+            warnings += await CheckModelVocabularyAsync(additions.Pack, result.File, store, cancellationToken).ConfigureAwait(false);
+        }
+
+        foreach (var orphan in UserAdditions.FindOrphans(additionsDirectory, results.Where(r => r.IsSuccess).Select(r => r.Pack!.Language)))
+        {
+            Console.WriteLine(orphan);
+            warnings++;
         }
 
         Console.WriteLine($"{results.Count} file(s): {errors} error(s), {warnings} warning(s), {passed} test(s) passed, {failures} test(s) failed");

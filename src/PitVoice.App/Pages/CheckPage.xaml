@@ -1,0 +1,59 @@
+<Page
+    x:Class="PitVoice.App.Pages.CheckPage"
+    x:ClassModifier="internal"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:loc="clr-namespace:PitVoice.App.Localization"
+    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+    Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+        <StackPanel Margin="24,16,24,24">
+            <TextBlock Style="{StaticResource PageTitle}" Text="{loc:Tr NavCheck}" />
+            <TextBlock Margin="0,0,0,12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="{loc:Tr CheckIntro}" TextWrapping="Wrap" />
+
+            <ui:Card Margin="0,0,0,12">
+                <StackPanel>
+                    <TextBlock Margin="0,0,0,4" Text="{loc:Tr TextCheckLabel}" />
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBox PlaceholderText="{loc:Tr TextCheckPlaceholder}" Text="{Binding Phrase, UpdateSourceTrigger=PropertyChanged}">
+                            <ui:TextBox.InputBindings>
+                                <KeyBinding Key="Enter" Command="{Binding CheckTextCommand}" />
+                            </ui:TextBox.InputBindings>
+                        </ui:TextBox>
+                        <ui:Button
+                            Grid.Column="1"
+                            Margin="8,0,0,0"
+                            Appearance="Primary"
+                            Command="{Binding CheckTextCommand}"
+                            Content="{loc:Tr CheckButton}" />
+                    </Grid>
+                    <StackPanel Margin="0,12,0,0" Orientation="Horizontal">
+                        <ui:Button Command="{Binding MicrophoneCommand}" Content="{Binding MicrophoneButton}" />
+                        <TextBlock Margin="12,0,0,0" VerticalAlignment="Center" Text="{Binding MicrophoneState}" TextWrapping="Wrap" />
+                    </StackPanel>
+                </StackPanel>
+            </ui:Card>
+
+            <TextBlock Foreground="{DynamicResource SystemFillColorCriticalBrush}" Text="{Binding Error}" TextWrapping="Wrap" />
+
+            <ui:Card Visibility="{Binding HasResult, Converter={StaticResource Visible}}">
+                <StackPanel>
+                    <TextBlock FontSize="16" FontWeight="SemiBold" Text="{Binding ResultText}" TextWrapping="Wrap" />
+                    <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="{Binding ResultWords}" TextWrapping="Wrap" />
+                    <TextBlock Margin="0,8,0,0" Text="{Binding Verdict}" />
+                    <ItemsControl Margin="12,4,0,0" ItemsSource="{Binding Commands}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding StringFormat=• {0}}" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock Margin="0,8,0,0" Text="{Binding Confidence}" />
+                    <TextBlock Text="{Binding Response}" TextWrapping="Wrap" />
+                </StackPanel>
+            </ui:Card>
+        </StackPanel>
+</Page>

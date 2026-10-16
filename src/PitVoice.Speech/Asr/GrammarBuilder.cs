@@ -79,6 +79,18 @@ public static class GrammarBuilder
     }
 
     /// <summary>
+    /// Words of the user's additions that the model does not know (FR-LANG-5): phrases with them work as text but
+    /// cannot be recognized by voice, so the user gets a warning naming them.
+    /// </summary>
+    public static IReadOnlyList<string> MissingAdditionWords(LanguagePack pack, VocabularyReport report)
+    {
+        ArgumentNullException.ThrowIfNull(pack);
+        ArgumentNullException.ThrowIfNull(report);
+        var missing = new HashSet<string>(report.Missing, StringComparer.Ordinal);
+        return VocabularyBuilder.BuildUserAdditionWords(pack).Where(missing.Contains).ToArray();
+    }
+
+    /// <summary>
     /// The word as the model knows it: itself, or a variant with some <c>е</c> replaced by <c>ё</c> (packs are written
     /// with <c>е</c> because normalization folds <c>ё</c>). Null when the model knows no spelling.
     /// </summary>

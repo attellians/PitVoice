@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <!-- WPF bindings need real cultures (en-US at least); Directory.Build.props switches them off for the rest. -->
+    <InvariantGlobalization>false</InvariantGlobalization>
+    <UseWPF>true</UseWPF>
+    <IsPackable>false</IsPackable>
+    <!-- WPF and the registry exist only on Windows; on other systems the project only builds. -->
+    <IsTestProject Condition="'$(OS)' == 'Windows_NT'">true</IsTestProject>
+    <IsTestProject Condition="'$(OS)' != 'Windows_NT'">false</IsTestProject>
+    <RootNamespace>PitVoice.App.Tests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.11.0" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\PitVoice.App\PitVoice.App.csproj" />
+  </ItemGroup>
+
+</Project>

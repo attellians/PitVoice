@@ -163,6 +163,34 @@ given. Tests run with the default settings: unit `liters`, confidence threshold 
 Recommended checklist per intent: two or more positive phrases, including at least one with an extra word that
 must still match (fuzzy) and, for negated intents, a phrase that must not be mistaken for the positive one.
 
+## Own phrases (user additions)
+
+A user can add patterns to a built-in pack without touching it: `%AppData%\PitVoice\languages\<code>.yaml`
+(the directory can be changed with `PITVOICE_USER_LANGUAGES`, which tests and tools use). The window's
+"Commands" page shows the path and has "Open file" (creates the file with a format comment) and "Reload".
+
+```yaml
+language: ru
+intents:
+  fuel.add:
+    patterns: ["плесни {amount} {unit?}"]
+  tires.all:
+    patterns: ["меняй всю резину"]
+```
+
+Only `language` and `intents.<id>.patterns` are allowed: additions cannot replace or remove built-in patterns, add
+intents, change responses, conjunctions or fillers. Every pattern is checked by the same rules as the pack: the
+intent must be in the pack, slots must exist, two words at least for intents that change the pit stop. Any error
+(including invalid YAML) leaves the whole file out and the built-in pack is used; the error names the file and the
+line. A pattern equal to a built-in one is skipped with a warning. A file for a language without a built-in pack
+(e.g. `de.yaml`) is ignored with a warning.
+
+Words of additions go into the recognizer vocabulary. A word the model does not know is reported as a warning: the
+phrase still works when typed (the "Check" page), but cannot be recognized by voice.
+
+`pitvoice-cli parse`, `listen`, `recognize`, `send` and `run` load the additions and print their problems;
+`validate` checks the additions files too, when they exist.
+
 ## What needs code
 
 Two pieces live in `src/PitVoice.Core` and are registered in `Languages/LanguageSupport.cs`:

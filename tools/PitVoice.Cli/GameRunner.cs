@@ -152,6 +152,8 @@ internal static class GameRunner
         public static IPitCommandSink OpenSink() =>
             OperatingSystem.IsWindows() ? new BroadcastPitCommandSink() : NoGame.Instance;
 
+        public static IExecutionLog ConsoleLog => ConsoleExecutionLog.Instance;
+
         public static IExecutionLog Log() =>
             OperatingSystem.IsWindows()
                 ? new ElevationHintLog(ConsoleExecutionLog.Instance, new WindowsGameElevationProbe())

@@ -192,6 +192,48 @@ public sealed class JsonSettingsStore : ISettingsStore
             }
         }
 
+        if (TryGet(root, "setupCheckDone", out var checkDone))
+        {
+            if (checkDone.ValueKind is JsonValueKind.True or JsonValueKind.False)
+            {
+                settings = settings with { SetupCheckDone = checkDone.GetBoolean() };
+            }
+            else
+            {
+                warnings.Add($"settings: invalid setupCheckDone {checkDone.GetRawText()}, using false");
+            }
+        }
+
+        if (TryGet(root, "interfaceLanguage", out var interfaceLanguage) && interfaceLanguage.ValueKind != JsonValueKind.Null)
+        {
+            if (interfaceLanguage.ValueKind == JsonValueKind.String && !string.IsNullOrWhiteSpace(interfaceLanguage.GetString()))
+            {
+                settings = settings with { InterfaceLanguage = interfaceLanguage.GetString()!.Trim() };
+            }
+            else
+            {
+                warnings.Add($"settings: invalid interfaceLanguage {interfaceLanguage.GetRawText()}, using the language of the commands");
+            }
+        }
+
+        if (TryGet(root, "theme", out var theme))
+        {
+            switch (theme.ValueKind == JsonValueKind.String ? theme.GetString() : null)
+            {
+                case "system":
+                    break;
+                case "light":
+                    settings = settings with { Theme = AppTheme.Light };
+                    break;
+                case "dark":
+                    settings = settings with { Theme = AppTheme.Dark };
+                    break;
+                default:
+                    warnings.Add($"settings: unknown theme {theme.GetRawText()}, using system");
+                    break;
+            }
+        }
+
         return settings;
     }
 
@@ -293,6 +335,9 @@ public sealed class JsonSettingsStore : ISettingsStore
             writer.WriteNumber("cueVolume", settings.CueVolume);
             writer.WriteString("defaultUnit", settings.DefaultUnit);
             writer.WriteNumber("threshold", settings.Threshold);
+            writer.WriteBoolean("setupCheckDone", settings.SetupCheckDone);
+            WriteNullable(writer, "interfaceLanguage", settings.InterfaceLanguage);
+            writer.WriteString("theme", settings.Theme.ToString().ToLowerInvariant());
             writer.WriteEndObject();
         }
 

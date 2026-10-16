@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <RootNamespace>PitVoice.Host.Tests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.11.0" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
+    <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" Version="10.11.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\PitVoice.Host\PitVoice.Host.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Pipeline fakes are shared with PitVoice.Core.Tests. -->
+    <Compile Include="..\PitVoice.Core.Tests\Pipeline\PipelineFakes.cs" Link="Shared\PipelineFakes.cs" />
+    <Compile Include="..\PitVoice.Core.Tests\Pit\FakeTelemetrySource.cs" Link="Shared\FakeTelemetrySource.cs" />
+    <Compile Include="..\PitVoice.Core.Tests\Pit\ManualTimeProvider.cs" Link="Shared\ManualTimeProvider.cs" />
+    <Compile Include="..\PitVoice.Core.Tests\Ptt\SteppedTimeProvider.cs" Link="Shared\SteppedTimeProvider.cs" />
+    <Compile Include="..\PitVoice.Core.Tests\TestPacks.cs" Link="Shared\TestPacks.cs" />
+    <Compile Include="..\PitVoice.Models.Tests\TestSupport.cs" Link="Shared\ModelsTestSupport.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\languages\*.yaml" Link="languages\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\models\manifest.json" Link="models\manifest.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\PitVoice.Core.Tests\Fixtures\*.yaml" Link="Fixtures\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

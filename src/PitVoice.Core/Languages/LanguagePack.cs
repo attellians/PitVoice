@@ -130,4 +130,20 @@ public sealed class LanguagePack
     /// <summary>Catalog intents this pack does not describe; phrases for them are rejected in this language.</summary>
     public IReadOnlyList<IntentId> MissingIntents =>
         IntentCatalog.All.Select(d => d.Id).Where(id => !Intents.ContainsKey(id)).ToArray();
+
+    /// <summary>User additions file merged into this pack (FR-LANG-5), or null for the built-in pack alone.</summary>
+    public string? AdditionsFile { get; private init; }
+
+    /// <summary>A copy with <paramref name="extra"/> templates appended to their intents (already validated).</summary>
+    internal LanguagePack WithTemplates(IReadOnlyDictionary<IntentId, List<Template>> extra, string additionsFile)
+    {
+        var intents = Intents.ToDictionary(
+            p => p.Key,
+            p => extra.TryGetValue(p.Key, out var added) ? p.Value with { Templates = [.. p.Value.Templates, .. added] } : p.Value);
+        return new LanguagePack(SourceFile, Language, Name, Version, AsrModel, DefaultVoice, NumberParser, PluralRules, Units,
+            Conjunctions, Fillers, Negations, intents, Responses, Tests, Normalizer)
+        {
+            AdditionsFile = additionsFile,
+        };
+    }
 }

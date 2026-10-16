@@ -1,0 +1,89 @@
+<Page
+    x:Class="PitVoice.App.Pages.HomePage"
+    x:ClassModifier="internal"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:loc="clr-namespace:PitVoice.App.Localization"
+    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+    Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+        <StackPanel Margin="24,16,24,24">
+            <TextBlock Style="{StaticResource PageTitle}" Text="{loc:Tr NavHome}" />
+
+            <ui:Card Margin="0,0,0,12" Visibility="{Binding ChecklistVisible, Converter={StaticResource Visible}}">
+                <StackPanel>
+                    <TextBlock FontWeight="SemiBold" Text="{loc:Tr ChecklistTitle}" />
+                    <ItemsControl Margin="0,8,0,0" ItemsSource="{Binding Checklist}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <ui:HyperlinkButton
+                                    Margin="0,2"
+                                    Padding="4,2"
+                                    Command="{Binding Open}"
+                                    Content="{Binding Text}" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </ui:Card>
+
+            <ui:InfoBar
+                Title="{loc:Tr ElevationTitle}"
+                Margin="0,0,0,12"
+                IsClosable="False"
+                IsOpen="{Binding ElevationHintVisible}"
+                Message="{loc:Tr ElevationHint}"
+                Severity="Warning" />
+
+            <ui:Card Margin="0,0,0,12">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition />
+                        <RowDefinition />
+                        <RowDefinition />
+                    </Grid.RowDefinitions>
+                    <TextBlock Style="{StaticResource FieldLabel}" Text="{loc:Tr StatusLabel}" />
+                    <TextBlock Grid.Column="1" Margin="0,6,0,0" FontWeight="SemiBold" Text="{Binding StatusLine}" TextWrapping="Wrap" />
+                    <TextBlock Grid.Row="1" Style="{StaticResource FieldLabel}" Text="{loc:Tr GameLabel}" />
+                    <TextBlock Grid.Row="1" Grid.Column="1" Margin="0,6,0,0" Text="{Binding GameText}" />
+                    <TextBlock Grid.Row="2" Style="{StaticResource FieldLabel}" Text="{loc:Tr PttLabel}" />
+                    <TextBlock Grid.Row="2" Grid.Column="1" Margin="0,6,0,0" Text="{Binding PttText}" />
+                </Grid>
+            </ui:Card>
+
+            <TextBlock Margin="0,8,0,8" FontWeight="SemiBold" Text="{loc:Tr RecentPhrases}" />
+            <TextBlock
+                Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                Text="{loc:Tr NoPhrasesYet}"
+                Visibility="{Binding NoPhrases, Converter={StaticResource Visible}}" />
+            <ItemsControl ItemsSource="{Binding Phrases}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <ui:Card Margin="0,0,0,6" Padding="12,8">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="70" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="{Binding Time}" />
+                                <StackPanel Grid.Column="1">
+                                    <TextBlock FontWeight="SemiBold" Text="{Binding Text}" TextWrapping="Wrap" />
+                                    <TextBlock TextWrapping="Wrap">
+                                        <Run Text="{Binding Outcome, Mode=OneWay}" />
+                                        <Run Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="{Binding Response, Mode=OneWay}" />
+                                    </TextBlock>
+                                    <TextBlock
+                                        Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                        Text="{Binding Detail}"
+                                        TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Grid>
+                        </ui:Card>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
+</Page>

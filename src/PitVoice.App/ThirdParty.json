@@ -1,0 +1,11 @@
+[
+  { "name": "Vosk", "license": "Apache-2.0", "url": "https://github.com/alphacep/vosk-api" },
+  { "name": "NAudio", "license": "MIT", "url": "https://github.com/naudio/NAudio" },
+  { "name": "SDL3", "license": "Zlib", "url": "https://github.com/libsdl-org/SDL" },
+  { "name": "ppy.SDL3-CS", "license": "MIT", "url": "https://github.com/ppy/SDL3-CS" },
+  { "name": "YamlDotNet", "license": "MIT", "url": "https://github.com/aaubry/YamlDotNet" },
+  { "name": "WPF-UI", "license": "MIT", "url": "https://github.com/lepoco/wpfui" },
+  { "name": "H.NotifyIcon", "license": "MIT", "url": "https://github.com/HavenDV/H.NotifyIcon" },
+  { "name": "CommunityToolkit.Mvvm", "license": "MIT", "url": "https://github.com/CommunityToolkit/dotnet" },
+  { "name": ".NET", "license": "MIT", "url": "https://github.com/dotnet/runtime" }
+]

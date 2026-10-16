@@ -31,7 +31,19 @@ public sealed record VoicePipelineServices(
     PitExecutor Executor,
     IAudioCuePlayer Cues,
     IEventBus Events,
-    TimeProvider Time);
+    TimeProvider Time)
+{
+    /// <summary>Numbers of phrases; a host that rebuilds the pipeline passes one source so numbers never repeat.</summary>
+    public PhraseIdSource PhraseIds { get; init; } = new();
+}
+
+/// <summary>Hands out phrase numbers starting at 1. Thread-safe.</summary>
+public sealed class PhraseIdSource
+{
+    private int _last;
+
+    public int Next() => Interlocked.Increment(ref _last);
+}
 
 /// <summary>
 /// The whole way from the PTT button to the result cue (design decision 9). Feed it the transitions of
@@ -52,7 +64,7 @@ public sealed class VoicePipeline : IAsyncDisposable
     private readonly Lock _lock = new();
     private readonly Task _worker;
     private int _generation;
-    private int _lastPhraseId;
+    private int _pending;
     private Recording? _recording;
 
     public VoicePipeline(VoicePipelineServices services)
@@ -60,6 +72,18 @@ public sealed class VoicePipeline : IAsyncDisposable
         ArgumentNullException.ThrowIfNull(services);
         _services = services;
         _worker = Task.Run(RunAsync);
+    }
+
+    /// <summary>True while a phrase is recorded or waits for its result cue; a host applies new settings only when false.</summary>
+    public bool IsBusy
+    {
+        get
+        {
+            lock (_lock)
+            {
+                return _recording is not null || _pending > 0;
+            }
+        }
     }
 
     public void OnTransition(PttTransition transition)
@@ -113,7 +137,7 @@ public sealed class VoicePipeline : IAsyncDisposable
         }
 
         _generation++;
-        var id = ++_lastPhraseId;
+        var id = _services.PhraseIds.Next();
         Publish(new PttPressed(id, Now));
 
         _services.Cues.Stop();
@@ -167,6 +191,7 @@ public sealed class VoicePipeline : IAsyncDisposable
         Publish(new PttReleased(recording.Id, Now, Ignored: false, reason));
         if (!recording.Capture.Started)
         {
+            _pending++;
             _queue.Writer.TryWrite(new Phrase(recording.Id, recording.Generation, AudioBuffer.Empty, stoppedAt,
                 recording.Capture.Error ?? "the microphone could not be opened"));
             return;
@@ -174,6 +199,7 @@ public sealed class VoicePipeline : IAsyncDisposable
 
         var buffer = Trim(StopCapture(recording.Id), recording.Trim);
         Publish(new AudioCaptured(recording.Id, Now, buffer.Duration, buffer.Truncated, recording.Capture.DeviceName));
+        _pending++;
         _queue.Writer.TryWrite(new Phrase(recording.Id, recording.Generation, buffer, stoppedAt, CaptureError: null));
     }
 
@@ -221,6 +247,11 @@ public sealed class VoicePipeline : IAsyncDisposable
             if (await ProcessAsync(phrase).ConfigureAwait(false) is { } result)
             {
                 Signal(phrase, result.Cue, result.Response);
+            }
+
+            lock (_lock)
+            {
+                _pending--;
             }
         }
     }

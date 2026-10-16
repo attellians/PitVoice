@@ -15,6 +15,9 @@ public sealed class ModelStore
     public const string MarkerFileName = "installed.json";
     public const string PartialSuffix = ".zip.part";
 
+    /// <summary>Suffix of a model directory being deleted.</summary>
+    public const string DeletingSuffix = ".deleting";
+
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 
     /// <param name="root">Explicit directory; when null, <see cref="EnvironmentVariable"/> and then the default are used.</param>
@@ -86,14 +89,25 @@ public sealed class ModelStore
             .ToArray();
     }
 
-    /// <summary>Removes the model directory and any partial download. Returns false when there was nothing to remove.</summary>
+    /// <summary>
+    /// Removes the model directory and any partial download. Returns false when there was nothing to remove. The
+    /// directory is first renamed, which Windows refuses as a whole while a file in it is open: a model in use then stays
+    /// complete and installed instead of losing some of its files.
+    /// </summary>
     public bool Delete(string id)
     {
         var removed = false;
         var directory = GetModelDirectory(id);
         if (Directory.Exists(directory))
         {
-            Directory.Delete(directory, recursive: true);
+            var doomed = directory + DeletingSuffix;
+            if (Directory.Exists(doomed))
+            {
+                Directory.Delete(doomed, recursive: true);
+            }
+
+            Directory.Move(directory, doomed);
+            Directory.Delete(doomed, recursive: true);
             removed = true;
         }
 

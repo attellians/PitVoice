@@ -20,7 +20,7 @@ internal static class PttRunner
         Console.WriteLine($"current PTT: {settings.PttBinding?.Describe() ?? "not assigned"}");
 
         using var assignment = new PttAssignment();
-        using var sources = AllSources.Start(assignment.OnInput, change: null);
+        using var sources = StartAll(assignment.OnInput, change: null);
         Console.WriteLine($"Press the wheel button or the key to use as PTT ({PttAssignment.Timeout.TotalSeconds:0} s, Esc cancels)...");
 
         PttAssignmentResult result;
@@ -65,7 +65,7 @@ internal static class PttRunner
             return 1;
         }
 
-        using var sources = AllSources.Start(
+        using var sources = StartAll(
             input => Console.WriteLine($"{DateTime.Now:HH:mm:ss.fff}  {(input.Down ? "down" : "up  ")}  {input.Describe()}  [{input.Key}]"),
             change => Console.WriteLine($"{DateTime.Now:HH:mm:ss.fff}  {(change.Connected ? "connected   " : "disconnected")}  {change.Name}  [{change.Device}]"));
         Console.WriteLine("Showing presses of every game device and key, also when another window has the focus. Ctrl+C stops.");
@@ -80,38 +80,22 @@ internal static class PttRunner
         return 0;
     }
 
-    /// <summary>Game devices and the keyboard together, for assignment and watching.</summary>
     [SupportedOSPlatform("windows")]
-    private sealed class AllSources : IDisposable
+    private static AllPttSources StartAll(Action<PttInput> input, Action<PttDeviceChange>? change)
     {
-        private readonly IPttSource[] _sources = [new SdlJoystickSource(), new KeyboardHookSource()];
-
-        public static AllSources Start(Action<PttInput> input, Action<PttDeviceChange>? change)
+        var sources = new AllPttSources();
+        sources.Input += input;
+        if (change is not null)
         {
-            var sources = new AllSources();
-            foreach (var source in sources._sources)
-            {
-                source.Input += input;
-                if (change is not null)
-                {
-                    source.DeviceChanged += change;
-                }
-
-                if (source.Start() is { } error)
-                {
-                    Console.Error.WriteLine($"warning: {error}");
-                }
-            }
-
-            return sources;
+            sources.DeviceChanged += change;
         }
 
-        public void Dispose()
+        sources.Start();
+        foreach (var warning in sources.Warnings)
         {
-            foreach (var source in _sources)
-            {
-                source.Dispose();
-            }
+            Console.Error.WriteLine($"warning: {warning}");
         }
+
+        return sources;
     }
 }

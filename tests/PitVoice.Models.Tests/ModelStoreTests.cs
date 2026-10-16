@@ -50,6 +50,31 @@ public sealed class ModelStoreTests
     }
 
     [Fact]
+    public void Store_Delete_LockedFile_LeavesModelComplete()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return; // other systems let open files be deleted
+        }
+
+        using var temp = new TempDirectory();
+        var store = new ModelStore(temp.Path);
+        var directory = store.GetModelDirectory("m1");
+        Directory.CreateDirectory(Path.Combine(directory, "am"));
+        store.WriteMarker("m1", new string('a', 64), DateTimeOffset.UnixEpoch);
+
+        using (new FileStream(Path.Combine(directory, "am", "final.mdl"), FileMode.Create, FileAccess.ReadWrite, FileShare.None))
+        {
+            Assert.ThrowsAny<IOException>(() => store.Delete("m1"));
+        }
+
+        Assert.True(store.IsInstalled("m1"));
+        Assert.True(store.Delete("m1"));
+        Assert.False(Directory.Exists(directory));
+        Assert.False(Directory.Exists(directory + ModelStore.DeletingSuffix));
+    }
+
+    [Fact]
     public void Store_MissingRoot_ListsNothing()
     {
         using var temp = new TempDirectory();

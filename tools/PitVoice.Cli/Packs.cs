@@ -42,11 +42,41 @@ internal static class Packs
             errors.WriteLine(issue);
         }
 
-        if (!match.IsSuccess)
+        if (match.Pack is not { } pack)
         {
             errors.WriteLine($"Language pack '{language}' failed validation.");
+            return null;
         }
 
-        return match.Pack;
+        return ApplyAdditions(pack, errors);
+    }
+
+    /// <summary>
+    /// Merges the user's additions file of the pack's language (FR-LANG-5) from
+    /// <c>$PITVOICE_USER_LANGUAGES</c> or <c>%AppData%\PitVoice\languages</c>; a broken file is reported and the
+    /// built-in pack is used.
+    /// </summary>
+    public static LanguagePack ApplyAdditions(LanguagePack pack, TextWriter errors)
+    {
+        var result = UserAdditions.Apply(pack, UserAdditionsLoader.ResolveDirectory(null));
+        Print(result, errors);
+        return result.Pack;
+    }
+
+    public static void Print(PackAdditionsResult result, TextWriter errors)
+    {
+        foreach (var issue in result.Issues)
+        {
+            errors.WriteLine(issue);
+        }
+
+        if (result.Exists && !result.Applied)
+        {
+            errors.WriteLine($"Additions {result.File} not applied; using the built-in '{result.Pack.Language}' pack.");
+        }
+        else if (result.Pack.Templates.Count(t => t.IsUserAddition) is var count and > 0)
+        {
+            errors.WriteLine($"additions:  {count} own pattern(s) from {result.File}");
+        }
     }
 }

@@ -33,9 +33,9 @@ network is a `.wsb` file:
 | 1.1 | Actions → Mirror models → Run workflow | the run is green; the pre-release `models` holds `vosk-model-small-ru-0.22.zip` and `vosk-model-small-en-us-0.15.zip` | ok (2026-10-16): run 1 green, pre-release "Speech models (mirror)" with vosk-model-small-ru-0.22.zip (46236750 bytes) and vosk-model-small-en-us-0.15.zip (41205931 bytes); `releases/latest` answers 404, so `models` is not the latest release |
 | 1.2 | open both `mirror` addresses of `models/manifest.json` in a private browser window, then `Get-FileHash -Algorithm SHA256` | both download without signing in, the sums match the manifest | ok (2026-10-16): both downloaded without a GitHub session, sizes and sha256 match the manifest |
 | 1.3 | run Mirror models again | green, both files reported as already in the release, nothing replaced | |
-| 1.4 | release N by the steps of README "Releasing" | the release `vN` has `PitVoice-win-Setup.exe`, `PitVoice-N-full.nupkg`, `releases.win.json`; the size of the installer is printed in the Pack job | |
-| 1.5 | the "Releases" link on the repository page | "Latest" is `vN`, not `models` | |
-| 1.6 | tag `vX` on a commit whose `VERSION` is not X, push it | the release fails in "Tag matches VERSION" with both versions; no release `vX`; then delete the tag | |
+| 1.4 | release N by the steps of README "Releasing" | the release `vN` has `PitVoice-win-Setup.exe`, `PitVoice-N-full.nupkg`, `releases.win.json`; the size of the installer is printed in the Pack job | ok (2026-10-16): v0.0.15 tagged on 061ed5e by the README steps; Release run 1 green (verify, CI on both OSes, pack); assets PitVoice-win-Setup.exe 85.8 MB, PitVoice-0.0.15-full.nupkg 78.7 MB, releases.win.json, RELEASES and PitVoice-win-Portable.zip (vpk always makes it) |
+| 1.5 | the "Releases" link on the repository page | "Latest" is `vN`, not `models` | ok (2026-10-16): `releases/latest` is v0.0.15 "PitVoice 0.0.15", the `models` pre-release is not |
+| 1.6 | tag `vX` on a commit whose `VERSION` is not X, push it | the release fails in "Tag matches VERSION" with both versions; no release `vX`; then delete the tag | ok (2026-10-16): v0.0.99 on a7f6972 (VERSION 0.0.16): Release run 2 failed in "Tag matches VERSION" with "tag v0.0.99 does not match VERSION 0.0.16 of the tagged commit", CI and pack skipped, no release v0.0.99, latest still v0.0.15; tag deleted |
 
 ## 2. Installation in Windows Sandbox
 

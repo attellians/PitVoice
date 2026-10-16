@@ -234,6 +234,18 @@ public sealed class JsonSettingsStore : ISettingsStore
             }
         }
 
+        if (TryGet(root, "checkForUpdates", out var checkForUpdates))
+        {
+            if (checkForUpdates.ValueKind is JsonValueKind.True or JsonValueKind.False)
+            {
+                settings = settings with { CheckForUpdates = checkForUpdates.GetBoolean() };
+            }
+            else
+            {
+                warnings.Add($"settings: invalid checkForUpdates {checkForUpdates.GetRawText()}, using true");
+            }
+        }
+
         return settings;
     }
 
@@ -338,6 +350,7 @@ public sealed class JsonSettingsStore : ISettingsStore
             writer.WriteBoolean("setupCheckDone", settings.SetupCheckDone);
             WriteNullable(writer, "interfaceLanguage", settings.InterfaceLanguage);
             writer.WriteString("theme", settings.Theme.ToString().ToLowerInvariant());
+            writer.WriteBoolean("checkForUpdates", settings.CheckForUpdates);
             writer.WriteEndObject();
         }
 

@@ -1,0 +1,88 @@
+{
+  // Components that are not NuGet packages with a license expression (design decision 8). "components" are added to
+  // the notices as they are; only here may the GCC runtime exception appear. "packages" describe NuGet packages
+  // whose .nuspec has no license expression, by package id.
+  "components": [
+    {
+      "name": ".NET Runtime",
+      "version": "10",
+      "license": "MIT",
+      "url": "https://github.com/dotnet/runtime",
+      "copyright": "Copyright (c) .NET Foundation and Contributors",
+      "note": "included in the installer (self-contained); its own notices: https://github.com/dotnet/runtime/blob/main/THIRD-PARTY-NOTICES.TXT"
+    },
+    {
+      "name": ".NET Windows Desktop Runtime (WPF)",
+      "version": "10",
+      "license": "MIT",
+      "url": "https://github.com/dotnet/wpf",
+      "copyright": "Copyright (c) .NET Foundation and Contributors",
+      "note": "included in the installer (self-contained); its own notices: https://github.com/dotnet/wpf/blob/main/THIRD-PARTY-NOTICES.TXT"
+    },
+    {
+      "name": "SDL3",
+      "version": "3.5.0",
+      "license": "Zlib",
+      "url": "https://github.com/libsdl-org/SDL",
+      "copyright": "Copyright (C) 1997-2026 Sam Lantinga",
+      "note": "native library SDL3.dll from the ppy.SDL3-CS package"
+    },
+    {
+      "name": "libvosk",
+      "version": "0.3.38",
+      "license": "Apache-2.0",
+      "url": "https://github.com/alphacep/vosk-api",
+      "copyright": "Copyright 2019-2026 Alpha Cephei Inc.",
+      "note": "native library libvosk.dll from the Vosk package"
+    },
+    {
+      "name": "Kaldi",
+      "version": "from Vosk 0.3.38",
+      "license": "Apache-2.0",
+      "url": "https://github.com/kaldi-asr/kaldi",
+      "copyright": null,
+      "note": "speech recognition toolkit, linked into libvosk.dll"
+    },
+    {
+      "name": "OpenFst",
+      "version": "from Vosk 0.3.38",
+      "license": "Apache-2.0",
+      "url": "https://www.openfst.org",
+      "copyright": null,
+      "note": "finite-state transducer library, linked into libvosk.dll"
+    },
+    {
+      "name": "OpenBLAS",
+      "version": "from Vosk 0.3.38",
+      "license": "BSD-3-Clause",
+      "url": "https://github.com/OpenMathLib/OpenBLAS",
+      "copyright": "Copyright (c) 2011-2014, The OpenBLAS Project",
+      "note": "linear algebra library, linked into libvosk.dll"
+    },
+    {
+      "name": "libstdc++ (GCC runtime)",
+      "version": "from Vosk 0.3.38",
+      "license": "GPL-3.0-or-later WITH GCC-exception-3.1",
+      "url": "https://gcc.gnu.org",
+      "copyright": "Copyright (C) Free Software Foundation, Inc.",
+      "note": "libstdc++-6.dll, the MinGW-w64 build of the C++ runtime that libvosk.dll needs; the GCC Runtime Library Exception allows shipping it with software under any license"
+    },
+    {
+      "name": "libgcc (GCC runtime)",
+      "version": "from Vosk 0.3.38",
+      "license": "GPL-3.0-or-later WITH GCC-exception-3.1",
+      "url": "https://gcc.gnu.org",
+      "copyright": "Copyright (C) Free Software Foundation, Inc.",
+      "note": "libgcc_s_seh-1.dll, the MinGW-w64 build of the compiler runtime that libvosk.dll needs; the GCC Runtime Library Exception allows shipping it with software under any license"
+    },
+    {
+      "name": "libwinpthread (MinGW-w64)",
+      "version": "from Vosk 0.3.38",
+      "license": "MIT",
+      "url": "https://www.mingw-w64.org",
+      "copyright": "Copyright (C) MingW-W64 Project Members 2010-2011",
+      "note": "libwinpthread-1.dll, threads for libvosk.dll"
+    }
+  ],
+  "packages": {}
+}

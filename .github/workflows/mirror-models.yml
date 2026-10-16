@@ -1,0 +1,50 @@
+name: Mirror models
+
+# Copies of the speech model archives from models/manifest.json go to the pre-release "models" (design decision 7):
+# the app downloads from there when the primary source is down. Run it by hand after a model is added to the manifest.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v7
+
+      # A pre-release is never an app update and never the "Latest" release of the project.
+      - name: Create the models release
+        run: |
+          if ! gh release view models > /dev/null 2>&1; then
+            gh release create models --prerelease --latest=false --target "$GITHUB_SHA" \
+              --title "Speech models (mirror)" \
+              --notes "Copies of the speech model archives listed in models/manifest.json, used by PitVoice when the primary source is unavailable. Not an app version."
+          fi
+
+      # Existing copies are never replaced; a new copy goes up only when its sha256 matches the manifest.
+      - name: Upload missing archives
+        run: |
+          set -euo pipefail
+          existing=$(gh release view models --json assets --jq '.assets[].name')
+          jq -c '.models[]' models/manifest.json | while read -r model; do
+            id=$(jq -r '.id' <<< "$model")
+            url=$(jq -r '.url' <<< "$model")
+            sha=$(jq -r '.sha256' <<< "$model")
+            file=$(basename "$url")
+            if grep -qxF "$file" <<< "$existing"; then
+              echo "$id: $file is already in the models release"
+              continue
+            fi
+            curl -fsSL --retry 3 -o "$file" "$url"
+            actual=$(sha256sum "$file" | cut -d ' ' -f 1)
+            if [ "$actual" != "$sha" ]; then
+              echo "::error::$id: sha256 of $url is $actual, the manifest says $sha; nothing uploaded"
+              exit 1
+            fi
+            gh release upload models "$file"
+            echo "$id: $file uploaded"
+          done

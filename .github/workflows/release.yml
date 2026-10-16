@@ -1,0 +1,119 @@
+name: Release
+
+# A tag vX.Y.Z publishes PitVoice X.Y.Z (design decision 6): the tag must match VERSION in the tagged commit, the
+# version must not be released yet, the usual build and tests must pass, then the installer and the update packages
+# go to GitHub Releases. Any failure leaves the releases as they were.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+env:
+  # Must be the version of the Velopack package in src/PitVoice.App, or the packages will not match the app.
+  VPK_VERSION: 1.2.161
+  # Installer size limit (installation spec): the .NET runtime is inside, the models are not.
+  MAX_SETUP_MB: 90
+
+jobs:
+  verify:
+    runs-on: windows-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Tag matches VERSION
+        id: version
+        shell: bash
+        run: |
+          version=$(tr -d '[:space:]' < VERSION)
+          tag="${GITHUB_REF_NAME}"
+          if [ "$tag" != "v$version" ]; then
+            echo "::error::tag $tag does not match VERSION $version of the tagged commit; tag the commit whose VERSION is the one to release"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Version not released yet
+        shell: bash
+        run: |
+          if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            echo "::error::version already released: $GITHUB_REF_NAME exists; the published release stays as it is"
+            exit 1
+          fi
+
+  ci:
+    needs: verify
+    uses: ./.github/workflows/ci.yml
+
+  pack:
+    needs: [verify, ci]
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ needs.verify.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      # App and CLI share one self-contained folder: the CLI reuses the runtime and the native libraries.
+      - name: Publish
+        run: |
+          dotnet publish src/PitVoice.App/PitVoice.App.csproj -c Release -r win-x64 --self-contained -o publish
+          dotnet publish tools/PitVoice.Cli/PitVoice.Cli.csproj -c Release -r win-x64 --self-contained -o publish
+
+      - name: Check third-party notices
+        run: dotnet run --project tools/notices-gen -c Release -- --check
+
+      - name: Add license files
+        shell: bash
+        run: cp LICENSE THIRD-PARTY-NOTICES.md publish/
+
+      - name: Install vpk
+        run: dotnet tool install -g vpk --version $env:VPK_VERSION
+
+      # The previous release gives the delta package; the first release has none, which is fine.
+      - name: Download the previous release
+        shell: bash
+        run: |
+          mkdir -p Releases
+          vpk download github --repoUrl "${{ github.server_url }}/${{ github.repository }}" --token "${{ github.token }}" --outputDir Releases \
+            || echo "No previous release: the first release has no delta package"
+
+      # The message of the annotated tag is the text of the release; an empty message is fine.
+      - name: Release notes
+        shell: bash
+        run: |
+          git fetch --force origin "refs/tags/$GITHUB_REF_NAME:refs/tags/$GITHUB_REF_NAME"
+          git tag -l --format='%(contents)' "$GITHUB_REF_NAME" > release-notes.md
+          cat release-notes.md
+
+      - name: Pack
+        run: >
+          vpk pack --packId PitVoice --packVersion $env:VERSION --runtime win-x64 --packDir publish --mainExe PitVoice.exe
+          --packTitle PitVoice --packAuthors "Artem Lebedko" --icon src/PitVoice.App/Assets/pitvoice.ico
+          --releaseNotes release-notes.md --outputDir Releases
+
+      - name: Installer size
+        shell: bash
+        run: |
+          size=$(stat -c %s Releases/PitVoice-win-Setup.exe)
+          mb=$(awk "BEGIN { printf \"%.1f\", $size / 1048576 }")
+          echo "PitVoice-win-Setup.exe: $mb MB (limit $MAX_SETUP_MB MB)"
+          if [ "$size" -gt $((MAX_SETUP_MB * 1048576)) ]; then
+            echo "::error::installer is $mb MB, above the $MAX_SETUP_MB MB limit; nothing is published"
+            exit 1
+          fi
+
+      - name: Publish the release
+        run: >
+          vpk upload github --repoUrl "${{ github.server_url }}/${{ github.repository }}" --token "${{ github.token }}"
+          --outputDir Releases --publish --tag $env:GITHUB_REF_NAME --releaseName "PitVoice $env:VERSION"

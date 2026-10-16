@@ -113,6 +113,15 @@ internal sealed partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     public partial bool ModelMissing { get; set; }
 
+    /// <summary>"Check for updates" (app-settings spec); saved at once, applies without a restart.</summary>
+    [ObservableProperty]
+    public partial bool CheckForUpdates { get; set; }
+
+    /// <summary>False in a build that was not installed: the switch is off-limits there (spec: Developer build).</summary>
+    public bool UpdatesAvailable => _services.Updates.IsInstalled;
+
+    public bool UpdatesUnavailable => !UpdatesAvailable;
+
     /// <summary>Reads the devices again (list opened, window activated, page shown).</summary>
     public void Refresh()
     {
@@ -144,6 +153,14 @@ internal sealed partial class SettingsViewModel : ObservableObject
         if (!_loading && value is not null)
         {
             Save(s => s with { InterfaceLanguage = value.Length == 0 ? null : value });
+        }
+    }
+
+    partial void OnCheckForUpdatesChanged(bool value)
+    {
+        if (!_loading)
+        {
+            Save(s => s with { CheckForUpdates = value });
         }
     }
 
@@ -282,6 +299,7 @@ internal sealed partial class SettingsViewModel : ObservableObject
             Unit = settings.DefaultUnit;
             Volume = settings.CueVolume;
             ThresholdText = settings.Threshold.ToString("0.##", CultureInfo.InvariantCulture);
+            CheckForUpdates = settings.CheckForUpdates;
         }
         finally
         {

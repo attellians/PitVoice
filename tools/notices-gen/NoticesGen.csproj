@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>notices-gen</AssemblyName>
+    <RootNamespace>PitVoice.NoticesGen</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <Description>Generates THIRD-PARTY-NOTICES.md and the component list of "About" from the shipped NuGet packages, the native components and the model manifest; fails on forbidden licenses.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="PitVoice.NoticesGen.Tests" />
+  </ItemGroup>
+
+</Project>

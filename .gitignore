@@ -38,3 +38,7 @@ models-cache/
 ### Acceptance voice recordings stay on the developer machine (personal voice data)
 tests/PitVoice.Speech.Tests/Samples/**/*.wav
 tests/PitVoice.Speech.Tests/Samples/**/samples.yaml
+
+### Release packaging (vpk) output
+publish/
+Releases/

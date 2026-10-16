@@ -179,7 +179,7 @@
   "intent.status.fuel": "Сколько топлива",
   "intent.assistant.cancel": "Отмена",
 
-  "ProjectLicense": "Лицензия: пока не выбрана (см. LICENSE в репозитории).",
+  "ProjectLicense": "Лицензия: MIT.",
   "BrowserFailed": "Браузер не открылся. Скопируйте адрес:",
   "ModelsLicenses": "Модели распознавания",
   "ComponentsLicenses": "Сторонние компоненты",
@@ -194,5 +194,21 @@
   "DiagCollecting": "Собираю архив…",
   "DiagCollected": "Архив готов: {0}",
   "DiagCollectFailed": "Архив не собран: {0}",
-  "DiagNoLogs": "Логов пока нет."
+  "DiagNoLogs": "Логов пока нет.",
+  "NoticesLink": "Полный список компонентов и лицензий (THIRD-PARTY-NOTICES.md)",
+  "UpdateAvailableTitle": "Доступна версия {0}",
+  "UpdateAvailableMessage": "Обновление скачается и установится только по кнопке. Настройки, модели и дополнения фраз сохранятся.",
+  "UpdateRestart": "Обновить и перезапустить",
+  "UpdateReleasePage": "Что нового",
+  "UpdateDownloading": "Скачивание обновления: {0}%. PitVoice работает как обычно.",
+  "UpdateDownloadFailed": "Не удалось скачать обновление: {0}",
+  "UpdateCheckButton": "Проверить обновления",
+  "UpdateChecking": "Проверяю…",
+  "UpdateLatest": "Установлена последняя версия.",
+  "UpdateFound": "Доступна версия {0} — блок обновления на главной странице.",
+  "UpdateCheckFailed": "Проверить не удалось: {0}",
+  "UpdatesOnlyInstalled": "Обновления доступны только в установленной версии.",
+  "UpdatesSection": "Обновления",
+  "CheckForUpdatesLabel": "Проверять обновления",
+  "CheckForUpdatesNote": "При запуске и раз в сутки PitVoice смотрит, есть ли новая версия в релизах проекта на GitHub. Данные о вас не отправляются; обновление ставится только по вашей кнопке."
 }

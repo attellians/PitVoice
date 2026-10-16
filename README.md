@@ -2,6 +2,21 @@
 
 PitVoice is a free, open-source Windows tray utility that gives iRacing drivers voice control over pit commands. Hold a wheel button, say "change tires and add thirty liters", release: the phrase is recognized locally, parsed into deterministic pit commands, sent to iRacing through the official SDK and confirmed by a short sound cue. Russian and English are supported from the start; a new language is a single YAML pack plus models. No cloud, no telemetry.
 
+## Install
+
+1. Download `PitVoice-win-Setup.exe` from the [latest release](https://github.com/attellians/PitVoice/releases/latest) (Windows 10/11 x64).
+2. Run it. It needs no administrator rights and nothing from the network: PitVoice and the .NET runtime it needs go into your profile (`%LocalAppData%\PitVoice`), shortcuts appear in the Start menu and on the desktop, and the app starts.
+   The installer is not signed yet, so Windows SmartScreen may say "Windows protected your PC": click **More info → Run anyway**.
+3. First setup: the home page lists what is left. Download the speech model of your language on the "Models" page, assign the push-to-talk button in "Settings", and try a phrase on the "Check" page. The models are not in the installer; they are downloaded only when you ask for it.
+
+**Updates.** At start and once a day the app looks for a newer version in the [releases](https://github.com/attellians/PitVoice/releases) (turn it off in "Settings → Updates"; "About → Check for updates" works anyway). A new version shows a block on the home page; nothing is downloaded until you press **Update and restart**. Settings, models and phrase additions stay. No data about you is sent.
+
+**Uninstall.** "Settings → Apps → Installed apps → PitVoice → Uninstall" closes the app and removes everything: the program, the shortcuts, `%LocalAppData%\PitVoice` (models, logs, crash reports, diagnostics archives) and `%AppData%\PitVoice` (settings, phrase additions).
+
+**About the GCC runtime.** The speech recognizer (Vosk) for Windows is built with MinGW-w64, so it comes with `libstdc++-6.dll` and `libgcc_s_seh-1.dll`. They are under GPL-3.0 with the GCC Runtime Library Exception, which allows shipping them with programs under any license; PitVoice itself stays MIT. Every component and its license are in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
+
+PitVoice is licensed under the [MIT License](LICENSE). Everything below is about building it from source.
+
 ## Repository layout
 
 ```
@@ -18,6 +33,7 @@ src/PitVoice.App/                  the tray app (WPF, WPF-UI): window, pages, tr
 tools/PitVoice.Cli/                pitvoice-cli: run, ptt, cues, diagnostics, parse, validate, models, devices, recognize, listen, status, send, record
 tools/cue-gen/                     generates the three built-in cue sounds
 tools/icon-gen/                    renders the app icon (.ico) from the same vector sign as the tray icon
+tools/notices-gen/                 generates THIRD-PARTY-NOTICES.md and the "About" list; components.json, license texts
 tests/PitVoice.Core.Tests/         unit tests for the core
 tests/PitVoice.Input.Tests/        language detection, smoke tests of the PTT sources (Windows)
 tests/PitVoice.LanguagePacks.Tests/ data-driven tests from the `tests:` section of every language pack
@@ -25,6 +41,7 @@ tests/PitVoice.Models.Tests/       manifest, license allowlist, store and downlo
 tests/PitVoice.Speech.Tests/       audio conversion, capture logic, grammar, Vosk engine, recorded sample set
 tests/PitVoice.Host.Tests/         the app logic on fakes: live apply, status, journal, check, models, assignment, diagnostics
 tests/PitVoice.App.Tests/          interface dictionaries and the components list (Windows only)
+tests/PitVoice.NoticesGen.Tests/   the notices generator on prepared package files: listing, forbidden licenses
 languages/                         ru.yaml, en.yaml
 models/                            manifest.json: downloadable models with URL, size, sha256 and license
 docs/                              adding-a-language.md
@@ -57,6 +74,10 @@ dotnet run --project tools/PitVoice.Cli -- models download vosk-model-small-ru-0
 dotnet run --project tools/PitVoice.Cli -- models verify vosk-model-small-ru-0.22
 dotnet run --project tools/PitVoice.Cli -- models delete vosk-model-small-ru-0.22
 ```
+
+### Model mirror
+
+When the primary source of a model does not answer, the download goes to its `mirror`: a copy in the pre-release [`models`](https://github.com/attellians/PitVoice/releases/tag/models) of this repository, under the same file name. A test fails for a manifest entry without such a mirror. After adding a model to the manifest, run the **Mirror models** workflow by hand (Actions → Mirror models → Run workflow): it creates the `models` release if needed, downloads every archive that is not there yet, checks its sha256 against the manifest and uploads it. Copies already in the release are never replaced; a checksum mismatch fails the run with the model id. Being a pre-release, `models` is never taken for an app update and never becomes the "Latest" release.
 
 ## Speech from a file or the microphone
 
@@ -160,6 +181,7 @@ The reason of an error is in the `run` output. `cues play [start|success|error|a
 - `cueVolume`: 0 to 100; 0 mutes the cues. `defaultUnit`: `liters` or `gallons`. `threshold`: confidence threshold 0 to 1.
 - `setupCheckDone`: set by the app after the first phrase check; hides the last item of the setup checklist.
 - `interfaceLanguage`: `ru` or `en` for the window and the tray menu; `null` follows `language`. `theme`: `system`, `light` or `dark`.
+- `checkForUpdates`: `true` (default; a file without the field means `true`) lets the installed app check for a new version at start and every 24 hours. A build that was not installed never checks, and the CLI never does.
 
 A missing field gets its default; an invalid value gets its default (the volume is clamped to 0..100) with a warning. A file that is not valid JSON is renamed to `settings.json.bak` and the defaults are used.
 
@@ -183,6 +205,28 @@ profile is replaced with `%USERPROFILE%` in every file. Nothing is sent anywhere
 ```bash
 dotnet run --project tools/PitVoice.Cli -- diagnostics collect                      # prints the path of the archive
 ```
+
+## Third-party notices
+
+`THIRD-PARTY-NOTICES.md` and `src/PitVoice.App/ThirdParty.json` (the list in "About") are generated, never edited by hand. The generator reads the restored packages of the app and the CLI (with every transitive one), `tools/notices-gen/components.json` (native libraries, the .NET runtime, packages without a license expression) and `models/manifest.json`, and appends the full text of every license from `tools/notices-gen/licenses/`.
+
+```bash
+dotnet run --project tools/notices-gen               # regenerate both files after adding, removing or updating a package
+dotnet run --project tools/notices-gen -- --check    # what CI runs: fails when the files are out of date
+```
+
+Regenerate and commit both files whenever a package of the app or of any project it references changes, or a native component changes in `components.json`. Generation fails, writing nothing, when a package has no license expression and no entry in `components.json`, or when a license may not ship: GPL, LGPL, AGPL and non-commercial licenses are forbidden, and the message names the package and the chain it comes through. The one exception, the GCC runtime under the GCC Runtime Library Exception, is allowed only for the entries described in `components.json`.
+
+## Releasing
+
+A release is one tag; GitHub Actions does the rest (`.github/workflows/release.yml`): it checks that the tag matches `VERSION` in the tagged commit and that the version is not released yet, runs the full CI, publishes the app and the CLI self-contained for win-x64, checks the notices, packs `PitVoice-win-Setup.exe` with the full and delta update packages (Velopack), fails if the installer is above 90 MB, and publishes the release.
+
+1. Commit everything that goes into the release (the pre-commit hook bumps `VERSION`) and push the branch.
+2. Read the version of that commit: `git show HEAD:VERSION`.
+3. Tag that commit with the release notes as the tag message: `git tag -a v<VERSION> -m "<what changed>"`.
+4. Push the tag: `git push origin v<VERSION>`.
+
+If the tag does not match `VERSION` (for example it went on a later commit whose hook already bumped the version), the release fails and names both versions: delete the tag (`git tag -d v<X>` and `git push origin :refs/tags/v<X>`) and tag the right commit. A tag of a version that is already released fails with "version already released" and leaves that release alone; release the next version instead. Installed apps never see a release until it is published, and there are no forced updates: to withdraw a release, delete it and its tag on GitHub.
 
 ## Versioning
 

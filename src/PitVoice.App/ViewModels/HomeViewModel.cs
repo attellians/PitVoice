@@ -5,6 +5,7 @@ using CommunityToolkit.Mvvm.Input;
 using PitVoice.App.Localization;
 using PitVoice.Core.Ptt;
 using PitVoice.Host;
+using PitVoice.Host.Updates;
 
 namespace PitVoice.App.ViewModels;
 
@@ -35,10 +36,35 @@ internal sealed partial class HomeViewModel : ObservableObject
             Refresh();
             RefreshPhrases();
         };
+        services.Updates.Changed += _ => Ui.Post(RefreshUpdate);
+        Loc.Instance.LanguageChanged += RefreshUpdate;
         Refresh();
         RefreshPhrases();
+        RefreshUpdate();
         CrashOfferVisible = services.Crashes.PendingFatal() is not null;
     }
+
+    /// <summary>"Version X is available" (app-updates spec): shown while an update is found, downloading or failed to download.</summary>
+    [ObservableProperty]
+    public partial bool UpdateVisible { get; set; }
+
+    [ObservableProperty]
+    public partial string UpdateTitle { get; set; } = string.Empty;
+
+    /// <summary>What the button does, the download progress or why the download failed.</summary>
+    [ObservableProperty]
+    public partial string UpdateMessage { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(UpdateNowCommand))]
+    public partial bool UpdateDownloading { get; set; }
+
+    [ObservableProperty]
+    public partial int UpdatePercent { get; set; }
+
+    /// <summary>The release page address to copy when no browser opened.</summary>
+    [ObservableProperty]
+    public partial string ReleaseCopyAddress { get; set; } = string.Empty;
 
     /// <summary>"PitVoice crashed last time" (spec: Offer to collect diagnostics after a crash).</summary>
     [ObservableProperty]
@@ -108,6 +134,42 @@ internal sealed partial class HomeViewModel : ObservableObject
     {
         DismissCrash();
         CollectError = await _services.Diagnostics.CollectAsync() is { } error ? Loc.F("DiagCollectFailed", error) : string.Empty;
+    }
+
+    private bool CanUpdateNow() => !UpdateDownloading;
+
+    /// <summary>Downloads, then the app stops and the new version starts; a failed download offers the update again.</summary>
+    [RelayCommand(CanExecute = nameof(CanUpdateNow))]
+    private Task UpdateNowAsync() => _services.Updates.UpdateAndRestartAsync();
+
+    [RelayCommand]
+    private void OpenRelease()
+    {
+        var url = _services.Updates.State.Update?.ReleaseUrl;
+        if (url is not null)
+        {
+            ReleaseCopyAddress = Links.TryOpen(url) ? string.Empty : url;
+        }
+    }
+
+    private void RefreshUpdate()
+    {
+        var state = _services.Updates.State;
+        UpdateVisible = state is { Update: not null, Status: UpdateStatus.Available or UpdateStatus.Downloading or UpdateStatus.Checking or UpdateStatus.Failed };
+        if (state.Update is not { } update)
+        {
+            return;
+        }
+
+        UpdateTitle = Loc.F("UpdateAvailableTitle", update.Version);
+        UpdateDownloading = state.Status == UpdateStatus.Downloading;
+        UpdatePercent = state.Percent;
+        UpdateMessage = state switch
+        {
+            { Status: UpdateStatus.Downloading } => Loc.F("UpdateDownloading", state.Percent),
+            { Status: UpdateStatus.Available, Error: { } error } => Loc.F("UpdateDownloadFailed", error),
+            _ => Loc.T("UpdateAvailableMessage"),
+        };
     }
 
     private void RefreshPhrases()

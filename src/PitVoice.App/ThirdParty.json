@@ -1,14 +1,164 @@
 [
-  { "name": "Vosk", "license": "Apache-2.0", "url": "https://github.com/alphacep/vosk-api" },
-  { "name": "NAudio", "license": "MIT", "url": "https://github.com/naudio/NAudio" },
-  { "name": "SDL3", "license": "Zlib", "url": "https://github.com/libsdl-org/SDL" },
-  { "name": "ppy.SDL3-CS", "license": "MIT", "url": "https://github.com/ppy/SDL3-CS" },
-  { "name": "YamlDotNet", "license": "MIT", "url": "https://github.com/aaubry/YamlDotNet" },
-  { "name": "Serilog", "license": "Apache-2.0", "url": "https://github.com/serilog/serilog" },
-  { "name": "Serilog.Sinks.File", "license": "Apache-2.0", "url": "https://github.com/serilog/serilog-sinks-file" },
-  { "name": "Serilog.Sinks.Async", "license": "Apache-2.0", "url": "https://github.com/serilog/serilog-sinks-async" },
-  { "name": "WPF-UI", "license": "MIT", "url": "https://github.com/lepoco/wpfui" },
-  { "name": "H.NotifyIcon", "license": "MIT", "url": "https://github.com/HavenDV/H.NotifyIcon" },
-  { "name": "CommunityToolkit.Mvvm", "license": "MIT", "url": "https://github.com/CommunityToolkit/dotnet" },
-  { "name": ".NET", "license": "MIT", "url": "https://github.com/dotnet/runtime" }
+  {
+    "name": ".NET Runtime",
+    "version": "10",
+    "license": "MIT",
+    "url": "https://github.com/dotnet/runtime"
+  },
+  {
+    "name": ".NET Windows Desktop Runtime (WPF)",
+    "version": "10",
+    "license": "MIT",
+    "url": "https://github.com/dotnet/wpf"
+  },
+  {
+    "name": "CommunityToolkit.Mvvm",
+    "version": "8.4.2",
+    "license": "MIT",
+    "url": "https://github.com/CommunityToolkit/dotnet"
+  },
+  {
+    "name": "H.GeneratedIcons.System.Drawing",
+    "version": "2.4.1",
+    "license": "MIT",
+    "url": "https://github.com/HavenDV/H.NotifyIcon"
+  },
+  {
+    "name": "H.NotifyIcon",
+    "version": "2.4.1",
+    "license": "MIT",
+    "url": "https://github.com/HavenDV/H.NotifyIcon"
+  },
+  {
+    "name": "H.NotifyIcon.Wpf",
+    "version": "2.4.1",
+    "license": "MIT",
+    "url": "https://github.com/HavenDV/H.NotifyIcon"
+  },
+  {
+    "name": "Kaldi",
+    "version": "from Vosk 0.3.38",
+    "license": "Apache-2.0",
+    "url": "https://github.com/kaldi-asr/kaldi"
+  },
+  {
+    "name": "libgcc (GCC runtime)",
+    "version": "from Vosk 0.3.38",
+    "license": "GPL-3.0-or-later WITH GCC-exception-3.1",
+    "url": "https://gcc.gnu.org"
+  },
+  {
+    "name": "libstdc++ (GCC runtime)",
+    "version": "from Vosk 0.3.38",
+    "license": "GPL-3.0-or-later WITH GCC-exception-3.1",
+    "url": "https://gcc.gnu.org"
+  },
+  {
+    "name": "libvosk",
+    "version": "0.3.38",
+    "license": "Apache-2.0",
+    "url": "https://github.com/alphacep/vosk-api"
+  },
+  {
+    "name": "libwinpthread (MinGW-w64)",
+    "version": "from Vosk 0.3.38",
+    "license": "MIT",
+    "url": "https://www.mingw-w64.org"
+  },
+  {
+    "name": "NAudio.Core",
+    "version": "3.1.0",
+    "license": "MIT",
+    "url": "https://naudio.github.io/NAudio/"
+  },
+  {
+    "name": "NAudio.Wasapi",
+    "version": "3.1.0",
+    "license": "MIT",
+    "url": "https://naudio.github.io/NAudio/"
+  },
+  {
+    "name": "OpenBLAS",
+    "version": "from Vosk 0.3.38",
+    "license": "BSD-3-Clause",
+    "url": "https://github.com/OpenMathLib/OpenBLAS"
+  },
+  {
+    "name": "OpenFst",
+    "version": "from Vosk 0.3.38",
+    "license": "Apache-2.0",
+    "url": "https://www.openfst.org"
+  },
+  {
+    "name": "ppy.SDL3-CS",
+    "version": "2026.722.0",
+    "license": "MIT",
+    "url": "https://github.com/ppy/SDL3-CS"
+  },
+  {
+    "name": "SDL3",
+    "version": "3.5.0",
+    "license": "Zlib",
+    "url": "https://github.com/libsdl-org/SDL"
+  },
+  {
+    "name": "Serilog",
+    "version": "4.4.0",
+    "license": "Apache-2.0",
+    "url": "https://serilog.net/"
+  },
+  {
+    "name": "Serilog.Sinks.Async",
+    "version": "2.1.0",
+    "license": "Apache-2.0",
+    "url": "https://serilog.net/"
+  },
+  {
+    "name": "Serilog.Sinks.File",
+    "version": "7.0.0",
+    "license": "Apache-2.0",
+    "url": "https://github.com/serilog/serilog-sinks-file"
+  },
+  {
+    "name": "System.CommandLine",
+    "version": "2.0.12",
+    "license": "MIT",
+    "url": "https://github.com/dotnet/command-line-api"
+  },
+  {
+    "name": "System.Numerics.Tensors",
+    "version": "9.0.0",
+    "license": "MIT",
+    "url": "https://dot.net/"
+  },
+  {
+    "name": "Velopack",
+    "version": "1.2.161",
+    "license": "MIT",
+    "url": "https://github.com/velopack/velopack"
+  },
+  {
+    "name": "Vosk",
+    "version": "0.3.38",
+    "license": "Apache-2.0",
+    "url": "https://alphacephei.com/vosk/"
+  },
+  {
+    "name": "WPF-UI",
+    "version": "4.3.0",
+    "license": "MIT",
+    "url": "https://github.com/lepoco/wpfui"
+  },
+  {
+    "name": "WPF-UI.Abstractions",
+    "version": "4.3.0",
+    "license": "MIT",
+    "url": "https://github.com/lepoco/wpfui"
+  },
+  {
+    "name": "YamlDotNet",
+    "version": "18.1.0",
+    "license": "MIT",
+    "url": "https://github.com/aaubry/YamlDotNet/wiki"
+  }
 ]

@@ -22,10 +22,26 @@
                         Command="{Binding OpenCommand}"
                         CommandParameter="{Binding Repository, Mode=OneTime}"
                         Content="{Binding Repository, Mode=OneTime}" />
+                    <ui:HyperlinkButton
+                        Margin="-8,0,0,0"
+                        Command="{Binding OpenCommand}"
+                        CommandParameter="{Binding NoticesUrl, Mode=OneTime}"
+                        Content="{loc:Tr NoticesLink}" />
                     <StackPanel Margin="0,4,0,0" Visibility="{Binding CopyAddress, Converter={StaticResource NotEmptyVisible}}">
                         <TextBlock Text="{loc:Tr BrowserFailed}" TextWrapping="Wrap" />
                         <ui:TextBox IsReadOnly="True" Text="{Binding CopyAddress, Mode=OneWay}" />
                     </StackPanel>
+
+                    <StackPanel Margin="0,12,0,0" Orientation="Horizontal" Visibility="{Binding IsInstalled, Mode=OneTime, Converter={StaticResource Visible}}">
+                        <ui:Button Command="{Binding CheckUpdatesCommand}" Content="{loc:Tr UpdateCheckButton}" />
+                        <TextBlock Margin="12,0,0,0" VerticalAlignment="Center" Text="{Binding UpdateResult}" TextWrapping="Wrap" />
+                    </StackPanel>
+                    <TextBlock
+                        Margin="0,12,0,0"
+                        Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                        Text="{loc:Tr UpdatesOnlyInstalled}"
+                        TextWrapping="Wrap"
+                        Visibility="{Binding IsNotInstalled, Mode=OneTime, Converter={StaticResource Visible}}" />
                 </StackPanel>
             </ui:Card>
 
@@ -51,8 +67,9 @@
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
                         <WrapPanel Margin="0,2">
-                            <TextBlock Width="260" Text="{Binding Name}" />
-                            <TextBlock Width="120" Text="{Binding License}" />
+                            <TextBlock Width="220" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                            <TextBlock Width="90" Text="{Binding Version}" />
+                            <TextBlock Width="190" Text="{Binding License}" TextTrimming="CharacterEllipsis" />
                             <ui:HyperlinkButton
                                 Padding="4,0"
                                 Command="{Binding DataContext.OpenCommand, ElementName=Root}"

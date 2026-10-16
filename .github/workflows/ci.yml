@@ -4,6 +4,8 @@ on:
   push:
     branches: ["**"]
   pull_request:
+  # The release workflow runs the same build and tests before it packs (design decision 6).
+  workflow_call:
 
 jobs:
   build-test:
@@ -46,6 +48,11 @@ jobs:
         env:
           PITVOICE_REQUIRE_MODELS: "1"
         run: dotnet test PitVoice.sln --configuration Release --no-build --logger "trx" --results-directory TestResults
+
+      # The notices and the "About" list must match the shipped packages (third-party-notices spec).
+      - name: Check third-party notices
+        if: runner.os == 'Windows'
+        run: dotnet run --project tools/notices-gen --configuration Release --no-build -- --check
 
       - name: Validate language packs
         run: dotnet run --project tools/PitVoice.Cli --configuration Release --no-build -- validate

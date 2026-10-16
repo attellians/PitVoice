@@ -24,7 +24,7 @@ network is a `.wsb` file:
 | 0.2 | `git log --all -p` searched for `token`, `password`, `apikey`, `api_key`, `secret` in added lines | nothing but code identifiers | 2026-10-16: only `TokenQuery` (a WinAPI constant) besides `CancellationToken` and `GITHUB_TOKEN` |
 | 0.3 | authors of all commits | the user's own name and address | 2026-10-16: "Artem" and "Artem Lebedko", one address |
 | 0.4 | telemetry recordings `tests/PitVoice.IRacing.Tests/Recordings` | no user names, CustID or team names | 2026-10-16: no `UserName`, `CustID`, `TeamName` in the history of the directory |
-| 0.5 | the user makes the repository public; the repository page opens in a private browser window | the page opens without signing in | |
+| 0.5 | the user makes the repository public; the repository page opens in a private browser window | the page opens without signing in | ok (2026-10-16): public, opens in a browser without a GitHub session; the default branch `main` holds only README, the code is in `development` |
 
 ## 1. Mirror and the first release
 

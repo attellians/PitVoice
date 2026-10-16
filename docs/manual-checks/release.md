@@ -30,8 +30,8 @@ network is a `.wsb` file:
 
 | # | Action | Expected | Result |
 |---|---|---|---|
-| 1.1 | Actions → Mirror models → Run workflow | the run is green; the pre-release `models` holds `vosk-model-small-ru-0.22.zip` and `vosk-model-small-en-us-0.15.zip` | |
-| 1.2 | open both `mirror` addresses of `models/manifest.json` in a private browser window, then `Get-FileHash -Algorithm SHA256` | both download without signing in, the sums match the manifest | |
+| 1.1 | Actions → Mirror models → Run workflow | the run is green; the pre-release `models` holds `vosk-model-small-ru-0.22.zip` and `vosk-model-small-en-us-0.15.zip` | ok (2026-10-16): run 1 green, pre-release "Speech models (mirror)" with vosk-model-small-ru-0.22.zip (46236750 bytes) and vosk-model-small-en-us-0.15.zip (41205931 bytes); `releases/latest` answers 404, so `models` is not the latest release |
+| 1.2 | open both `mirror` addresses of `models/manifest.json` in a private browser window, then `Get-FileHash -Algorithm SHA256` | both download without signing in, the sums match the manifest | ok (2026-10-16): both downloaded without a GitHub session, sizes and sha256 match the manifest |
 | 1.3 | run Mirror models again | green, both files reported as already in the release, nothing replaced | |
 | 1.4 | release N by the steps of README "Releasing" | the release `vN` has `PitVoice-win-Setup.exe`, `PitVoice-N-full.nupkg`, `releases.win.json`; the size of the installer is printed in the Pack job | |
 | 1.5 | the "Releases" link on the repository page | "Latest" is `vN`, not `models` | |

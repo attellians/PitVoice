@@ -110,6 +110,8 @@ public sealed class WindowHelpersTests
 
         public IReadOnlyList<Core.Audio.AudioDevice> GetOutputDevices() => inner.GetOutputDevices();
 
+        public IReadOnlyList<Input.GameDevice> GetGameDevices(out string? error) => inner.GetGameDevices(out error);
+
         public IAudioCuePlayer CreateCuePlayer(string? deviceName, int volume) =>
             new Core.Tests.Pipeline.FakeCuePlayer { Error = "device is in use" };
 

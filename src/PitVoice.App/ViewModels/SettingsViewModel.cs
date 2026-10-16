@@ -30,6 +30,9 @@ internal sealed partial class SettingsViewModel : ObservableObject
     private readonly DispatcherTimer _volumeTimer;
     private bool _loading;
 
+    /// <summary>The "Diagnostics" block (spec: Diagnostics section in the settings).</summary>
+    public DiagnosticsActions Diagnostics => _services.Diagnostics;
+
     public SettingsViewModel(AppServices services, Action openModels)
     {
         _services = services;

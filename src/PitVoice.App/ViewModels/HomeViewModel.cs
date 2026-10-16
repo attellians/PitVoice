@@ -37,7 +37,16 @@ internal sealed partial class HomeViewModel : ObservableObject
         };
         Refresh();
         RefreshPhrases();
+        CrashOfferVisible = services.Crashes.PendingFatal() is not null;
     }
+
+    /// <summary>"PitVoice crashed last time" (spec: Offer to collect diagnostics after a crash).</summary>
+    [ObservableProperty]
+    public partial bool CrashOfferVisible { get; set; }
+
+    /// <summary>Why collecting from the block failed, or empty.</summary>
+    [ObservableProperty]
+    public partial string CollectError { get; set; } = string.Empty;
 
     public ObservableCollection<ChecklistEntry> Checklist { get; } = [];
 
@@ -84,6 +93,21 @@ internal sealed partial class HomeViewModel : ObservableObject
                 ? Loc.F("PttDisconnected", binding.Describe())
                 : binding.Describe();
         ElevationHintVisible = status.Facts.GameElevated;
+    }
+
+    /// <summary>Either button hides the block until the next fatal crash.</summary>
+    [RelayCommand]
+    private void DismissCrash()
+    {
+        _services.Crashes.Acknowledge();
+        CrashOfferVisible = false;
+    }
+
+    [RelayCommand]
+    private async Task CollectAfterCrashAsync()
+    {
+        DismissCrash();
+        CollectError = await _services.Diagnostics.CollectAsync() is { } error ? Loc.F("DiagCollectFailed", error) : string.Empty;
     }
 
     private void RefreshPhrases()

@@ -171,7 +171,8 @@ public static class PitPlanner
             return new PlannedStep(sources, [new SentCommand(PitCommand.Clear, 0)], "nothing selected", s => s.NothingSelected);
         }
 
-        throw new InvalidOperationException($"No pit command for intent '{intent}'.");
+        // Without the intent: a stage failure reaches the log, and parsed intents must not (logging spec).
+        throw new InvalidOperationException("No pit command for the intent.");
     }
 
     private static PlannedStep Set(IReadOnlyList<ParsedCommand> sources, PitCommand command, PitServiceFlags flag, string expected) =>

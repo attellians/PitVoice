@@ -242,11 +242,25 @@ cuesPlayCommand.SetAction((result, cancellationToken) => CuesRunner.PlayAsync(
 
 var cuesCommand = new Command("cues", "Built-in sound cues.") { cuesPlayCommand };
 
+var diagnosticsCollectCommand = new Command("collect", "Collect logs, crash reports, settings, your additions and a system summary into a zip; prints its path.")
+{
+    settingsOption,
+    modelsDirOption,
+    dirOption,
+};
+diagnosticsCollectCommand.SetAction(result => DiagnosticsRunner.Collect(
+    result.GetValue(settingsOption),
+    Packs.ResolveDirectory(result.GetValue(dirOption)),
+    new ModelStore(result.GetValue(modelsDirOption))));
+
+var diagnosticsCommand = new Command("diagnostics", "Diagnostics for a problem report.") { diagnosticsCollectCommand };
+
 var root = new RootCommand("PitVoice command-line tool.")
 {
     runCommand,
     pttCommand,
     cuesCommand,
+    diagnosticsCommand,
     parseCommand,
     statusCommand,
     sendCommand,

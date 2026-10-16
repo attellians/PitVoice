@@ -182,5 +182,17 @@
   "ProjectLicense": "License: not chosen yet (see LICENSE in the repository).",
   "BrowserFailed": "The browser could not be opened. Copy the address:",
   "ModelsLicenses": "Speech models",
-  "ComponentsLicenses": "Third-party components"
+  "ComponentsLicenses": "Third-party components",
+
+  "CrashTitle": "PitVoice crashed last time",
+  "CrashMessage": "Collect diagnostics and attach the archive to your problem report — it makes the problem easier to find.",
+  "CrashDismiss": "Close",
+  "DiagnosticsSection": "Diagnostics",
+  "DiagnosticsNote": "The log holds only what the app does: start, settings, model, game, button and errors. Nothing of your phrases — no audio, no text — is in it. The diagnostics archive holds the logs, crash reports, settings and your command additions; you can open and check it before sending. PitVoice itself never sends it anywhere.",
+  "DiagCollectButton": "Collect diagnostics",
+  "DiagOpenLogs": "Open logs folder",
+  "DiagCollecting": "Collecting the archive…",
+  "DiagCollected": "Archive ready: {0}",
+  "DiagCollectFailed": "Archive not collected: {0}",
+  "DiagNoLogs": "No logs yet."
 }

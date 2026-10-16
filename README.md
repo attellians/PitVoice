@@ -12,9 +12,10 @@ src/PitVoice.Speech/               microphone capture and cue playback (NAudio),
 src/PitVoice.Input/                PTT sources: game device buttons (SDL3) and a low-level keyboard hook
 src/PitVoice.IRacing/              iRacing SDK: telemetry, pit commands, telemetry recording and replay
 src/PitVoice.Host/                 the pipeline host shared by the app and `run`: composition from settings, live apply,
-                                   tray status, recent phrases, command check, models, PTT assignment, one host per user
+                                   tray status, recent phrases, command check, models, PTT assignment, one host per user,
+                                   log, crash reports and the diagnostics archive
 src/PitVoice.App/                  the tray app (WPF, WPF-UI): window, pages, tray icon, interface strings ru/en
-tools/PitVoice.Cli/                pitvoice-cli: run, ptt, cues, parse, validate, models, devices, recognize, listen, status, send, record
+tools/PitVoice.Cli/                pitvoice-cli: run, ptt, cues, diagnostics, parse, validate, models, devices, recognize, listen, status, send, record
 tools/cue-gen/                     generates the three built-in cue sounds
 tools/icon-gen/                    renders the app icon (.ico) from the same vector sign as the tray icon
 tests/PitVoice.Core.Tests/         unit tests for the core
@@ -22,7 +23,7 @@ tests/PitVoice.Input.Tests/        language detection, smoke tests of the PTT so
 tests/PitVoice.LanguagePacks.Tests/ data-driven tests from the `tests:` section of every language pack
 tests/PitVoice.Models.Tests/       manifest, license allowlist, store and downloader tests
 tests/PitVoice.Speech.Tests/       audio conversion, capture logic, grammar, Vosk engine, recorded sample set
-tests/PitVoice.Host.Tests/         the app logic on fakes: live apply, status, journal, check, models, assignment
+tests/PitVoice.Host.Tests/         the app logic on fakes: live apply, status, journal, check, models, assignment, diagnostics
 tests/PitVoice.App.Tests/          interface dictionaries and the components list (Windows only)
 languages/                         ru.yaml, en.yaml
 models/                            manifest.json: downloadable models with URL, size, sha256 and license
@@ -161,6 +162,27 @@ The reason of an error is in the `run` output. `cues play [start|success|error|a
 - `interfaceLanguage`: `ru` or `en` for the window and the tray menu; `null` follows `language`. `theme`: `system`, `light` or `dark`.
 
 A missing field gets its default; an invalid value gets its default (the volume is clamped to 0..100) with a warning. A file that is not valid JSON is renamed to `settings.json.bak` and the defaults are used.
+
+## Logs and diagnostics
+
+The tray app and `run` write a log of what the app does to `%LocalAppData%\PitVoice\logs\pitvoice-<date>.log`: start and
+stop, settings, the pack, additions and model, the game and its administrator rights, the PTT device, stage failures and
+"not (fully) applied" outcomes without the commands. Nothing of what you say is written anywhere: no audio, no
+recognized text, no record per phrase. A new file starts every day and at 10 MB; the last 7 are kept. Other CLI
+commands write no log.
+
+An unhandled error writes `crash-<date-time>.log` next to the log (the last 10 are kept) and ends the process; the next
+start of the app offers to collect diagnostics on the home page. `PITVOICE_TEST_CRASH=ui|background|task` forces such a
+crash 5 s after start, for checking it (`ui` only in the app).
+
+"Collect diagnostics" in the app settings, or the command below, writes
+`%LocalAppData%\PitVoice\diagnostics\pitvoice-diagnostics-<date-time>.zip` (the last 5 are kept): a summary of the
+system, devices and state, the logs and crash reports, the settings file and your additions. The path of your Windows
+profile is replaced with `%USERPROFILE%` in every file. Nothing is sent anywhere; attach the archive yourself.
+
+```bash
+dotnet run --project tools/PitVoice.Cli -- diagnostics collect                      # prints the path of the archive
+```
 
 ## Versioning
 

@@ -1,9 +1,12 @@
 using System.Windows;
+using System.Windows.Threading;
 using PitVoice.App.Localization;
 using PitVoice.App.Tray;
 using PitVoice.App.ViewModels;
 using PitVoice.Host;
+using PitVoice.Host.Diagnostics;
 using PitVoice.Input;
+using Serilog.Core;
 
 namespace PitVoice.App;
 
@@ -13,6 +16,8 @@ namespace PitVoice.App;
 public partial class App : Application
 {
     private SingleInstance? _instance;
+    private Logger? _log;
+    private CrashReporter? _crashes;
     private AppServices? _services;
     private TrayIcon? _tray;
     private MainWindow? _window;
@@ -36,11 +41,19 @@ public partial class App : Application
             return;
         }
 
-        _services = new AppServices();
+        // Crash handling comes before the host, so a failure while it starts is reported too (crash-reports spec).
+        _log = DiagnosticLog.Create();
+        _crashes = new CrashReporter(_log);
+        _crashes.FatalReported += _ => HideTray();
+        _crashes.Install();
+        DispatcherUnhandledException += OnWindowThreadCrash;
+
+        _services = new AppServices(_log, _crashes);
         if (await _services.Host.StartAsync() == HostStartResult.AlreadyRunning)
         {
             ShowMessage("ConsoleHostRunning");
             await _services.DisposeAsync();
+            _log.Dispose();
             _instance.Dispose();
             Shutdown();
             return;
@@ -55,6 +68,40 @@ public partial class App : Application
         _instance.Listen(() => Dispatcher.Invoke(ShowWindow));
 
         ShowWindow();
+        TestCrash.Schedule(_log, action => Dispatcher.BeginInvoke(action));
+    }
+
+    /// <summary>
+    /// After an exception in the window thread the state of the window and the host is unknown, so the app writes the
+    /// report, removes the icon (<see cref="CrashReporter.FatalReported"/>) and ends (design decision 3); the next start
+    /// is a normal one.
+    /// </summary>
+    private void OnWindowThreadCrash(object sender, DispatcherUnhandledExceptionEventArgs e)
+    {
+        e.Handled = true;
+        _crashes?.Report(e.Exception, "window thread", fatal: true);
+        Environment.Exit(2);
+    }
+
+    /// <summary>Without it a dead icon stays in the tray until the mouse passes over it.</summary>
+    private void HideTray()
+    {
+        try
+        {
+            if (Dispatcher.CheckAccess())
+            {
+                _tray?.Dispose();
+            }
+            else
+            {
+                Dispatcher.Invoke(() => _tray?.Dispose(), DispatcherPriority.Send, CancellationToken.None, TimeSpan.FromSeconds(1));
+            }
+        }
+#pragma warning disable CA1031 // The process ends anyway.
+        catch (Exception)
+#pragma warning restore CA1031
+        {
+        }
     }
 
     private void ShowWindow()
@@ -104,6 +151,7 @@ public partial class App : Application
             await _services.DisposeAsync();
         }
 
+        _log?.Dispose();
         _instance?.Dispose();
         Shutdown();
     }

@@ -52,6 +52,9 @@ internal sealed class HostFixture : IAsyncDisposable
 
     public AppHost Host => _host ??= CreateHost();
 
+    /// <summary>Log of the host; set it before the host is created.</summary>
+    public Serilog.ILogger Log { get; set; } = Serilog.Core.Logger.None;
+
     public IReadOnlyList<PipelineEvent> Events => [.. _events];
 
     public void InstallModel(string id)
@@ -135,6 +138,7 @@ internal sealed class HostFixture : IAsyncDisposable
                 AdditionsDirectory = AdditionsDirectory,
                 Models = Models,
                 UseHostLock = false,
+                Log = Log,
             },
             Store,
             Platform,

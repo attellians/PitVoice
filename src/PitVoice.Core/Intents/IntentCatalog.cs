@@ -90,8 +90,9 @@ public static class IntentCatalog
 
     public static bool TryGet(IntentId id, out IntentDefinition definition) => ById.TryGetValue(id, out definition!);
 
+    /// <remarks>The message has no id: a stage failure reaches the log, and parsed intents must not (logging spec).</remarks>
     public static IntentDefinition Get(IntentId id) =>
         ById.TryGetValue(id, out var definition)
             ? definition
-            : throw new KeyNotFoundException($"Intent '{id}' is not in the catalog.");
+            : throw new KeyNotFoundException("The intent is not in the catalog.");
 }

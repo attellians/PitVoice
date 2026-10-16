@@ -9,6 +9,27 @@
         <StackPanel Margin="24,16,24,24">
             <TextBlock Style="{StaticResource PageTitle}" Text="{loc:Tr NavHome}" />
 
+            <!-- WPF-UI InfoBar does not show its content, so the buttons are a row under it. -->
+            <StackPanel Margin="0,0,0,12" Visibility="{Binding CrashOfferVisible, Converter={StaticResource Visible}}">
+                <ui:InfoBar
+                    Title="{loc:Tr CrashTitle}"
+                    IsClosable="False"
+                    IsOpen="True"
+                    Message="{loc:Tr CrashMessage}"
+                    Severity="Error" />
+                <StackPanel Margin="0,8,0,0" Orientation="Horizontal">
+                    <ui:Button Appearance="Primary" Command="{Binding CollectAfterCrashCommand}" Content="{loc:Tr DiagCollectButton}" />
+                    <ui:Button Margin="8,0,0,0" Command="{Binding DismissCrashCommand}" Content="{loc:Tr CrashDismiss}" />
+                </StackPanel>
+            </StackPanel>
+
+            <ui:InfoBar
+                Margin="0,0,0,12"
+                IsClosable="False"
+                IsOpen="{Binding CollectError, Converter={StaticResource NotEmpty}}"
+                Message="{Binding CollectError}"
+                Severity="Error" />
+
             <ui:Card Margin="0,0,0,12" Visibility="{Binding ChecklistVisible, Converter={StaticResource Visible}}">
                 <StackPanel>
                     <TextBlock FontWeight="SemiBold" Text="{loc:Tr ChecklistTitle}" />

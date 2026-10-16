@@ -3,6 +3,7 @@ using System.Runtime.Versioning;
 using PitVoice.Core.Ptt;
 using PitVoice.Core.Settings;
 using PitVoice.Host;
+using PitVoice.Host.Diagnostics;
 using PitVoice.Input;
 using PitVoice.Models;
 
@@ -29,12 +30,19 @@ internal static class HostRunner
             return 1;
         }
 
+        // The log file gets application events only; the console keeps the full execution report as before.
+        using var log = DiagnosticLog.Create();
+        var crashes = new CrashReporter(log);
+        crashes.FatalReported += path => Console.Error.WriteLine(path is null
+            ? "PitVoice crashed; the crash report could not be written."
+            : $"PitVoice crashed; crash report: {path}");
+        crashes.Install();
         var store = Settings.Open(settingsPath);
-        using var platform = new WindowsHostPlatform(GameRunner.Game.ConsoleLog);
-        var host = new AppHost(new AppHostOptions { PacksDirectory = packsDirectory, Models = models }, store, platform);
+        using var platform = new WindowsHostPlatform(new CompositeExecutionLog(GameRunner.Game.ConsoleLog, new SerilogExecutionLog(log)));
+        var host = new AppHost(new AppHostOptions { PacksDirectory = packsDirectory, Models = models, Log = log }, store, platform);
         try
         {
-            return await HostAsync(host, platform, store, cancellationToken).ConfigureAwait(false);
+            return await HostAsync(host, platform, store, log, cancellationToken).ConfigureAwait(false);
         }
         finally
         {
@@ -43,7 +51,7 @@ internal static class HostRunner
     }
 
     [SupportedOSPlatform("windows")]
-    private static async Task<int> HostAsync(AppHost host, WindowsHostPlatform platform, ISettingsStore store, CancellationToken cancellationToken)
+    private static async Task<int> HostAsync(AppHost host, WindowsHostPlatform platform, ISettingsStore store, Serilog.ILogger log, CancellationToken cancellationToken)
     {
         host.SubscriberFailed += e => Console.Error.WriteLine($"event subscriber failed: {e.Message}");
         host.Events.Subscribe(ConsoleEvents.Print);
@@ -112,6 +120,7 @@ internal static class HostRunner
             }
         }
 
+        TestCrash.Schedule(log, runOnWindow: null);
         Console.WriteLine("Ready. Ctrl+C stops.");
         try
         {

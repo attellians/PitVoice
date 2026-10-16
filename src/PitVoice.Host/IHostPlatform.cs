@@ -3,6 +3,7 @@ using PitVoice.Core.Audio;
 using PitVoice.Core.Cues;
 using PitVoice.Core.Pit;
 using PitVoice.Core.Ptt;
+using PitVoice.Input;
 using PitVoice.IRacing.Diagnostics;
 
 namespace PitVoice.Host;
@@ -23,6 +24,9 @@ public interface IHostPlatform
     IReadOnlyList<AudioDevice> GetInputDevices();
 
     IReadOnlyList<AudioDevice> GetOutputDevices();
+
+    /// <summary>Connected game devices for the diagnostics summary; <paramref name="error"/> says why there is no list.</summary>
+    IReadOnlyList<GameDevice> GetGameDevices(out string? error);
 
     IAudioCuePlayer CreateCuePlayer(string? deviceName, int volume);
 

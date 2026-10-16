@@ -31,7 +31,8 @@ public static class WheelsExtensions
         Wheels.RF => PitCommand.RF,
         Wheels.LR => PitCommand.LR,
         Wheels.RR => PitCommand.RR,
-        _ => throw new ArgumentOutOfRangeException(nameof(wheel), wheel, "not a single wheel"),
+        // Without the value: a stage failure reaches the log, and slots of a phrase must not (logging spec).
+        _ => throw new ArgumentOutOfRangeException(nameof(wheel), "not a single wheel"),
     };
 
     /// <summary>Compact text such as <c>LF+LR</c> or <c>none</c>.</summary>

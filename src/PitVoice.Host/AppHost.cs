@@ -8,9 +8,13 @@ using PitVoice.Core.Pit;
 using PitVoice.Core.Ptt;
 using PitVoice.Core.Responses;
 using PitVoice.Core.Settings;
+using PitVoice.Host.Diagnostics;
 using PitVoice.IRacing.Diagnostics;
 using PitVoice.Models;
 using PitVoice.Speech.Asr;
+using Serilog;
+using Serilog.Core;
+using Serilog.Events;
 
 namespace PitVoice.Host;
 
@@ -30,6 +34,9 @@ public sealed record AppHostOptions
 
     /// <summary>Take <see cref="HostLock.PipelineHostName"/>; tests switch it off.</summary>
     public bool UseHostLock { get; init; } = true;
+
+    /// <summary>Application events (logging spec); nothing about phrases is written to it. The caller owns it.</summary>
+    public ILogger Log { get; init; } = Logger.None;
 }
 
 /// <summary>How <see cref="AppHost.StartAsync"/> ended.</summary>
@@ -77,6 +84,7 @@ public sealed class AppHost : IAsyncDisposable
     private readonly ISettingsStore _store;
     private readonly IHostPlatform _platform;
     private readonly TimeProvider _time;
+    private readonly ILogger _log;
     private readonly Lock _lock = new();
     private readonly PhraseIdSource _ids = new();
     private readonly CancellationTokenSource _stopping = new();
@@ -92,6 +100,7 @@ public sealed class AppHost : IAsyncDisposable
     private bool _reloadRequested;
     private bool _modelReleased;
     private bool _rebuildPtt;
+    private bool _started;
     private HostFacts _facts = HostFacts.Initial;
     private HostStatus _status = HostStatus.Evaluate(HostFacts.Initial);
 
@@ -117,9 +126,15 @@ public sealed class AppHost : IAsyncDisposable
         _store = store;
         _platform = platform;
         _time = time ?? TimeProvider.System;
+        _log = options.Log;
         AdditionsDirectory = UserAdditionsLoader.ResolveDirectory(options.AdditionsDirectory);
-        Events = new EventBus(e => SubscriberFailed?.Invoke(e));
+        Events = new EventBus(e =>
+        {
+            _log.Error(e, "Event subscriber failed");
+            SubscriberFailed?.Invoke(e);
+        });
         Events.Subscribe(Journal.OnEvent);
+        Events.Subscribe(new PipelineIssueLogger(_log).OnEvent);
         _target = AppSettings.Defaults("en");
     }
 
@@ -251,6 +266,9 @@ public sealed class AppHost : IAsyncDisposable
             }
         }
 
+        // A host refused by the lock writes nothing: the log file belongs to the host that runs.
+        _started = true;
+        _log.Information("PitVoice {Version} started on {Os}, .NET {Runtime}", DiagnosticPaths.Version, DiagnosticPaths.OperatingSystem, Environment.Version);
         var loaded = _store.Load();
         SettingsWarnings = loaded.Warnings;
         lock (_lock)
@@ -258,7 +276,17 @@ public sealed class AppHost : IAsyncDisposable
             _target = loaded.Settings;
         }
 
+        _log.Information("Settings file {Path}", _store.Path);
+        foreach (var warning in loaded.Warnings)
+        {
+            _log.Warning("Settings file: {Warning}", warning);
+        }
+
         _packs = LanguagePackLoader.LoadDirectory(_options.PacksDirectory);
+        foreach (var failed in _packs.Where(r => r.Pack is null))
+        {
+            _log.Error("Built-in language pack did not load: {Errors}", string.Join("; ", failed.Errors.Select(e => e.ToString())));
+        }
         _applyLoop = Task.Run(ApplyLoopAsync, CancellationToken.None);
         await WhenAppliedAsync().WaitAsync(cancellationToken).ConfigureAwait(false);
 
@@ -356,6 +384,11 @@ public sealed class AppHost : IAsyncDisposable
             return;
         }
 
+        if (_started)
+        {
+            _log.Information("Host stopping");
+        }
+
         await _stopping.CancelAsync().ConfigureAwait(false);
         _gameTimer?.Dispose();
         try
@@ -387,6 +420,10 @@ public sealed class AppHost : IAsyncDisposable
         Events.Dispose();
         _hostLock?.Dispose();
         _stopping.Dispose();
+        if (_started)
+        {
+            _log.Information("Host stopped");
+        }
     }
 
     /// <summary>
@@ -470,12 +507,14 @@ public sealed class AppHost : IAsyncDisposable
             {
                 await WaitIdleAsync(token).ConfigureAwait(false);
                 AppSettings target;
+                AppSettings? previous;
                 bool reload;
                 bool rebuildPtt;
                 List<TaskCompletionSource>? done = null;
                 lock (_lock)
                 {
                     target = _target;
+                    previous = _applied;
                     reload = _reloadRequested;
                     rebuildPtt = _rebuildPtt;
                     _reloadRequested = false;
@@ -490,10 +529,12 @@ public sealed class AppHost : IAsyncDisposable
 
                 if (done is not null)
                 {
+                    LogApplied(previous, target);
                     done.ForEach(w => w.TrySetResult());
                     break;
                 }
 
+                LogApplied(previous, target);
                 var applied = _applied;
                 if (reload || applied is null || applied.Language != target.Language)
                 {
@@ -511,6 +552,24 @@ public sealed class AppHost : IAsyncDisposable
 
                 SessionChanged?.Invoke();
             }
+        }
+    }
+
+    /// <summary>One record per applied change; several changes applied at once give one record (spec: Settings changed).</summary>
+    private void LogApplied(AppSettings? previous, AppSettings target)
+    {
+        if (previous == target)
+        {
+            return;
+        }
+
+        if (previous is null)
+        {
+            _log.Information("Settings at start: {Settings}", LogText.Describe(target));
+        }
+        else
+        {
+            _log.Information("Settings applied: {Settings}", LogText.Describe(target));
         }
     }
 
@@ -570,6 +629,19 @@ public sealed class AppHost : IAsyncDisposable
             packError = $"language pack '{language}' names no asr_model";
         }
 
+        LogPack(language, packError, additions);
+        if (packError is null && modelId is not null && modelPath is null)
+        {
+            if (released)
+            {
+                _log.Information("Model {ModelId} unloaded", modelId);
+            }
+            else
+            {
+                _log.Warning("Model {ModelId} is not installed", modelId);
+            }
+        }
+
         IAsrEngine? oldEngine;
         lock (_lock)
         {
@@ -604,6 +676,7 @@ public sealed class AppHost : IAsyncDisposable
         }
 
         var engine = _platform.CreateEngine();
+        var loadStarted = _time.GetTimestamp();
         AsrLoadResult loaded;
         try
         {
@@ -617,6 +690,7 @@ public sealed class AppHost : IAsyncDisposable
 
         if (!loaded.IsLoaded)
         {
+            _log.Error("Model {ModelId} failed to load: {Error}", modelId, loaded.Error);
             (engine as IDisposable)?.Dispose();
             UpdateFacts(f => f with { ModelLoading = false, ModelError = loaded.Error, Starting = false });
             await SwapHandlerAsync(target, () => Unavailable(StatusReason.ModelFailed, loaded.Error)).ConfigureAwait(false);
@@ -626,6 +700,12 @@ public sealed class AppHost : IAsyncDisposable
         var missing = engine is VoskAsrEngine { Vocabulary: { } vocabulary }
             ? GrammarBuilder.MissingAdditionWords(pack, vocabulary)
             : [];
+        _log.Information("Model {ModelId} loaded in {Elapsed} ms", modelId, (long)_time.GetElapsedTime(loadStarted).TotalMilliseconds);
+        if (missing.Count > 0)
+        {
+            _log.Warning("{Count} words of the user additions are not in the model vocabulary", missing.Count);
+        }
+
         lock (_lock)
         {
             _engine = engine;
@@ -634,6 +714,38 @@ public sealed class AppHost : IAsyncDisposable
 
         UpdateFacts(f => f with { ModelLoading = false, Starting = false });
         await SwapHandlerAsync(target, () => CreatePipeline(target)).ConfigureAwait(false);
+    }
+
+    /// <summary>Pack errors and problems of the additions file by file and line; the patterns themselves stay out.</summary>
+    private void LogPack(string language, string? packError, PackAdditionsResult? additions)
+    {
+        if (packError is not null)
+        {
+            _log.Error("Language pack {Language} not loaded: {Error}", language, packError);
+            return;
+        }
+
+        _log.Information("Language pack {Language} loaded", language);
+        if (additions is not { Exists: true })
+        {
+            return;
+        }
+
+        _log.Information(
+            "User additions {File}: {State}, {Errors} errors, {Warnings} warnings",
+            additions.File,
+            additions.Applied ? "applied" : "not applied",
+            additions.Errors.Count(),
+            additions.Warnings.Count());
+        foreach (var issue in additions.Issues)
+        {
+            _log.Write(
+                issue.Severity == IssueSeverity.Error ? LogEventLevel.Error : LogEventLevel.Warning,
+                "User additions {File}:{Line}: problem at {Location}",
+                issue.File,
+                issue.Line,
+                issue.Path);
+        }
     }
 
     private Task RebuildLightAsync(AppSettings target)
@@ -767,6 +879,7 @@ public sealed class AppHost : IAsyncDisposable
             Volatile.Read(ref _machine)?.OnDeviceChanged(change);
             if (binding.IsDevice(change.Device))
             {
+                _log.Information("PTT device {State}: {Name}", change.Connected ? "connected" : "disconnected", change.Name);
                 Volatile.Write(ref seen, seen || change.Connected);
                 UpdateFacts(f => f with { PttDeviceConnected = change.Connected });
                 PttDeviceChanged?.Invoke(change);
@@ -775,6 +888,15 @@ public sealed class AppHost : IAsyncDisposable
 
         _source = source;
         var error = source.Start();
+        if (error is null)
+        {
+            _log.Information("PTT source started for {Binding}", binding.Describe());
+        }
+        else
+        {
+            _log.Error("PTT source for {Binding} failed: {Error}", binding.Describe(), error);
+        }
+
         UpdateFacts(f => f with { PttSourceError = error, PttDeviceConnected = true });
         if (error is null && binding.Kind == PttDeviceKind.Joystick)
         {
@@ -787,6 +909,7 @@ public sealed class AppHost : IAsyncDisposable
                     {
                         if (ReferenceEquals(_source, source) && !Volatile.Read(ref seen))
                         {
+                            _log.Warning("PTT device is not connected: {Name}", binding.Name);
                             UpdateFacts(f => f with { PttDeviceConnected = false });
                         }
                     },
@@ -849,24 +972,49 @@ public sealed class AppHost : IAsyncDisposable
     private void UpdateFacts(Func<HostFacts, HostFacts> change)
     {
         HostStatus status;
+        HostFacts old;
+        HostFacts facts;
+        bool statusChanged;
         lock (_lock)
         {
-            var facts = change(_facts);
-            if (facts == _facts)
+            old = _facts;
+            facts = change(old);
+            if (facts == old)
             {
                 return;
             }
 
             _facts = facts;
             status = HostStatus.Evaluate(facts);
-            if (status == _status)
-            {
-                return;
-            }
-
+            statusChanged = status != _status;
             _status = status;
         }
 
-        StatusChanged?.Invoke(status);
+        LogGame(old, facts);
+        if (statusChanged)
+        {
+            StatusChanged?.Invoke(status);
+        }
+    }
+
+    /// <summary>Only changes of the game state are written, so polling an idle game leaves no records (spec: Idle game polling).</summary>
+    private void LogGame(HostFacts old, HostFacts facts)
+    {
+        if (old.Game != facts.Game)
+        {
+            _log.Information("iRacing: {State}", facts.Game switch
+            {
+                ConnectionState.NotRunning => "not running",
+                ConnectionState.Connected => "running, not in the car",
+                _ => "in the car",
+            });
+        }
+
+        if (old.GameElevated != facts.GameElevated && (facts.GameElevated || facts.Game != ConnectionState.NotRunning))
+        {
+            _log.Warning(facts.GameElevated
+                ? "iRacing runs as administrator while PitVoice does not"
+                : "iRacing no longer runs as administrator");
+        }
     }
 }

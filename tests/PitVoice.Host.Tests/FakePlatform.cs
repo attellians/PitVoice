@@ -9,6 +9,7 @@ using PitVoice.Core.Ptt;
 using PitVoice.Core.Settings;
 using PitVoice.Core.Tests.Pipeline;
 using PitVoice.Core.Tests.Pit;
+using PitVoice.Input;
 using PitVoice.IRacing.Diagnostics;
 
 namespace PitVoice.Host.Tests;
@@ -64,7 +65,7 @@ internal sealed class FakePlatform : IHostPlatform
 
     public IPitCommandSink Sink { get; }
 
-    public IExecutionLog ExecutionLog { get; } = new NullLog();
+    public IExecutionLog ExecutionLog { get; set; } = new NullLog();
 
     public GameElevation Elevation { get; set; } = GameElevation.NotElevated;
 
@@ -78,6 +79,15 @@ internal sealed class FakePlatform : IHostPlatform
     public IReadOnlyList<AudioDevice> GetInputDevices() => Microphones;
 
     public IReadOnlyList<AudioDevice> GetOutputDevices() => Outputs;
+
+    /// <summary>When set, the game device list cannot be read.</summary>
+    public string? GameDevicesError { get; set; }
+
+    public IReadOnlyList<GameDevice> GetGameDevices(out string? error)
+    {
+        error = GameDevicesError;
+        return error is null ? [.. ConnectedDevices.Select(d => new GameDevice(d.Guid, d.Name))] : [];
+    }
 
     public IAudioCuePlayer CreateCuePlayer(string? deviceName, int volume)
     {

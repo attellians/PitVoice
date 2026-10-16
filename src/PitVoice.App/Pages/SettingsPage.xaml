@@ -127,5 +127,17 @@
                     </StackPanel>
                 </StackPanel>
             </ui:Card>
+
+            <ui:Card Margin="0,0,0,12">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource SectionTitle}" Text="{loc:Tr DiagnosticsSection}" />
+                    <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="{loc:Tr DiagnosticsNote}" TextWrapping="Wrap" />
+                    <StackPanel Margin="0,8,0,0" Orientation="Horizontal">
+                        <ui:Button Command="{Binding Diagnostics.CollectCommand}" Content="{loc:Tr DiagCollectButton}" />
+                        <ui:Button Margin="8,0,0,0" Command="{Binding Diagnostics.OpenLogsCommand}" Content="{loc:Tr DiagOpenLogs}" />
+                    </StackPanel>
+                    <TextBlock Margin="0,6,0,0" Text="{Binding Diagnostics.Message}" TextWrapping="Wrap" />
+                </StackPanel>
+            </ui:Card>
         </StackPanel>
 </Page>

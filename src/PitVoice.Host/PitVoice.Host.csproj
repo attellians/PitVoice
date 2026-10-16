@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <RootNamespace>PitVoice.Host</RootNamespace>
-    <Description>Pipeline host shared by the tray app and the console host: composition from settings, live apply, status, recent phrases, command check, models and PTT assignment.</Description>
+    <Description>Pipeline host shared by the tray app and the console host: composition from settings, live apply, status, recent phrases, command check, models, PTT assignment and diagnostics (log, crash reports, archive).</Description>
   </PropertyGroup>
 
   <ItemGroup>
@@ -11,6 +11,12 @@
     <ProjectReference Include="..\PitVoice.IRacing\PitVoice.IRacing.csproj" />
     <ProjectReference Include="..\PitVoice.Input\PitVoice.Input.csproj" />
     <ProjectReference Include="..\PitVoice.Models\PitVoice.Models.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Serilog" Version="4.4.0" />
+    <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
+    <PackageReference Include="Serilog.Sinks.Async" Version="2.1.0" />
   </ItemGroup>
 
   <ItemGroup>

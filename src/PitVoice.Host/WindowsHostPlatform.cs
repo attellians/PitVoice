@@ -43,6 +43,8 @@ public sealed class WindowsHostPlatform : IHostPlatform, IDisposable
 
     public IReadOnlyList<AudioDevice> GetOutputDevices() => _outputs.Value.GetOutputDevices();
 
+    public IReadOnlyList<GameDevice> GetGameDevices(out string? error) => SdlJoystickSource.ListDevices(out error);
+
     public IAudioCuePlayer CreateCuePlayer(string? deviceName, int volume) => new NAudioCuePlayer(deviceName, volume);
 
     public IAsrEngine CreateEngine() => new VoskAsrEngine(GrammarBuilder.DefaultMode);

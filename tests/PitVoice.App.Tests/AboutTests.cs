@@ -13,6 +13,7 @@ public sealed class AboutTests
 
         Assert.Contains(components, c => c.Name == "Vosk" && c.License == "Apache-2.0");
         Assert.Contains(components, c => c.Name == "WPF-UI" && c.License == "MIT");
+        Assert.Contains(components, c => c.Name == "Serilog" && c.License == "Apache-2.0");
         Assert.All(components, c => Assert.StartsWith("https://", c.Url, StringComparison.Ordinal));
     }
 }

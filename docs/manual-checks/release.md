@@ -20,7 +20,7 @@ network is a `.wsb` file:
 
 | # | Check | Expected | Result |
 |---|---|---|---|
-| 0.1 | `git log --all --name-only --pretty=format: \| sort -u` filtered by `*.wav`, `samples.yaml`, `spike/`, `settings.json`, `.env`, `*.pfx`, `*.pem`, `*.key` | no voice recordings of the user, no spike files, no settings | 2026-10-16: only the three generated cues (`src/PitVoice.Speech/Cues/*.wav`) and `tests/PitVoice.Speech.Tests/Fixtures/en-change-all-tires-add-thirty-liters.wav` (origin to be confirmed by the user); no `samples.yaml`, `spike/`, `settings.json`, `.env` or keys ever committed |
+| 0.1 | `git log --all --name-only --pretty=format: \| sort -u` filtered by `*.wav`, `samples.yaml`, `spike/`, `settings.json`, `.env`, `*.pfx`, `*.pem`, `*.key` | no voice recordings of the user, no spike files, no settings | 2026-10-16: only the three generated cues (`src/PitVoice.Speech/Cues/*.wav`) and `tests/PitVoice.Speech.Tests/Fixtures/en-change-all-tires-add-thirty-liters.wav` (synthesized speech, confirmed by the user); no `samples.yaml`, `spike/`, `settings.json`, `.env` or keys ever committed |
 | 0.2 | `git log --all -p` searched for `token`, `password`, `apikey`, `api_key`, `secret` in added lines | nothing but code identifiers | 2026-10-16: only `TokenQuery` (a WinAPI constant) besides `CancellationToken` and `GITHUB_TOKEN` |
 | 0.3 | authors of all commits | the user's own name and address | 2026-10-16: "Artem" and "Artem Lebedko", one address |
 | 0.4 | telemetry recordings `tests/PitVoice.IRacing.Tests/Recordings` | no user names, CustID or team names | 2026-10-16: no `UserName`, `CustID`, `TeamName` in the history of the directory |

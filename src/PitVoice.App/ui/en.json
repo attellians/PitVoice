@@ -181,7 +181,7 @@
 
   "ProjectLicense": "License: MIT.",
   "BrowserFailed": "The browser could not be opened. Copy the address:",
-  "ModelsLicenses": "Speech models",
+  "ModelsLicenses": "Speech recognition models",
   "ComponentsLicenses": "Third-party components",
 
   "CrashTitle": "PitVoice crashed last time",
@@ -194,6 +194,5 @@
   "DiagCollecting": "Collecting the archive…",
   "DiagCollected": "Archive ready: {0}",
   "DiagCollectFailed": "Archive not collected: {0}",
-  "DiagNoLogs": "No logs yet.",
-  "NoticesLink": "Full list of components and licenses (THIRD-PARTY-NOTICES.md)"
+  "DiagNoLogs": "No logs yet."
 }

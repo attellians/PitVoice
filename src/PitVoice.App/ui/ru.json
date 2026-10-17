@@ -181,7 +181,7 @@
 
   "ProjectLicense": "Лицензия: MIT.",
   "BrowserFailed": "Браузер не открылся. Скопируйте адрес:",
-  "ModelsLicenses": "Модели распознавания",
+  "ModelsLicenses": "Модели распознавания речи",
   "ComponentsLicenses": "Сторонние компоненты",
 
   "CrashTitle": "PitVoice аварийно завершился в прошлый раз",
@@ -194,6 +194,5 @@
   "DiagCollecting": "Собираю архив…",
   "DiagCollected": "Архив готов: {0}",
   "DiagCollectFailed": "Архив не собран: {0}",
-  "DiagNoLogs": "Логов пока нет.",
-  "NoticesLink": "Полный список компонентов и лицензий (THIRD-PARTY-NOTICES.md)"
+  "DiagNoLogs": "Логов пока нет."
 }

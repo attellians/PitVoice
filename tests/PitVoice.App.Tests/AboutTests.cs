@@ -19,20 +19,19 @@ public sealed class AboutTests
         Assert.All(components, c => Assert.StartsWith("https://", c.Url, StringComparison.Ordinal));
     }
 
-    /// <summary>Spec: Components match the notices file — the same names, versions and licenses as THIRD-PARTY-NOTICES.md.</summary>
+    /// <summary>Spec: Components match the notices file — "About" shows the same names in the same order as THIRD-PARTY-NOTICES.md.</summary>
     [Fact]
     public void Components_match_the_notices_file()
     {
-        var rows = File.ReadAllLines(Path.Combine(RepositoryRoot(), "THIRD-PARTY-NOTICES.md"))
+        var names = File.ReadAllLines(Path.Combine(RepositoryRoot(), "THIRD-PARTY-NOTICES.md"))
             .SkipWhile(l => l != "## Components")
             .Skip(4) // blank line, header, separator
             .TakeWhile(l => l.StartsWith('|'))
-            .Select(l => l.Split(" | "))
-            .Select(cells => (Name: cells[0].TrimStart('|', ' '), Version: cells[1], License: cells[2]))
+            .Select(l => l.Split(" | ")[0].TrimStart('|', ' '))
             .ToArray();
 
-        Assert.NotEmpty(rows);
-        Assert.Equal(rows, AboutViewModel.LoadComponents().Select(c => (c.Name, c.Version, c.License)));
+        Assert.NotEmpty(names);
+        Assert.Equal(names, AboutViewModel.LoadComponents().Select(c => c.Name));
     }
 
     [Fact]
@@ -43,12 +42,6 @@ public sealed class AboutTests
             Assert.Contains("MIT", Loc.LoadDictionary(language)!["ProjectLicense"], StringComparison.Ordinal);
         }
     }
-
-    [Theory]
-    [InlineData("0.1.3", true, "https://github.com/attellians/PitVoice/blob/v0.1.3/THIRD-PARTY-NOTICES.md")]
-    [InlineData("0.1.3", false, "https://github.com/attellians/PitVoice/blob/main/THIRD-PARTY-NOTICES.md")]
-    public void Notices_link_points_to_the_tag_of_the_installed_version(string version, bool installed, string expected) =>
-        Assert.Equal(expected, AboutViewModel.NoticesAddress(version, installed));
 
     private static string RepositoryRoot()
     {

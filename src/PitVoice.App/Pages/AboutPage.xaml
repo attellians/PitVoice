@@ -22,11 +22,6 @@
                         Command="{Binding OpenCommand}"
                         CommandParameter="{Binding Repository, Mode=OneTime}"
                         Content="{Binding Repository, Mode=OneTime}" />
-                    <ui:HyperlinkButton
-                        Margin="-8,0,0,0"
-                        Command="{Binding OpenCommand}"
-                        CommandParameter="{Binding NoticesUrl, Mode=OneTime}"
-                        Content="{loc:Tr NoticesLink}" />
                     <StackPanel Margin="0,4,0,0" Visibility="{Binding CopyAddress, Converter={StaticResource NotEmptyVisible}}">
                         <TextBlock Text="{loc:Tr BrowserFailed}" TextWrapping="Wrap" />
                         <ui:TextBox IsReadOnly="True" Text="{Binding CopyAddress, Mode=OneWay}" />
@@ -55,16 +50,7 @@
             <ItemsControl ItemsSource="{Binding Components, Mode=OneTime}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
-                        <WrapPanel Margin="0,2">
-                            <TextBlock Width="220" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
-                            <TextBlock Width="90" Text="{Binding Version}" />
-                            <TextBlock Width="190" Text="{Binding License}" TextTrimming="CharacterEllipsis" />
-                            <ui:HyperlinkButton
-                                Padding="4,0"
-                                Command="{Binding DataContext.OpenCommand, ElementName=Root}"
-                                CommandParameter="{Binding Url}"
-                                Content="{Binding Url}" />
-                        </WrapPanel>
+                        <TextBlock Margin="0,2" Text="{Binding Name}" TextWrapping="Wrap" />
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>

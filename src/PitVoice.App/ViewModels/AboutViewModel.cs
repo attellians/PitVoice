@@ -3,7 +3,6 @@ using System.Text.Json;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PitVoice.Models;
-using Velopack.Locators;
 
 namespace PitVoice.App.ViewModels;
 
@@ -11,8 +10,8 @@ namespace PitVoice.App.ViewModels;
 internal sealed record LicensedItem(string Name, string Version, string License, string Url);
 
 /// <summary>
-/// "About" (spec: About section): version, license, repository, the notices file of this version, components and
-/// models with their licenses.
+/// "About" (spec: About section): version, license, repository, models with their licenses and the names of the
+/// third-party components; their versions and licenses are in THIRD-PARTY-NOTICES.md next to the program.
 /// </summary>
 internal sealed partial class AboutViewModel : ObservableObject
 {
@@ -26,7 +25,6 @@ internal sealed partial class AboutViewModel : ObservableObject
             .Where(e => e.Type == ModelType.Asr)
             .Select(e => new LicensedItem(e.Id, string.Empty, e.License, e.Source))
             .ToArray() ?? [];
-        NoticesUrl = NoticesAddress(Version, IsInstalled());
     }
 
     /// <summary>PitVoice version without the commit hash.</summary>
@@ -43,30 +41,9 @@ internal sealed partial class AboutViewModel : ObservableObject
 
     public static string Repository => RepositoryUrl;
 
-    /// <summary>The notices file of this version; a build that was not installed has no tag, so it gets the main branch (design decision 9).</summary>
-    public string NoticesUrl { get; }
-
     /// <summary>The address to copy when no browser opened (spec: Browser cannot be opened).</summary>
     [ObservableProperty]
     public partial string CopyAddress { get; set; } = string.Empty;
-
-    internal static string NoticesAddress(string version, bool installed) =>
-        $"{RepositoryUrl}/blob/{(installed ? "v" + version : "main")}/THIRD-PARTY-NOTICES.md";
-
-    /// <summary>True when the installer put this copy in place; <see cref="Program"/> sets the locator at start.</summary>
-    private static bool IsInstalled()
-    {
-        try
-        {
-            return VelopackLocator.IsCurrentSet && VelopackLocator.Current.CurrentlyInstalledVersion is not null;
-        }
-#pragma warning disable CA1031 // Not knowing only changes the link to the main branch.
-        catch (Exception)
-#pragma warning restore CA1031
-        {
-            return false;
-        }
-    }
 
     [RelayCommand]
     private void Open(string url) => CopyAddress = Links.TryOpen(url) ? string.Empty : url;

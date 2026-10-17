@@ -5,7 +5,6 @@ using PitVoice.Core.Languages;
 using PitVoice.Core.Settings;
 using PitVoice.Host;
 using PitVoice.Host.Diagnostics;
-using PitVoice.Host.Updates;
 using PitVoice.Input;
 using PitVoice.Models;
 using Serilog;
@@ -22,8 +21,7 @@ internal sealed class AppServices : IAsyncDisposable
 
     /// <param name="log">The application log; the app owns it and closes it after this object.</param>
     /// <param name="crashes">Crash reports; installed by the app before this object is created.</param>
-    /// <param name="stopForUpdate">Stops the app without ending the process, before the installer applies an update.</param>
-    public AppServices(ILogger log, CrashReporter crashes, Func<Task> stopForUpdate)
+    public AppServices(ILogger log, CrashReporter crashes)
     {
         Log = log;
         Crashes = crashes;
@@ -37,7 +35,6 @@ internal sealed class AppServices : IAsyncDisposable
         Models = new ModelService(Host, manifest, error, _http);
         Check = new CommandCheck(Host);
         Diagnostics = new DiagnosticsActions(Host);
-        Updates = new UpdateService(new VelopackUpdateSource(), Host, stopForUpdate, log);
     }
 
     public ILogger Log { get; }
@@ -56,9 +53,6 @@ internal sealed class AppServices : IAsyncDisposable
 
     public CommandCheck Check { get; }
 
-    /// <summary>Update checks of the installed app; started once the host runs.</summary>
-    public UpdateService Updates { get; }
-
     /// <summary>The built-in packs next to the exe.</summary>
     public static string PacksDirectory => Path.Combine(AppContext.BaseDirectory, "languages");
 
@@ -69,7 +63,6 @@ internal sealed class AppServices : IAsyncDisposable
     {
         var stopping = Task.Run(async () =>
         {
-            await Updates.DisposeAsync().ConfigureAwait(false);
             Check.Dispose();
             await Models.DisposeAsync().ConfigureAwait(false);
             await Host.DisposeAsync().ConfigureAwait(false);

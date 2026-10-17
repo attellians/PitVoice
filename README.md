@@ -9,7 +9,7 @@ PitVoice is a free, open-source Windows tray utility that gives iRacing drivers 
    The installer is not signed yet, so Windows SmartScreen may say "Windows protected your PC": click **More info → Run anyway**.
 3. First setup: the home page lists what is left. Download the speech model of your language on the "Models" page, assign the push-to-talk button in "Settings", and try a phrase on the "Check" page. The models are not in the installer; they are downloaded only when you ask for it.
 
-**Updates.** At start and once a day the app looks for a newer version in the [releases](https://github.com/attellians/PitVoice/releases) (turn it off in "Settings → Updates"; "About → Check for updates" works anyway). A new version shows a block on the home page; nothing is downloaded until you press **Update and restart**. Settings, models and phrase additions stay. No data about you is sent.
+**New versions.** The app does not look for updates yet and never goes online on its own: model downloads are the only network traffic, and only when you ask. To update, download the installer of the newer version from the [releases](https://github.com/attellians/PitVoice/releases) and run it; it says "PitVoice is already installed", press **Repair**. Settings, models and phrase additions stay.
 
 **Uninstall.** "Settings → Apps → Installed apps → PitVoice → Uninstall" closes the app and removes everything: the program (`%LocalAppData%\PitVoiceApp`), the shortcuts, `%LocalAppData%\PitVoice` (models, logs, crash reports, diagnostics archives) and `%AppData%\PitVoice` (settings, phrase additions).
 
@@ -181,7 +181,6 @@ The reason of an error is in the `run` output. `cues play [start|success|error|a
 - `cueVolume`: 0 to 100; 0 mutes the cues. `defaultUnit`: `liters` or `gallons`. `threshold`: confidence threshold 0 to 1.
 - `setupCheckDone`: set by the app after the first phrase check; hides the last item of the setup checklist.
 - `interfaceLanguage`: `ru` or `en` for the window and the tray menu; `null` follows `language`. `theme`: `system`, `light` or `dark`.
-- `checkForUpdates`: `true` (default; a file without the field means `true`) lets the installed app check for a new version at start and every 24 hours. A build that was not installed never checks, and the CLI never does.
 
 A missing field gets its default; an invalid value gets its default (the volume is clamped to 0..100) with a warning. A file that is not valid JSON is renamed to `settings.json.bak` and the defaults are used.
 
@@ -226,7 +225,7 @@ A release is one tag; GitHub Actions does the rest (`.github/workflows/release.y
 3. Tag that commit with the release notes as the tag message: `git tag -a v<VERSION> -m "<what changed>"`.
 4. Push the tag: `git push origin v<VERSION>`.
 
-If the tag does not match `VERSION` (for example it went on a later commit whose hook already bumped the version), the release fails and names both versions: delete the tag (`git tag -d v<X>` and `git push origin :refs/tags/v<X>`) and tag the right commit. A tag of a version that is already released fails with "version already released" and leaves that release alone; release the next version instead. Installed apps never see a release until it is published, and there are no forced updates: to withdraw a release, delete it and its tag on GitHub.
+If the tag does not match `VERSION` (for example it went on a later commit whose hook already bumped the version), the release fails and names both versions: delete the tag (`git tag -d v<X>` and `git push origin :refs/tags/v<X>`) and tag the right commit. A tag of a version that is already released fails with "version already released" and leaves that release alone; release the next version instead. Nothing reaches users before the release is published; to withdraw a release, delete it and its tag on GitHub. Deleting a release whose tag is `models` removes the model mirror: run **Mirror models** again then.
 
 ## Versioning
 

@@ -23,28 +23,6 @@
                 </StackPanel>
             </StackPanel>
 
-            <StackPanel Margin="0,0,0,12" Visibility="{Binding UpdateVisible, Converter={StaticResource Visible}}">
-                <ui:InfoBar
-                    Title="{Binding UpdateTitle}"
-                    IsClosable="False"
-                    IsOpen="True"
-                    Message="{Binding UpdateMessage}"
-                    Severity="Informational" />
-                <ProgressBar
-                    Margin="0,8,0,0"
-                    Maximum="100"
-                    Visibility="{Binding UpdateDownloading, Converter={StaticResource Visible}}"
-                    Value="{Binding UpdatePercent}" />
-                <StackPanel Margin="0,8,0,0" Orientation="Horizontal">
-                    <ui:Button Appearance="Primary" Command="{Binding UpdateNowCommand}" Content="{loc:Tr UpdateRestart}" />
-                    <ui:HyperlinkButton Margin="8,0,0,0" Command="{Binding OpenReleaseCommand}" Content="{loc:Tr UpdateReleasePage}" />
-                </StackPanel>
-                <StackPanel Margin="0,4,0,0" Visibility="{Binding ReleaseCopyAddress, Converter={StaticResource NotEmptyVisible}}">
-                    <TextBlock Text="{loc:Tr BrowserFailed}" TextWrapping="Wrap" />
-                    <ui:TextBox IsReadOnly="True" Text="{Binding ReleaseCopyAddress, Mode=OneWay}" />
-                </StackPanel>
-            </StackPanel>
-
             <ui:InfoBar
                 Margin="0,0,0,12"
                 IsClosable="False"

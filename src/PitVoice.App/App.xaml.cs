@@ -48,7 +48,7 @@ public partial class App : Application
         _crashes.Install();
         DispatcherUnhandledException += OnWindowThreadCrash;
 
-        _services = new AppServices(_log, _crashes, () => Dispatcher.InvokeAsync(StopAsync).Task.Unwrap());
+        _services = new AppServices(_log, _crashes);
         if (await _services.Host.StartAsync() == HostStartResult.AlreadyRunning)
         {
             ShowMessage("ConsoleHostRunning");
@@ -58,8 +58,6 @@ public partial class App : Application
             Shutdown();
             return;
         }
-
-        _services.Updates.Start();
 
         ApplyLook(_services.Host.Settings);
         _services.Host.SettingsChanged += settings => Ui.Post(() => ApplyLook(settings));
@@ -140,21 +138,6 @@ public partial class App : Application
             return;
         }
 
-        await StopAsync();
-        Shutdown();
-    }
-
-    /// <summary>
-    /// Like "Exit" but the process stays: the installer ends it once the update is applied (design decision 4). The
-    /// microphone, the hook, the host lock and the log are free by then.
-    /// </summary>
-    private async Task StopAsync()
-    {
-        if (_exiting)
-        {
-            return;
-        }
-
         _exiting = true;
         _tray?.Dispose();
         if (_window is not null)
@@ -170,6 +153,7 @@ public partial class App : Application
 
         _log?.Dispose();
         _instance?.Dispose();
+        Shutdown();
     }
 
     private static void ShowMessage(string key) =>

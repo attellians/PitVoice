@@ -31,17 +31,6 @@
                         <TextBlock Text="{loc:Tr BrowserFailed}" TextWrapping="Wrap" />
                         <ui:TextBox IsReadOnly="True" Text="{Binding CopyAddress, Mode=OneWay}" />
                     </StackPanel>
-
-                    <StackPanel Margin="0,12,0,0" Orientation="Horizontal" Visibility="{Binding IsInstalled, Mode=OneTime, Converter={StaticResource Visible}}">
-                        <ui:Button Command="{Binding CheckUpdatesCommand}" Content="{loc:Tr UpdateCheckButton}" />
-                        <TextBlock Margin="12,0,0,0" VerticalAlignment="Center" Text="{Binding UpdateResult}" TextWrapping="Wrap" />
-                    </StackPanel>
-                    <TextBlock
-                        Margin="0,12,0,0"
-                        Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                        Text="{loc:Tr UpdatesOnlyInstalled}"
-                        TextWrapping="Wrap"
-                        Visibility="{Binding IsNotInstalled, Mode=OneTime, Converter={StaticResource Visible}}" />
                 </StackPanel>
             </ui:Card>
 

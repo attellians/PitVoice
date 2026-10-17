@@ -134,30 +134,6 @@ public sealed class JsonSettingsStoreTests : IDisposable
     }
 
     [Fact]
-    public void SettingsFromAnOlderVersion_CheckForUpdatesIsOn_AndTheRestIsReadUnchanged()
-    {
-        var result = LoadFrom("""{ "version": 1, "language": "en", "cueVolume": 40, "theme": "dark" }""");
-
-        Assert.Empty(result.Warnings);
-        Assert.True(result.Settings.CheckForUpdates);
-        Assert.Equal(AppSettings.Defaults("en") with { CueVolume = 40, Theme = AppTheme.Dark }, result.Settings);
-    }
-
-    [Fact]
-    public void CheckForUpdatesOff_RoundTrips_AndInvalidValueWarns()
-    {
-        Store().Save(AppSettings.Defaults("ru") with { CheckForUpdates = false });
-
-        Assert.Contains("\"checkForUpdates\": false", File.ReadAllText(FilePath), StringComparison.Ordinal);
-        Assert.False(Store().Load().Settings.CheckForUpdates);
-
-        var invalid = LoadFrom("""{ "checkForUpdates": "no" }""");
-
-        Assert.True(invalid.Settings.CheckForUpdates);
-        Assert.Contains("checkForUpdates", Assert.Single(invalid.Warnings), StringComparison.Ordinal);
-    }
-
-    [Fact]
     public void UnknownTheme_IsSystem_WithWarning()
     {
         var result = LoadFrom("""{ "theme": "pink" }""");

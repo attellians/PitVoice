@@ -41,9 +41,6 @@ public sealed record AppSettings
     /// <summary>Colors of the window.</summary>
     public AppTheme Theme { get; init; } = AppTheme.System;
 
-    /// <summary>Automatic update check of the installed app (app-settings spec); a file without the field means on.</summary>
-    public bool CheckForUpdates { get; init; } = true;
-
     /// <summary>The interface language in effect.</summary>
     public string EffectiveInterfaceLanguage => InterfaceLanguage ?? Language;
 

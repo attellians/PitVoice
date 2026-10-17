@@ -15,6 +15,6 @@ public static class LogText
             $"PTT {settings.PttBinding?.Describe() ?? "not assigned"} ({settings.PttMode}), " +
             $"microphone {settings.Microphone ?? "system default"}, output {settings.OutputDevice ?? "system default"}, " +
             $"volume {settings.CueVolume}%, unit {settings.DefaultUnit}, threshold {settings.Threshold}, " +
-            $"setup check done {settings.SetupCheckDone}, update check {settings.CheckForUpdates}");
+            $"setup check done {settings.SetupCheckDone}");
     }
 }

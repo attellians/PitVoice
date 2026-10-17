@@ -1,9 +1,8 @@
-# Manual check: release, installation, updates and uninstall
+# Manual check: release, installation and uninstall
 
 The first public release and what a user does with it: install on a clean Windows, first start, the model mirror, the
-CLI next to the app, reinstall, update from one release to the next, the update switch, uninstall. Everything runs in
-**Windows Sandbox** (clean Windows without .NET and without a PitVoice profile at every start); the update check needs
-two published releases, N and N+1.
+CLI next to the app, reinstall, uninstall. Updates from inside the app were removed from this stage (2026-10-17); a newer version is installed over the old one with its installer. Everything runs in
+**Windows Sandbox** (clean Windows without .NET and without a PitVoice profile at every start).
 
 Mark every item **ok**, **mismatch** or **not checked** (with the reason) and write what was seen.
 
@@ -44,7 +43,7 @@ network is a `.wsb` file:
 | 2.1 | in the sandbox: download the installer from `releases/latest`, run it | SmartScreen "Windows protected your PC" → More info → Run anyway; no administrator prompt; the app starts || ok (2026-10-17, the user): installed v0.0.19 on a clean system without administrator rights, the app started |
 | 2.2 | 2.1 | Start menu and desktop have a PitVoice shortcut | |
 | 2.3 | 2.1 | the home page shows the setup checklist with "download the model"; the tray icon is in the "no model" state | |
-| 2.4 | 2.1, "About" | version N, "License: MIT", the components with versions, "Check for updates" (not the text of a developer build) | |
+| 2.4 | 2.1, "About" | version N, "License: MIT", the components with versions, a link to THIRD-PARTY-NOTICES.md of this version | |
 | 2.5 | 2.1, `cmd`: `cd %LocalAppData%\PitVoiceApp\current` and `pitvoice-cli diagnostics collect` | prints the path of the archive; no .NET installed in the sandbox | |
 | 2.6 | sandbox without network (`.wsb` above), the installer copied in | installation succeeds, the app starts; "Models" reports a connection error only when a download is started || ok (2026-10-17, the user, network cable unplugged): installed and started; "Models" showed nothing until "Download", then "no connection: primary https://alphacephei.com/... No such host is known; mirror https://github.com/.../releases/download/models/... No such host is known" under the model (both sources named; the text is technical, but correct) |
 | 2.7 | sandbox with network: `notepad C:\Windows\System32\drivers\etc\hosts` as administrator inside the sandbox, add `0.0.0.0 alphacephei.com`; download the model in "Models" | the model downloads from the `models` release, passes the check and is installed || ok (2026-10-17), on the developer machine instead of the sandbox: blocking alphacephei.com in hosts did not work (DNS goes through Mihomo on the router) and the Mihomo REJECT rule was not reliable, so a copy of the installed v0.0.19 got a manifest whose primary address of vosk-model-small-en-us-0.15 is https://primary.invalid/...; `pitvoice-cli models download` printed "primary source failed (...), switching to mirror https://github.com/attellians/PitVoice/releases/download/models/vosk-model-small-en-us-0.15.zip", downloaded 39.3 MB, checked sha256 and installed; `models verify` OK. Note: after Mihomo stopped resolving release-assets.githubusercontent.com for a while, Windows kept the negative answer until `ipconfig /flushdns` |
@@ -53,14 +52,7 @@ network is a `.wsb` file:
 
 ## 3. Update from N to N+1
 
-| # | Action | Expected | Result |
-|---|---|---|---|
-| 3.1 | in the sandbox with N installed, a model and a changed setting; publish N+1 | the release `vN+1` also has a delta package from N | |
-| 3.2 | restart PitVoice in the sandbox | the home page shows "Version N+1 is available" with "Update and restart" and "What's new" (opens the release page) | |
-| 3.3 | "Update and restart" | progress in the block, then the app closes and starts again as N+1 with the same settings and model | |
-| 3.4 | 3.3, the log in `%LocalAppData%\PitVoice\logs` | "Automatic update check: version N+1 found", "Update N+1 download started", "… downloaded, installing and restarting", then "PitVoice N+1 started" | |
-| 3.5 | install N in a new sandbox, turn "Check for updates" off in Settings, restart the app | no update block; the log has "Automatic update check off" and no check line | |
-| 3.6 | 3.5, "About → Check for updates" | shows N+1 and the block appears on the home page | |
+Removed from this stage on 2026-10-17 together with the update check in the app; it comes back with that feature. Seen before the removal: the installed v0.0.19 checked GitHub at start ("Automatic update check: 0.0.19 is the latest"), the release v0.0.22 got a delta package from 0.0.19 (0.1 MB), and the manual check without API quota showed "Could not check: … 403 (rate limit exceeded)" with the button available again.
 
 ## 4. Uninstall
 

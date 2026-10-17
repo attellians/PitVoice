@@ -195,20 +195,5 @@
   "DiagCollected": "Archive ready: {0}",
   "DiagCollectFailed": "Archive not collected: {0}",
   "DiagNoLogs": "No logs yet.",
-  "NoticesLink": "Full list of components and licenses (THIRD-PARTY-NOTICES.md)",
-  "UpdateAvailableTitle": "Version {0} is available",
-  "UpdateAvailableMessage": "The update is downloaded and installed only when you press the button. Settings, models and phrase additions stay.",
-  "UpdateRestart": "Update and restart",
-  "UpdateReleasePage": "What's new",
-  "UpdateDownloading": "Downloading the update: {0}%. PitVoice keeps working.",
-  "UpdateDownloadFailed": "Could not download the update: {0}",
-  "UpdateCheckButton": "Check for updates",
-  "UpdateChecking": "Checking…",
-  "UpdateLatest": "You have the latest version.",
-  "UpdateFound": "Version {0} is available — see the update block on the Home page.",
-  "UpdateCheckFailed": "Could not check: {0}",
-  "UpdatesOnlyInstalled": "Updates are available only in the installed version.",
-  "UpdatesSection": "Updates",
-  "CheckForUpdatesLabel": "Check for updates",
-  "CheckForUpdatesNote": "At start and once a day PitVoice looks for a newer version in the project releases on GitHub. Nothing about you is sent; an update is installed only when you press the button."
+  "NoticesLink": "Full list of components and licenses (THIRD-PARTY-NOTICES.md)"
 }

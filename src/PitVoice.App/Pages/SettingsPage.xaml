@@ -130,26 +130,6 @@
 
             <ui:Card Margin="0,0,0,12">
                 <StackPanel>
-                    <TextBlock Style="{StaticResource SectionTitle}" Text="{loc:Tr UpdatesSection}" />
-                    <ui:ToggleSwitch
-                        Content="{loc:Tr CheckForUpdatesLabel}"
-                        IsChecked="{Binding CheckForUpdates}"
-                        IsEnabled="{Binding UpdatesAvailable, Mode=OneTime}" />
-                    <TextBlock
-                        Margin="0,6,0,0"
-                        Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                        Text="{loc:Tr CheckForUpdatesNote}"
-                        TextWrapping="Wrap" />
-                    <TextBlock
-                        Margin="0,6,0,0"
-                        Text="{loc:Tr UpdatesOnlyInstalled}"
-                        TextWrapping="Wrap"
-                        Visibility="{Binding UpdatesUnavailable, Mode=OneTime, Converter={StaticResource Visible}}" />
-                </StackPanel>
-            </ui:Card>
-
-            <ui:Card Margin="0,0,0,12">
-                <StackPanel>
                     <TextBlock Style="{StaticResource SectionTitle}" Text="{loc:Tr DiagnosticsSection}" />
                     <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="{loc:Tr DiagnosticsNote}" TextWrapping="Wrap" />
                     <StackPanel Margin="0,8,0,0" Orientation="Horizontal">

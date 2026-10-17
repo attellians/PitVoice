@@ -69,12 +69,12 @@ public sealed partial class NoPhraseRecordsTests
         file.Dispose();
 
         // Only the failures are there: the partial outcome (without commands) and the stage failure; the first check marks
-        // the setup checklist item done, which is a settings change.
-        Assert.Collection(
-            afterPhrases,
-            l => Assert.StartsWith("WRN Pit commands \"partially applied\": ", l, StringComparison.Ordinal),
-            l => Assert.Equal($"ERR Stage Recognition failed, phrase {failed.PhraseId}: \"recognition failed: engine crashed\"", l),
-            l => Assert.Contains("setup check done True", l, StringComparison.Ordinal));
+        // the setup checklist item done, which is a settings change. Pipeline failures reach the log through the event
+        // bus, the settings line comes from the host directly, so their order may vary.
+        Assert.Equal(3, afterPhrases.Count);
+        Assert.Single(afterPhrases, l => l.StartsWith("WRN Pit commands \"partially applied\": ", StringComparison.Ordinal));
+        Assert.Single(afterPhrases, l => l == $"ERR Stage Recognition failed, phrase {failed.PhraseId}: \"recognition failed: engine crashed\"");
+        Assert.Single(afterPhrases, l => l.Contains("setup check done True", StringComparison.Ordinal));
 
         var files = Directory.GetFiles(directory);
         Assert.NotEmpty(files);

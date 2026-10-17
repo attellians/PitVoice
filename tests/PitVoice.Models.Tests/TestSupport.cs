@@ -28,6 +28,7 @@ internal sealed class TempDirectory : IDisposable
 internal sealed class FakeHttpHandler : HttpMessageHandler
 {
     private readonly Dictionary<Uri, Func<HttpResponseMessage>> _routes = [];
+    private readonly HashSet<Uri> _hanging = [];
 
     public List<Uri> Requests { get; } = [];
 
@@ -46,16 +47,59 @@ internal sealed class FakeHttpHandler : HttpMessageHandler
         return this;
     }
 
-    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    /// <summary>Accepts the request and never answers, like a source behind a proxy that drops it.</summary>
+    public FakeHttpHandler Hang(Uri url)
+    {
+        _hanging.Add(url);
+        return this;
+    }
+
+    /// <summary>Answers and sends <paramref name="sendBytes"/> of <paramref name="body"/>, then sends nothing more.</summary>
+    public FakeHttpHandler Stall(Uri url, byte[] body, int sendBytes)
+    {
+        _routes[url] = () => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StreamContent(new StallingStream(body, sendBytes, this)) { Headers = { ContentLength = body.Length } },
+        };
+        return this;
+    }
+
+    /// <summary>Set when a request waits for its answer or for data; tests move the clock on after it.</summary>
+    public SemaphoreSlim Waiting { get; } = new(0);
+
+    protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         Requests.Add(request.RequestUri!);
+        if (_hanging.Contains(request.RequestUri!))
+        {
+            Waiting.Release();
+            await Task.Delay(Timeout.Infinite, cancellationToken);
+        }
+
         if (_routes.TryGetValue(request.RequestUri!, out var route))
         {
-            return Task.FromResult(route());
+            return route();
         }
 
         throw new HttpRequestException($"no route to {request.RequestUri!.Host}");
+    }
+
+    /// <summary>Gives the first bytes, then waits until the read is cancelled.</summary>
+    private sealed class StallingStream(byte[] data, int sendBytes, FakeHttpHandler owner) : MemoryStream(data, 0, sendBytes, writable: false)
+    {
+        public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+        {
+            var read = await base.ReadAsync(buffer, cancellationToken);
+            if (read > 0)
+            {
+                return read;
+            }
+
+            owner.Waiting.Release();
+            await Task.Delay(Timeout.Infinite, cancellationToken);
+            return 0;
+        }
     }
 
     /// <summary>Returns data in small chunks and calls back after each chunk, so tests can cancel mid-download.</summary>

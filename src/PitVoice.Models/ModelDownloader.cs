@@ -31,10 +31,18 @@ public sealed class ModelDownloadException(string message, Exception? inner = nu
 /// <summary>
 /// Downloads a model archive on user request (FR-MOD-2..3): streams to <c>&lt;id&gt;.zip.part</c> while hashing, verifies
 /// SHA-256 before extraction, falls back to the mirror once, extracts with zip-slip protection and writes the install
-/// marker last. On cancellation or any failure the partial archive and the model directory are removed.
+/// marker last. On cancellation or any failure the partial archive and the model directory are removed. A source that
+/// does not answer within <see cref="ResponseTimeout"/>, or stops sending for <see cref="StallTimeout"/>, counts as
+/// unavailable, so a hung primary source gives way to the mirror instead of holding the download.
 /// </summary>
 public sealed class ModelDownloader
 {
+    /// <summary>How long a source may take to answer (response headers) before the next one is tried.</summary>
+    public static readonly TimeSpan ResponseTimeout = TimeSpan.FromSeconds(20);
+
+    /// <summary>How long a started download may receive nothing before the next source is tried.</summary>
+    public static readonly TimeSpan StallTimeout = TimeSpan.FromSeconds(30);
+
     private const int BufferSize = 81920;
 
     private readonly HttpClient _http;
@@ -42,6 +50,10 @@ public sealed class ModelDownloader
     private readonly Action<string> _log;
     private readonly TimeProvider _time;
 
+    /// <param name="http">Client for both sources; its own timeout only limits the whole download.</param>
+    /// <param name="store">Where the model is installed.</param>
+    /// <param name="log">Receives the switch to the mirror and cleanup problems.</param>
+    /// <param name="time">Clock of the timeouts and the install date; virtual in tests.</param>
     public ModelDownloader(HttpClient http, ModelStore store, Action<string>? log = null, TimeProvider? time = null)
     {
         ArgumentNullException.ThrowIfNull(http);
@@ -128,18 +140,24 @@ public sealed class ModelDownloader
         IProgress<DownloadProgress>? progress,
         CancellationToken cancellationToken)
     {
+        // One timer for both waits: the answer, then every read. It fires only when the source is silent for too long.
+        using var silence = new CancellationTokenSource(ResponseTimeout, _time);
+        using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, silence.Token);
+        var token = linked.Token;
+
         HttpResponseMessage response;
         try
         {
-            response = await _http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+            response = await _http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, token).ConfigureAwait(false);
         }
         catch (HttpRequestException e)
         {
             throw new SourceUnavailableException($"{url}: {e.Message}", e);
         }
-        catch (TaskCanceledException e) when (!cancellationToken.IsCancellationRequested)
+        catch (OperationCanceledException e) when (!cancellationToken.IsCancellationRequested)
         {
-            throw new SourceUnavailableException($"{url}: timed out", e);
+            throw new SourceUnavailableException(
+                silence.IsCancellationRequested ? $"{url}: no answer in {(int)ResponseTimeout.TotalSeconds} s" : $"{url}: timed out", e);
         }
 
         using (response)
@@ -155,7 +173,8 @@ public sealed class ModelDownloader
             long received = 0;
             try
             {
-                var source = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+                silence.CancelAfter(StallTimeout);
+                var source = await response.Content.ReadAsStreamAsync(token).ConfigureAwait(false);
                 await using (source.ConfigureAwait(false))
                 {
                     var target = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None, BufferSize, useAsync: true);
@@ -163,8 +182,9 @@ public sealed class ModelDownloader
                     {
                         progress?.Report(new DownloadProgress(DownloadStage.Downloading, 0, total));
                         int read;
-                        while ((read = await source.ReadAsync(buffer, cancellationToken).ConfigureAwait(false)) > 0)
+                        while ((read = await source.ReadAsync(buffer, token).ConfigureAwait(false)) > 0)
                         {
+                            silence.CancelAfter(StallTimeout);
                             hash.AppendData(buffer, 0, read);
                             await target.WriteAsync(buffer.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
                             received += read;
@@ -176,6 +196,11 @@ public sealed class ModelDownloader
             catch (Exception e) when (e is HttpRequestException or IOException && !cancellationToken.IsCancellationRequested)
             {
                 throw new SourceUnavailableException($"{url}: connection lost after {received} bytes: {e.Message}", e);
+            }
+            catch (OperationCanceledException e) when (silence.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
+            {
+                throw new SourceUnavailableException(
+                    $"{url}: no data for {(int)StallTimeout.TotalSeconds} s after {received} bytes", e);
             }
 
             return Convert.ToHexStringLower(hash.GetHashAndReset());

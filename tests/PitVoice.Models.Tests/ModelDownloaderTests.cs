@@ -1,4 +1,5 @@
 using System.Net;
+using Microsoft.Extensions.Time.Testing;
 using Xunit;
 
 namespace PitVoice.Models.Tests;
@@ -6,6 +7,10 @@ namespace PitVoice.Models.Tests;
 public sealed class ModelDownloaderTests
 {
     private static readonly Uri MirrorUrl = new("https://mirror.example/m.zip");
+    private static readonly TimeSpan Wait = TimeSpan.FromSeconds(10);
+
+    /// <summary>Where <see cref="FakeTimeProvider"/> starts by default.</summary>
+    private static readonly DateTimeOffset FakeStart = new FakeTimeProvider().GetUtcNow();
 
     [Fact]
     public async Task Download_Success_ExtractsStripsRootAndWritesMarker()
@@ -63,6 +68,69 @@ public sealed class ModelDownloaderTests
         Assert.Equal(DownloadOutcome.Installed, outcome);
         Assert.Equal([entry.Url, MirrorUrl], handler.Requests);
         Assert.Contains(log, l => l.Contains("mirror", StringComparison.Ordinal));
+    }
+
+    /// <summary>A proxy that swallows the request must not hold the download: after the response timeout the mirror is used.</summary>
+    [Fact]
+    public async Task Download_PrimaryDoesNotAnswer_SwitchesToMirrorAfterTheResponseTimeout()
+    {
+        using var temp = new TempDirectory();
+        var archive = Archives.VoskLike("m");
+        var entry = Archives.Entry("m", archive, MirrorUrl);
+        var handler = new FakeHttpHandler().Hang(entry.Url).Serve(MirrorUrl, archive);
+        var time = new FakeTimeProvider();
+        var log = new List<string>();
+        var download = Downloader(handler, new ModelStore(temp.Path), log.Add, time).DownloadAsync(entry);
+        Assert.True(await handler.Waiting.WaitAsync(Wait));
+
+        time.Advance(ModelDownloader.ResponseTimeout - TimeSpan.FromSeconds(1));
+        await Task.Delay(50);
+        Assert.False(download.IsCompleted);
+        time.Advance(TimeSpan.FromSeconds(1));
+
+        Assert.Equal(DownloadOutcome.Installed, await download.WaitAsync(Wait));
+        Assert.Equal([entry.Url, MirrorUrl], handler.Requests);
+        Assert.Contains(log, l => l.Contains("no answer in 20 s", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task Download_PrimaryStallsMidway_SwitchesToMirrorAfterTheStallTimeout()
+    {
+        using var temp = new TempDirectory();
+        var archive = Archives.VoskLike("m");
+        var entry = Archives.Entry("m", archive, MirrorUrl);
+        var handler = new FakeHttpHandler().Stall(entry.Url, archive, sendBytes: 100).Serve(MirrorUrl, archive);
+        var time = new FakeTimeProvider();
+        var log = new List<string>();
+        var store = new ModelStore(temp.Path);
+        var download = Downloader(handler, store, log.Add, time).DownloadAsync(entry);
+        Assert.True(await handler.Waiting.WaitAsync(Wait));
+
+        time.Advance(ModelDownloader.StallTimeout);
+
+        Assert.Equal(DownloadOutcome.Installed, await download.WaitAsync(Wait));
+        Assert.Equal([entry.Url, MirrorUrl], handler.Requests);
+        Assert.Contains(log, l => l.Contains("no data for 30 s after 100 bytes", StringComparison.Ordinal));
+        Assert.True(store.TryGetInstalled("m", out var installed));
+        Assert.Equal(entry.Sha256, installed.Sha256);
+    }
+
+    [Fact]
+    public async Task Download_SlowButSteadySource_IsNotAbandoned()
+    {
+        using var temp = new TempDirectory();
+        var archive = Archives.VoskLike("m");
+        var entry = Archives.Entry("m", archive, MirrorUrl);
+        var time = new FakeTimeProvider();
+        var handler = new FakeHttpHandler()
+            .Serve(entry.Url, archive, chunkSize: 256, onChunk: _ => time.Advance(ModelDownloader.StallTimeout - TimeSpan.FromSeconds(5)))
+            .Serve(MirrorUrl, archive);
+
+        var outcome = await Downloader(handler, new ModelStore(temp.Path), time: time).DownloadAsync(entry).WaitAsync(Wait);
+
+        Assert.Equal(DownloadOutcome.Installed, outcome);
+        Assert.Equal([entry.Url], handler.Requests);
+        Assert.True(time.GetUtcNow() - FakeStart > ModelDownloader.StallTimeout); // longer than the stall timeout in total
     }
 
     [Fact]
@@ -204,8 +272,8 @@ public sealed class ModelDownloaderTests
         Assert.Equal("acoustic model", File.ReadAllText(Path.Combine(store.GetModelDirectory("m"), "am", "final.mdl")));
     }
 
-    private static ModelDownloader Downloader(FakeHttpHandler handler, ModelStore store, Action<string>? log = null) =>
-        new(new HttpClient(handler), store, log);
+    private static ModelDownloader Downloader(FakeHttpHandler handler, ModelStore store, Action<string>? log = null, TimeProvider? time = null) =>
+        new(new HttpClient(handler), store, log, time);
 
     private static void AssertNothingLeft(ModelStore store, string id)
     {

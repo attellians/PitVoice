@@ -77,7 +77,7 @@ dotnet run --project tools/PitVoice.Cli -- models delete vosk-model-small-ru-0.2
 
 ### Model mirror
 
-When the primary source of a model does not answer, the download goes to its `mirror`: a copy in the pre-release [`models`](https://github.com/attellians/PitVoice/releases/tag/models) of this repository, under the same file name. A test fails for a manifest entry without such a mirror. After adding a model to the manifest, run the **Mirror models** workflow by hand (Actions → Mirror models → Run workflow): it creates the `models` release if needed, downloads every archive that is not there yet, checks its sha256 against the manifest and uploads it. Copies already in the release are never replaced; a checksum mismatch fails the run with the model id. Being a pre-release, `models` is never taken for an app update and never becomes the "Latest" release.
+When the primary source of a model fails, answers nothing for 20 s or stops sending for 30 s, the download goes to its `mirror`: a copy in the pre-release [`models`](https://github.com/attellians/PitVoice/releases/tag/models) of this repository, under the same file name. A test fails for a manifest entry without such a mirror. After adding a model to the manifest, run the **Mirror models** workflow by hand (Actions → Mirror models → Run workflow): it creates the `models` release if needed, downloads every archive that is not there yet, checks its sha256 against the manifest and uploads it. Copies already in the release are never replaced; a checksum mismatch fails the run with the model id. Being a pre-release, `models` is never taken for an app update and never becomes the "Latest" release.
 
 ## Speech from a file or the microphone
 

@@ -57,6 +57,29 @@ jobs:
       - name: Validate language packs
         run: dotnet run --project tools/PitVoice.Cli --configuration Release --no-build -- validate
 
+      # The release workflow deletes what this script prints: never a stable release or `models` (release-publishing spec).
+      - name: Test old alpha cleanup
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          cd .github/scripts
+          seven=$(bash old-alphas.sh < testdata/releases-7-alphas.json | sort)
+          four=$(bash old-alphas.sh < testdata/releases-4-alphas.json)
+          echo "7 alphas -> ${seven//$'\n'/ }"
+          echo "4 alphas -> ${four:-nothing}"
+          if printf '%s\n' "$seven" "$four" | grep -Ev '^(v[0-9]+\.[0-9]+\.[0-9]+-alpha)?$'; then
+            echo "::error::old-alphas.sh selected a release that is not an alpha pre-release"
+            exit 1
+          fi
+          if [ "$seven" != $'v0.0.27-alpha\nv0.0.28-alpha' ]; then
+            echo "::error::7 alphas: expected the 2 oldest (v0.0.27-alpha, v0.0.28-alpha), got: $seven"
+            exit 1
+          fi
+          if [ -n "$four" ]; then
+            echo "::error::4 alphas: expected nothing, got: $four"
+            exit 1
+          fi
+
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v7

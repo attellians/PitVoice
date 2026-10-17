@@ -4,12 +4,14 @@ PitVoice is a free, open-source Windows tray utility that gives iRacing drivers 
 
 ## Install
 
-1. Download `PitVoice-win-Setup.exe` from the [latest release](https://github.com/attellians/PitVoice/releases/latest) (Windows 10/11 x64).
+1. Download `PitVoice-win-Setup.exe` from the [latest release](https://github.com/attellians/PitVoice/releases/latest) (Windows 10/11 x64). That is always the latest stable version.
 2. Run it. It needs no administrator rights and nothing from the network: PitVoice and the .NET runtime it needs go into your profile (`%LocalAppData%\PitVoiceApp`; your models, logs and diagnostics live apart, in `%LocalAppData%\PitVoice`), shortcuts appear in the Start menu and on the desktop, and the app starts.
    The installer is not signed yet, so Windows SmartScreen may say "Windows protected your PC": click **More info → Run anyway**.
 3. First setup: the home page lists what is left. Download the speech model of your language on the "Models" page, assign the push-to-talk button in "Settings", and try a phrase on the "Check" page. The models are not in the installer; they are downloaded only when you ask for it.
 
 **New versions.** The app does not look for updates yet and never goes online on its own: model downloads are the only network traffic, and only when you ask. To update, download the installer of the newer version from the [releases](https://github.com/attellians/PitVoice/releases) and run it; it says "PitVoice is already installed", press **Repair**. Settings, models and phrase additions stay.
+
+**Alpha builds.** Builds of work in progress are published as pre-releases named `PitVoice X.Y.Z-alpha` on the [releases](https://github.com/attellians/PitVoice/releases) page, never as the latest release; the last five are kept. An alpha installs into the same place as the stable version and over it ("Repair"), with the same settings and models; to go back, run the installer of a stable version the same way. "About" shows the version with its `-alpha` suffix.
 
 **Uninstall.** "Settings → Apps → Installed apps → PitVoice → Uninstall" closes the app and removes everything: the program (`%LocalAppData%\PitVoiceApp`), the shortcuts, `%LocalAppData%\PitVoice` (models, logs, crash reports, diagnostics archives) and `%AppData%\PitVoice` (settings, phrase additions).
 
@@ -218,14 +220,40 @@ Regenerate and commit both files whenever a package of the app or of any project
 
 ## Releasing
 
-A release is one tag; GitHub Actions does the rest (`.github/workflows/release.yml`): it checks that the tag matches `VERSION` in the tagged commit and that the version is not released yet, runs the full CI, publishes the app and the CLI self-contained for win-x64, checks the notices, packs the installer with the full and delta update packages (Velopack, package id `PitVoiceApp`, so the program goes into `%LocalAppData%\PitVoiceApp` and never shares a directory with the data in `%LocalAppData%\PitVoice`), uploads it as `PitVoice-win-Setup.exe` without the portable zip, fails if the installer is above 90 MB, and publishes the release.
+Work goes into the `development` branch; `main` holds only what was released as stable and moves only by fast-forward to `development`, never by its own commits. A release is one tag; GitHub Actions does the rest (`.github/workflows/release.yml`). The form of the tag decides what is published:
 
-1. Commit everything that goes into the release (the pre-commit hook bumps `VERSION`) and push the branch.
+| Tag | Tagged commit must be in | Published as |
+|---|---|---|
+| `vX.Y.Z` | `main` | a stable release, the latest release of the project |
+| `vX.Y.Z-alpha` | `development` | a pre-release, never the latest release; the last 5 are kept, older ones are deleted with their tags |
+
+Both kinds go through the same steps: the workflow checks the form of the tag, that `X.Y.Z` matches `VERSION` in the tagged commit (the suffix takes no part), that the commit is in the branch of its kind and that the tag is not released yet, runs the full CI, publishes the app and the CLI self-contained for win-x64 with the version of the tag (an alpha shows `X.Y.Z-alpha` in "About" and in the log), checks the notices, packs the installer (Velopack, package id `PitVoiceApp`, so the program goes into `%LocalAppData%\PitVoiceApp` and never shares a directory with the data in `%LocalAppData%\PitVoice`), fails if it is above 90 MB, and publishes the release with `PitVoice-win-Setup.exe` as its only file. The update packages are not published until updates from the app come back.
+
+**Alpha** (any commit of `development`):
+
+1. Commit everything that goes into the build in `development` (the pre-commit hook bumps `VERSION`) and push it: `git push origin development`.
 2. Read the version of that commit: `git show HEAD:VERSION`.
-3. Tag that commit with the release notes as the tag message: `git tag -a v<VERSION> -m "<what changed>"`.
+3. Tag that commit with the notes as the tag message: `git tag -a v<VERSION>-alpha -m "<what changed>"`.
+4. Push the tag: `git push origin v<VERSION>-alpha`.
+
+**Stable** (the head of `development`, usually after its alpha was tried):
+
+1. Move `main` to `development`, without a new commit:
+   `git switch main`, `git merge --ff-only development`, `git push origin main`, `git switch development`.
+2. Read the version: `git show main:VERSION`.
+3. Tag that commit: `git tag -a v<VERSION> -m "<what changed>" main`.
 4. Push the tag: `git push origin v<VERSION>`.
 
-If the tag does not match `VERSION` (for example it went on a later commit whose hook already bumped the version), the release fails and names both versions: delete the tag (`git tag -d v<X>` and `git push origin :refs/tags/v<X>`) and tag the right commit. A tag of a version that is already released fails with "version already released" and leaves that release alone; release the next version instead. Nothing reaches users before the release is published; to withdraw a release, delete it and its tag on GitHub. Deleting a release whose tag is `models` removes the model mirror: run **Mirror models** again then.
+If `git merge --ff-only` refuses, something was committed to `main` directly: move it into `development` (`git switch development`, `git cherry-pick <commit>`), push, and start the stable steps again.
+
+When a release fails in "Tag form, VERSION and branch", nothing is published; delete the tag (`git tag -d <tag>` and `git push origin :refs/tags/<tag>`) and then:
+
+- **not a release tag** (`-beta`, `-rc1`, `-alpha.1`, `-ALPHA`): only `vX.Y.Z` and `vX.Y.Z-alpha` are allowed; tag again in one of these forms.
+- **does not match VERSION** (for example the tag went on a later commit whose hook already bumped the version): the message names both versions; tag the commit whose `VERSION` is the one to release.
+- **a stable release comes only from main**: the commit is only in `development`; release it as `v<VERSION>-alpha`, or move `main` to it as above and tag again.
+- **a pre-release comes only from development**: tag a commit of `development`.
+
+A tag of a version that is already released fails with "version already released" and leaves that release alone; to rebuild the same commit, delete its release and tag on GitHub and push the tag again. Nothing reaches users before the release is published; to withdraw a release, delete it and its tag on GitHub. Deleting a release whose tag is `models` removes the model mirror: run **Mirror models** again then. The cleanup of old alphas never touches stable releases or `models`; when it cannot delete one, the run shows a warning with the tag, and the new pre-release stays published.
 
 ## Versioning
 

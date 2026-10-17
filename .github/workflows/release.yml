@@ -1,8 +1,9 @@
 name: Release
 
-# A tag vX.Y.Z publishes PitVoice X.Y.Z (design decision 6): the tag must match VERSION in the tagged commit, the
-# version must not be released yet, the usual build and tests must pass, then the installer and the update packages
-# go to GitHub Releases. Any failure leaves the releases as they were.
+# A tag publishes PitVoice (release-publishing spec): vX.Y.Z is a stable release from a commit of main, vX.Y.Z-alpha a
+# pre-release from a commit of development. X.Y.Z must match VERSION in the tagged commit, the tag must not be released
+# yet, the usual build and tests must pass, then the installer, and nothing else, goes to GitHub Releases. Any failure
+# leaves the releases as they were.
 on:
   push:
     tags: ["v*"]
@@ -11,10 +12,12 @@ permissions:
   contents: read
 
 env:
-  # Must be the version of the Velopack package in src/PitVoice.App, or the packages will not match the app.
+  # Must be the version of the Velopack package in src/PitVoice.App, or the installer will not match the app.
   VPK_VERSION: 1.2.161
   # Installer size limit (installation spec): the .NET runtime is inside, the models are not.
   MAX_SETUP_MB: 90
+  # Alpha pre-releases kept after a new one is published; older ones go with their tags.
+  KEEP_ALPHAS: 5
 
 jobs:
   verify:
@@ -22,21 +25,19 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
     outputs:
-      version: ${{ steps.version.outputs.version }}
+      kind: ${{ steps.tag.outputs.kind }}
+      version: ${{ steps.tag.outputs.version }}
+      base: ${{ steps.tag.outputs.base }}
     steps:
+      # The full history: the branch check needs origin/main and origin/development.
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
-      - name: Tag matches VERSION
-        id: version
+      - name: Tag form, VERSION and branch
+        id: tag
         shell: bash
-        run: |
-          version=$(tr -d '[:space:]' < VERSION)
-          tag="${GITHUB_REF_NAME}"
-          if [ "$tag" != "v$version" ]; then
-            echo "::error::tag $tag does not match VERSION $version of the tagged commit; tag the commit whose VERSION is the one to release"
-            exit 1
-          fi
-          echo "version=$version" >> "$GITHUB_OUTPUT"
+        run: bash .github/scripts/release-tag.sh "$GITHUB_REF_NAME" "$GITHUB_SHA"
 
       - name: Version not released yet
         shell: bash
@@ -56,6 +57,9 @@ jobs:
     permissions:
       contents: write
     env:
+      GH_TOKEN: ${{ github.token }}
+      KIND: ${{ needs.verify.outputs.kind }}
+      # The full version, with the suffix for an alpha (0.0.27-alpha): "About", the log and the notices link show it.
       VERSION: ${{ needs.verify.outputs.version }}
     steps:
       - uses: actions/checkout@v7
@@ -64,11 +68,12 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
-      # App and CLI share one self-contained folder: the CLI reuses the runtime and the native libraries.
+      # App and CLI share one self-contained folder: the CLI reuses the runtime and the native libraries. The version
+      # from the tag overrides the one Directory.Build.props reads from VERSION; for a stable release they are equal.
       - name: Publish
         run: |
-          dotnet publish src/PitVoice.App/PitVoice.App.csproj -c Release -r win-x64 --self-contained -o publish
-          dotnet publish tools/PitVoice.Cli/PitVoice.Cli.csproj -c Release -r win-x64 --self-contained -o publish
+          dotnet publish src/PitVoice.App/PitVoice.App.csproj -c Release -r win-x64 --self-contained -o publish -p:Version=$env:VERSION
+          dotnet publish tools/PitVoice.Cli/PitVoice.Cli.csproj -c Release -r win-x64 --self-contained -o publish -p:Version=$env:VERSION
 
       - name: Check third-party notices
         run: dotnet run --project tools/notices-gen -c Release -- --check
@@ -79,14 +84,6 @@ jobs:
 
       - name: Install vpk
         run: dotnet tool install -g vpk --version $env:VPK_VERSION
-
-      # The previous release gives the delta package; the first release has none, which is fine.
-      - name: Download the previous release
-        shell: bash
-        run: |
-          mkdir -p Releases
-          vpk download github --repoUrl "${{ github.server_url }}/${{ github.repository }}" --token "${{ github.token }}" --outputDir Releases \
-            || echo "No previous release: the first release has no delta package"
 
       # The message of the annotated tag is the text of the release; an empty message is fine.
       - name: Release notes
@@ -99,23 +96,23 @@ jobs:
       # The package id is the install directory, %LocalAppData%\PitVoiceApp. It must differ from the data directory
       # %LocalAppData%\PitVoice: the installer treats a non-empty directory as an installation and its "Repair" deletes
       # it whole, models included. The title is what the user sees: shortcuts and "Installed apps" say "PitVoice".
+      # Releases/ holds no previous package, so no delta is built: updates from the app are not there yet.
       - name: Pack
         run: >
           vpk pack --packId PitVoiceApp --packVersion $env:VERSION --runtime win-x64 --packDir publish --mainExe PitVoice.exe
           --packTitle PitVoice --packAuthors "Artem Lebedko" --icon src/PitVoice.App/Assets/pitvoice.ico
           --releaseNotes release-notes.md --outputDir Releases
 
-      # Users download PitVoice-win-Setup.exe; the portable zip is not supported, so it is not uploaded. Updates only
-      # use releases.win.json and the .nupkg files, which stay as they are.
+      # Users download PitVoice-win-Setup.exe, the only file of the release.
       - name: Name the installer
-        shell: pwsh
+        shell: bash
         run: |
-          Move-Item Releases/PitVoiceApp-win-Setup.exe Releases/PitVoice-win-Setup.exe
-          Remove-Item Releases/PitVoiceApp-win-Portable.zip
-          $assets = (Get-Content Releases/assets.win.json -Raw | ConvertFrom-Json) | Where-Object Type -ne 'Portable'
-          foreach ($asset in $assets) { if ($asset.Type -eq 'Installer') { $asset.RelativeFileName = 'PitVoice-win-Setup.exe' } }
-          ConvertTo-Json @($assets) -Compress | Set-Content Releases/assets.win.json -Encoding utf8NoBOM
-          Get-Content Releases/assets.win.json
+          if [ ! -f Releases/PitVoiceApp-win-Setup.exe ]; then
+            echo "::error::the installer is not among the results of packing; nothing is published"
+            ls -l Releases || true
+            exit 1
+          fi
+          mv Releases/PitVoiceApp-win-Setup.exe Releases/PitVoice-win-Setup.exe
 
       - name: Installer size
         shell: bash
@@ -128,7 +125,29 @@ jobs:
             exit 1
           fi
 
+      # Only the installer: the update packages and their lists come back together with updates from the app.
+      # An alpha is a pre-release and never the latest release, so releases/latest stays on the stable one.
       - name: Publish the release
-        run: >
-          vpk upload github --repoUrl "${{ github.server_url }}/${{ github.repository }}" --token "${{ github.token }}"
-          --outputDir Releases --publish --tag $env:GITHUB_REF_NAME --releaseName "PitVoice $env:VERSION"
+        shell: bash
+        run: |
+          if [ "$KIND" = alpha ]; then latest=(--prerelease --latest=false); else latest=(--latest); fi
+          gh release create "$GITHUB_REF_NAME" Releases/PitVoice-win-Setup.exe --repo "$GITHUB_REPOSITORY" \
+            --title "PitVoice $VERSION" --notes-file release-notes.md --verify-tag "${latest[@]}"
+
+      # A failed deletion only warns: the new pre-release is already published.
+      - name: Remove old alphas
+        if: env.KIND == 'alpha'
+        shell: bash
+        run: |
+          if ! gh release list --repo "$GITHUB_REPOSITORY" --limit 1000 --json tagName,isPrerelease,createdAt > releases.json \
+            || ! old=$(bash .github/scripts/old-alphas.sh "$KEEP_ALPHAS" < releases.json); then
+            echo "::warning::could not list the releases; old pre-releases stay until the next alpha"
+            exit 0
+          fi
+          for tag in $old; do
+            if gh release delete "$tag" --repo "$GITHUB_REPOSITORY" --cleanup-tag --yes; then
+              echo "removed $tag"
+            else
+              echo "::warning::could not remove the old pre-release $tag; delete it and its tag by hand"
+            fi
+          done

@@ -1,5 +1,6 @@
 # Hooks run under sh and must keep LF line endings on every OS.
 .githooks/* text eol=lf
+.github/scripts/*.sh text eol=lf
 VERSION text eol=lf
 
 # Recorded test audio.

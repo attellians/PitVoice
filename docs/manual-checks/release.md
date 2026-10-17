@@ -60,3 +60,17 @@ Removed from this stage on 2026-10-17 together with the update check in the app;
 |---|---|---|---|
 | 4.1 | the app is running with a model, settings, a log and a diagnostics archive; Settings → Apps → PitVoice → Uninstall | the app closes, the tray icon disappears || ok (2026-10-17, the user, on the developer machine): uninstall showed progress, then "Uninstall Complete" with the system sound |
 | 4.2 | 4.1 | no `%LocalAppData%\PitVoiceApp`, no `%LocalAppData%\PitVoice`, no `%AppData%\PitVoice`, no shortcuts, PitVoice not in the list of apps || ok (2026-10-17): checked after 4.1 on the developer machine: no `%LocalAppData%\PitVoiceApp`, `%LocalAppData%\PitVoice`, `%AppData%\PitVoice`, no desktop or Start menu shortcut, no PitVoice entry in the uninstall list |
+
+## 5. Alpha and stable
+
+Branches and tag forms of README "Releasing" (change `add-alpha-prereleases`, 2026-10-17): an alpha `vX.Y.Z-alpha` from
+`development`, a stable `vX.Y.Z` from `main` after a fast-forward to `development`, and only the installer in a release.
+
+| # | Action | Expected | Result |
+|---|---|---|---|
+| 5.1 | alpha by README "Releasing → Alpha": tag `vX.Y.Z-alpha` on a commit of `development` | the Release run is green; the pre-release "PitVoice X.Y.Z-alpha" has only `PitVoice-win-Setup.exe` (and the source archives GitHub adds); `releases/latest` is still the last stable release | |
+| 5.2 | install the alpha of 5.1 over the installed stable version ("Repair"), open "About" | version `X.Y.Z-alpha`; the THIRD-PARTY-NOTICES.md link opens the file of the tag `vX.Y.Z-alpha`; the log has "PitVoice X.Y.Z-alpha started"; settings and models stay | |
+| 5.3 | stable by README "Releasing → Stable": `main` fast-forwarded to `development`, tag `vX.Y.Z` | the Release run is green; the release is the latest, its only file is `PitVoice-win-Setup.exe` (and the source archives); the installer goes over the alpha of 5.2 with "Repair", settings and models stay, "About" shows `X.Y.Z` | |
+| 5.4 | tag `vX.Y.Z` on a commit that is only in `development`, push it | the run fails in "Tag form, VERSION and branch" with "a stable release comes only from main" and the hint; CI and pack skipped, no release; then delete the tag | |
+| 5.5 | tag `vX.Y.Z-beta`, push it | the run fails in "Tag form, VERSION and branch" with the allowed forms `vX.Y.Z` and `vX.Y.Z-alpha`; no release; then delete the tag | |
+| 5.6 | the sixth alpha (when there are 5 already) | the oldest alpha and its tag are gone, 5 stay; stable releases and `models` are in place | |

@@ -61,6 +61,8 @@ public sealed partial class NoPhraseRecordsTests
             Assert.True((await pending.WaitAsync(HostFixture.Wait))!.Accepted);
         }
 
+        // The checklist flag is applied (and logged) once the pipeline is free, not when the check returns.
+        await host.WhenAppliedAsync().WaitAsync(HostFixture.Wait);
         await host.Events.DrainAsync();
         var afterPhrases = capture.LinesAfter(before);
         await fixture.Host.DisposeAsync();

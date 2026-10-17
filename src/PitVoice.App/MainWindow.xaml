@@ -45,11 +45,6 @@
                         <ui:SymbolIcon Symbol="ArrowDownload24" />
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
-                <ui:NavigationViewItem Content="{loc:Tr NavCheck}" TargetPageType="{x:Type pages:CheckPage}">
-                    <ui:NavigationViewItem.Icon>
-                        <ui:SymbolIcon Symbol="Mic24" />
-                    </ui:NavigationViewItem.Icon>
-                </ui:NavigationViewItem>
                 <ui:NavigationViewItem Content="{loc:Tr NavCommands}" TargetPageType="{x:Type pages:CommandsPage}">
                     <ui:NavigationViewItem.Icon>
                         <ui:SymbolIcon Symbol="TextBulletListLtr24" />

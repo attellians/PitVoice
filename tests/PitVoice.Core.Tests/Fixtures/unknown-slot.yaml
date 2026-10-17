@@ -1,21 +1,26 @@
-language: ru
 name: Неизвестный слот
+language: ru
+plural_rules: ru
 units:
   liters:
-    synonyms: [литр]
+    synonyms: [литр, литра, литров]
     forms: { one: литр, few: литра, many: литров }
-intents:
-  fuel.add:
-    patterns:
-      - "залей {amount} {unit?}"
-      - "залей {amount} {liters}"
-    response: "заливаем {amount} {unit}"
+conjunctions: [и]
+fillers: [пожалуйста]
+lexicon:
+  fuel: { action: [залей] }
+  tires: { action: [меняй], object: [шины] }
 responses:
+  fuel.add: "заливаем {amount} {liters}"
+  tires.all: "меняем шины"
   not_understood: "не понял"
   not_connected: "no connection"
   not_in_car: "not in car"
   apply_failed: "failed"
-  not_supported: "not supported"
 tests:
-  - say: "залей десять"
-    expect: [{ intent: fuel.add, amount: 10 }]
+  - say: "залей десять литров"
+    expect: [{ intent: fuel.add, amount: 10, unit: liters }]
+  - say: "меняй шины"
+    expect: [{ intent: tires.all }]
+  - say: "привет"
+    expect: reject

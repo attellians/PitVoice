@@ -158,11 +158,11 @@ public sealed class VoicePipelineTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task CancelPhrase_SuccessCue_NothingSent()
+    public async Task CancelPhrase_IsRejected_ErrorCue_NothingSent()
     {
         Say("отмена");
 
-        Assert.Equal(Cue.Success, (await Result(1)).Cue);
+        Assert.Equal(Cue.Error, (await Result(1)).Cue);
         Assert.Empty(_sink.Sent);
     }
 
@@ -423,11 +423,11 @@ public sealed class VoicePipelineTests : IAsyncLifetime
         _telemetryOverride = new BrokenTelemetrySource();
 
         Say("залей тридцать литров");
-        Say("отмена");
+        Say("отмена"); // no longer a command: the next phrase is still handled and rejected
 
         Assert.Equal(Cue.Error, (await Result(1)).Cue);
         Assert.Equal(PipelineStage.Execution, (await WaitFor<PipelineFailed>()).Stage);
-        Assert.Equal(Cue.Success, (await Result(2)).Cue);
+        Assert.Equal(Cue.Error, (await Result(2)).Cue);
     }
 
     [Fact]

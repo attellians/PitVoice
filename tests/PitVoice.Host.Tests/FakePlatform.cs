@@ -27,11 +27,6 @@ internal sealed class FakePlatform : IHostPlatform
 
     public IAudioCapture Capture => PipelineCapture;
 
-    public ConcurrentQueue<FakeCapture> CheckCaptures { get; } = new();
-
-    /// <summary>When set, the microphone of the check does not open.</summary>
-    public string? CheckCaptureError { get; set; }
-
     /// <summary>Recognizer script shared by every engine the host creates.</summary>
     public ScriptedAsrEngine Script { get; } = new();
 
@@ -68,13 +63,6 @@ internal sealed class FakePlatform : IHostPlatform
     public IExecutionLog ExecutionLog { get; set; } = new NullLog();
 
     public GameElevation Elevation { get; set; } = GameElevation.NotElevated;
-
-    public IAudioCapture CreateCheckCapture()
-    {
-        var capture = new FakeCapture { StartError = CheckCaptureError };
-        CheckCaptures.Enqueue(capture);
-        return capture;
-    }
 
     public IReadOnlyList<AudioDevice> GetInputDevices() => Microphones;
 

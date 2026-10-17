@@ -10,11 +10,13 @@ using PitVoice.Host;
 
 namespace PitVoice.App.ViewModels;
 
-internal sealed record PhraseLine(string Text, bool IsOwn);
+internal sealed record WordLine(string Text, bool IsOwn);
 
-internal sealed record CommandEntry(string Name, IReadOnlyList<PhraseLine> Phrases);
+internal sealed record ClassEntry(string Name, IReadOnlyList<WordLine> Words);
 
-internal sealed record GroupEntry(string Name, IReadOnlyList<CommandEntry> Commands);
+internal sealed record CommandEntry(string Name, IReadOnlyList<string> Examples);
+
+internal sealed record GroupEntry(string Name, IReadOnlyList<ClassEntry> Classes, IReadOnlyList<CommandEntry> Commands, string ElidedAction);
 
 /// <summary>"Commands" (spec: Command reference, User additions in the reference).</summary>
 internal sealed partial class CommandsViewModel : ObservableObject
@@ -110,9 +112,13 @@ internal sealed partial class CommandsViewModel : ObservableObject
         {
             Groups.Add(new GroupEntry(
                 Texts.Group(group.Group),
+                group.Classes.Select(c => new ClassEntry(
+                    Texts.WordClass(c.Class),
+                    c.Words.Select(w => new WordLine(w.Text, w.IsUserAddition)).ToArray())).ToArray(),
                 group.Commands.Select(c => new CommandEntry(
                     Texts.Intent(c.Intent),
-                    c.Phrases.Select(p => new PhraseLine(Texts.Pattern(p.Pattern), p.IsUserAddition)).ToArray())).ToArray()));
+                    c.Examples.Select(Texts.Pattern).ToArray())).ToArray(),
+                group.ElidedAction is { } elided ? Loc.F("ElidedAction", elided) : string.Empty));
         }
 
         var additions = _services.Host.Additions;
@@ -120,7 +126,7 @@ internal sealed partial class CommandsViewModel : ObservableObject
         {
             null or { Exists: false } => Loc.T("AdditionsNone"),
             { Applied: false } => Loc.T("AdditionsNotApplied"),
-            _ => Loc.F("AdditionsApplied", pack.Templates.Count(t => t.IsUserAddition)),
+            _ => Loc.F("AdditionsApplied", pack.UserEntries.Count),
         };
         foreach (var issue in additions?.Issues ?? [])
         {

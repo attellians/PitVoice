@@ -1,6 +1,3 @@
-using PitVoice.Core.Intents;
-using PitVoice.Core.Parsing;
-
 namespace PitVoice.Core.Languages;
 
 /// <summary>Outcome of applying a user additions file to a built-in pack.</summary>
@@ -17,10 +14,10 @@ public sealed record PackAdditionsResult(LanguagePack Pack, string File, bool Ex
 }
 
 /// <summary>
-/// Merges user additions into a built-in pack (FR-LANG-5, design decision 9). Each pattern is checked by the rules of
-/// <see cref="LanguagePackValidator"/>: the intent must be in the pack, slots must exist, the pattern must not be empty and
-/// a pattern of a pit command needs at least two words. Any error leaves the whole file out and the built-in pack in
-/// use. A pattern equal to a built-in pattern of the same intent, or repeated in the file, is skipped with a warning.
+/// Merges user additions into a built-in pack (FR-LANG-5, design D7). Each word is checked by the rules of the built-in
+/// lexicon (<see cref="LexiconWords"/>): no slots, digits, fillers, negations or conjunctions, and no word in both a
+/// class and its opposite. Any error leaves the whole file out and the built-in pack in use. A word already in its class,
+/// or repeated in the file, is skipped with a warning. One word never makes a command alone: every rule needs two.
 /// </summary>
 public static class UserAdditions
 {
@@ -49,11 +46,11 @@ public static class UserAdditions
         ArgumentNullException.ThrowIfNull(additions);
 
         var issues = new List<PackIssue>();
-        void Add(IssueSeverity severity, AdditionPattern? pattern, string message) => issues.Add(new PackIssue(
+        void Add(IssueSeverity severity, AdditionWord? word, string message) => issues.Add(new PackIssue(
             severity,
             additions.File,
-            pattern?.Line,
-            pattern is null ? string.Empty : $"intents/{pattern.Intent}/patterns",
+            word?.Line,
+            word is null ? string.Empty : $"lexicon/{word.Class}",
             message));
 
         if (additions.Language is { } language && !string.Equals(language, pack.Language, StringComparison.Ordinal))
@@ -62,81 +59,41 @@ public static class UserAdditions
             return new PackAdditionsResult(pack, additions.File, Exists: true, Applied: false, issues);
         }
 
-        var compiler = new TemplateCompiler(pack.Normalizer);
-        var builtIn = new Dictionary<string, IntentId>(StringComparer.Ordinal);
-        foreach (var template in pack.Templates)
+        var checker = new LexiconWords(pack.Normalizer, pack.Conjunctions, pack.Negations);
+        var added = new List<LexiconEntry>();
+        foreach (var word in additions.Words)
         {
-            builtIn.TryAdd(Key(template), template.Intent);
+            var entry = checker.Check(word.Class, word.Text, isUserAddition: true, message => Add(IssueSeverity.Error, word, message));
+            if (entry is null)
+            {
+                continue;
+            }
+
+            if (pack.Lexicon.Contains(entry.Class, entry.Text))
+            {
+                Add(IssueSeverity.Warning, word, $"'{entry.Text}' is already built into '{entry.Class}'; skipped");
+                continue;
+            }
+
+            if (added.Any(e => e.Class == entry.Class && e.Text == entry.Text))
+            {
+                Add(IssueSeverity.Warning, word, $"'{entry.Text}' is repeated in the file; skipped");
+                continue;
+            }
+
+            added.Add(entry);
         }
 
-        var added = new Dictionary<IntentId, List<Template>>();
-        var seen = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var pattern in additions.Patterns)
+        foreach (var (action, keep) in LexiconWords.Opposites(pack.Lexicon.Entries.Concat(added)))
         {
-            if (!IntentCatalog.TryGet(pattern.Intent, out var definition))
-            {
-                Add(IssueSeverity.Error, pattern, $"unknown intent '{pattern.Intent}'; additions can only extend intents of the pack");
-                continue;
-            }
-
-            if (!pack.Intents.ContainsKey(pattern.Intent))
-            {
-                Add(IssueSeverity.Error, pattern, $"intent '{pattern.Intent}' is not described in the '{pack.Language}' pack, so it cannot get extra patterns");
-                continue;
-            }
-
-            if (string.IsNullOrWhiteSpace(pattern.Pattern))
-            {
-                Add(IssueSeverity.Error, pattern, "empty pattern");
-                continue;
-            }
-
-            var errors = new List<string>();
-            var compiled = compiler.Compile(pattern.Pattern, definition, errors);
-            foreach (var error in errors)
-            {
-                Add(IssueSeverity.Error, pattern, $"pattern \"{pattern.Pattern}\": {error}");
-            }
-
-            if (compiled is null)
+            var own = action.IsUserAddition ? action : keep;
+            if (!own.IsUserAddition)
             {
                 continue;
             }
 
-            if (definition.ChangesPitSetup && compiled.RequiredLength < LanguagePackValidator.MinPitPatternWords)
-            {
-                Add(IssueSeverity.Error, pattern,
-                    $"pattern \"{pattern.Pattern}\" has a single word; intent '{pattern.Intent}' changes the pit stop and needs at least {LanguagePackValidator.MinPitPatternWords} words");
-                continue;
-            }
-
-            var key = Key(compiled);
-            if (builtIn.TryGetValue(key, out var owner))
-            {
-                if (owner == pattern.Intent)
-                {
-                    Add(IssueSeverity.Warning, pattern, $"pattern \"{pattern.Pattern}\" is already built in; skipped");
-                }
-                else
-                {
-                    Add(IssueSeverity.Error, pattern, $"pattern \"{pattern.Pattern}\" is a built-in pattern of intent '{owner}'");
-                }
-
-                continue;
-            }
-
-            if (!seen.Add(key))
-            {
-                Add(IssueSeverity.Warning, pattern, $"pattern \"{pattern.Pattern}\" is repeated in the file; skipped");
-                continue;
-            }
-
-            if (!added.TryGetValue(pattern.Intent, out var list))
-            {
-                added[pattern.Intent] = list = [];
-            }
-
-            list.Add(compiled with { IsUserAddition = true });
+            var word = additions.Words.FirstOrDefault(w => w.Class == own.Class);
+            Add(IssueSeverity.Error, word, $"'{own.Text}' cannot be in both '{action.Class}' and '{keep.Class}': the meanings are opposite");
         }
 
         if (issues.Any(i => i.Severity == IssueSeverity.Error))
@@ -144,7 +101,7 @@ public static class UserAdditions
             return new PackAdditionsResult(pack, additions.File, Exists: true, Applied: false, issues);
         }
 
-        return new PackAdditionsResult(pack.WithTemplates(added, additions.File), additions.File, Exists: true, Applied: true, issues);
+        return new PackAdditionsResult(pack.WithEntries(added, additions.File), additions.File, Exists: true, Applied: true, issues);
     }
 
     /// <summary>
@@ -168,6 +125,4 @@ public static class UserAdditions
                 $"no built-in language pack '{Path.GetFileNameWithoutExtension(f)}'; the additions file is ignored"))
             .ToArray();
     }
-
-    private static string Key(Template template) => string.Join(' ', template.Tokens.Select(t => t.ToString()));
 }

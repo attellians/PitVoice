@@ -7,7 +7,7 @@ PitVoice is a free, open-source Windows tray utility that gives iRacing drivers 
 1. Download `PitVoice-win-Setup.exe` from the [latest release](https://github.com/attellians/PitVoice/releases/latest) (Windows 10/11 x64). That is always the latest stable version.
 2. Run it. It needs no administrator rights and nothing from the network: PitVoice and the .NET runtime it needs go into your profile (`%LocalAppData%\PitVoiceApp`; your models, logs and diagnostics live apart, in `%LocalAppData%\PitVoice`), shortcuts appear in the Start menu and on the desktop, and the app starts.
    The installer is not signed yet, so Windows SmartScreen may say "Windows protected your PC": click **More info → Run anyway**.
-3. First setup: the home page lists what is left. Download the speech model of your language on the "Models" page, assign the push-to-talk button in "Settings", and try a phrase on the "Check" page. The models are not in the installer; they are downloaded only when you ask for it.
+3. First setup: download the speech model of your language on the "Models" page and assign the push-to-talk button in "Settings"; the status line on the home page says what is missing. Then say a command: it appears in "Recent phrases" on the home page with what was heard and how it ended. The models are not in the installer; they are downloaded only when you ask for it.
 
 **New versions.** The app does not look for updates yet and never goes online on its own: model downloads are the only network traffic, and only when you ask. To update, download the installer of the newer version from the [releases](https://github.com/attellians/PitVoice/releases) and run it; it says "PitVoice is already installed", press **Repair**. Settings, models and phrase additions stay.
 
@@ -29,7 +29,7 @@ src/PitVoice.Speech/               microphone capture and cue playback (NAudio),
 src/PitVoice.Input/                PTT sources: game device buttons (SDL3) and a low-level keyboard hook
 src/PitVoice.IRacing/              iRacing SDK: telemetry, pit commands, telemetry recording and replay
 src/PitVoice.Host/                 the pipeline host shared by the app and `run`: composition from settings, live apply,
-                                   tray status, recent phrases, command check, models, PTT assignment, one host per user,
+                                   tray status, recent phrases, models, PTT assignment, one host per user,
                                    log, crash reports and the diagnostics archive
 src/PitVoice.App/                  the tray app (WPF, WPF-UI): window, pages, tray icon, interface strings ru/en
 tools/PitVoice.Cli/                pitvoice-cli: run, ptt, cues, diagnostics, parse, validate, models, devices, recognize, listen, status, send, record
@@ -41,7 +41,7 @@ tests/PitVoice.Input.Tests/        language detection, smoke tests of the PTT so
 tests/PitVoice.LanguagePacks.Tests/ data-driven tests from the `tests:` section of every language pack
 tests/PitVoice.Models.Tests/       manifest, license allowlist, store and downloader tests
 tests/PitVoice.Speech.Tests/       audio conversion, capture logic, grammar, Vosk engine, recorded sample set
-tests/PitVoice.Host.Tests/         the app logic on fakes: live apply, status, journal, check, models, assignment, diagnostics
+tests/PitVoice.Host.Tests/         the app logic on fakes: live apply, status, journal, reference, models, assignment, diagnostics
 tests/PitVoice.App.Tests/          interface dictionaries and the components list (Windows only)
 tests/PitVoice.NoticesGen.Tests/   the notices generator on prepared package files: listing, forbidden licenses
 languages/                         ru.yaml, en.yaml
@@ -63,6 +63,16 @@ dotnet run --project tools/PitVoice.Cli -- parse --lang ru "меняй шины 
 dotnet run --project tools/PitVoice.Cli -- parse --lang en          # REPL
 dotnet run --project tools/PitVoice.Cli -- validate                 # checks every pack and runs its tests
 ```
+
+Commands are built from words, not fixed phrases, and the word order is free. A few examples of what is understood:
+
+- "залей тридцать литров", "долей двадцать", "тридцать литров топлива"; "add thirty liters", "give me twenty"
+- "меняй шины", "шины меняй", "замени левое переднее", "задние шины"; "change tires", "left front", "swap rears"
+- several targets and the verb said once: "меняй левые передние", "меняй левые и передние", "не меняй левые и переднее правое"; "change front left and rear right"
+- removal: "не меняй шины", "без шин", "стекло не трогай", "без ремонта"; "no tires", "keep fronts", "leave the rears"
+- compound commands, also when the recognizer lost the "и": "меняй шины залей двадцать пять литров"
+
+One word never changes the pit stop, fuel amounts are whole numbers only ("тридцать точка два" is rejected, nothing is rounded), and a phrase that can be read two ways is rejected. The full word lists are in `languages/*.yaml` and on the "Commands" page.
 
 ## Speech models
 
@@ -92,9 +102,9 @@ dotnet run --project tools/PitVoice.Cli -- listen --lang ru                     
 dotnet run --project tools/PitVoice.Cli -- listen --lang ru --mic "Microphone (USB Audio)" --save-wav samples/ru/take.wav
 ```
 
-The recognizer grammar is checked against the model vocabulary when the model loads: a pack word the model spells with `ё` (`еще` → `ещё`) is used in the model spelling, and a word the model does not know at all is left out, because it can never be recognized. `validate` reports such words as warnings, with the templates that use them, for every installed model (`--models-dir` works here too); without an installed model the check is skipped.
+The recognizer grammar is checked against the model vocabulary when the model loads: a pack word the model spells with `ё` (`еще` → `ещё`) is used in the model spelling, and a word the model does not know at all is left out, because it can never be recognized. `validate` reports such words as warnings, with the word classes that use them, for every installed model (`--models-dir` works here too); without an installed model the check is skipped.
 
-Audio stays in memory. `listen` writes a file only with `--save-wav`; later takes of the same session get `-2`, `-3`, ... suffixes. `--grammar phrases` switches the recognizer grammar from the vocabulary word list to whole template phrases.
+Audio stays in memory. `listen` writes a file only with `--save-wav`; later takes of the same session get `-2`, `-3`, ... suffixes. `listen --script <list> --save-wav <directory>` records the acceptance set phrase by phrase from a list ([tests/PitVoice.Speech.Tests/Samples/README.md](tests/PitVoice.Speech.Tests/Samples/README.md)).
 
 Tests that need a real model are skipped when it is not installed and say which one to download. Set `PITVOICE_REQUIRE_MODELS=1` to turn a missing model into a failure (CI does).
 
@@ -111,13 +121,12 @@ Tests that need a real model are skipped when it is not installed and say which 
 dotnet run --project src/PitVoice.App    # opens the window; the icon stays in the notification area
 ```
 
-The window walks through the first setup: a "What is left to set up" block on the home page leads to the model
-download, the PTT button assignment and a phrase check. Every setting is saved at once and applies from the next PTT
-press, without a restart; a phrase in flight finishes with the old settings. Switching the language switches the
-interface, the commands and the speech model. The home page shows the game and button state and the last 20 phrases
-of this run (kept in memory only). "Check" parses a typed or spoken phrase without touching the game; "Commands" lists
-the phrases of the language, including your own (`%AppData%\PitVoice\languages\<code>.yaml`, see
-[docs/adding-a-language.md](docs/adding-a-language.md#own-phrases-user-additions)).
+Every setting is saved at once and applies from the next PTT press, without a restart; a phrase in flight finishes
+with the old settings. Switching the language switches the interface, the commands and the speech model. The home
+page shows the state with its reason (no model, no PTT button, no game), the button and the last 20 phrases of this
+run (kept in memory only) with the recognized text, the outcome and the response, so a command is checked by saying
+it. "Commands" lists the words of every command with example phrases, including your own words (`%AppData%\PitVoice\languages\<code>.yaml`, see
+[docs/adding-a-language.md](docs/adding-a-language.md#own-words-user-additions)).
 
 The icon shows one state: no model, error (button not assigned or unplugged, pack failed), no connection to iRacing,
 ready; the tooltip names the reason. Closing the window keeps PitVoice running; "Exit" in the icon menu stops it.
@@ -149,8 +158,8 @@ There is no voice. Three short built-in sounds tell what happened:
 | Cue | When |
 | --- | --- |
 | start (short rising tone) | the recording started |
-| success (two rising tones) | the phrase was applied in the game, or it was "cancel" |
-| error (two low falling tones) | anything else: not understood, game not running, not in the car, not (fully) applied, not supported yet, a failed stage |
+| success (two rising tones) | the phrase was applied in the game |
+| error (two low falling tones) | anything else: not understood, game not running, not in the car, not (fully) applied, a failed stage |
 
 The reason of an error is in the `run` output. `cues play [start|success|error|all] [--volume 0-100] [--device <name>]` plays them without the game or a microphone. The sounds are generated by `tools/cue-gen` (`dotnet run --project tools/cue-gen` rewrites `src/PitVoice.Speech/Cues/*.wav` byte for byte).
 
@@ -171,7 +180,6 @@ The reason of an error is in the `run` output. `cues play [start|success|error|a
   "cueVolume": 100,
   "defaultUnit": "liters",
   "threshold": 0.6,
-  "setupCheckDone": false,
   "interfaceLanguage": null,
   "theme": "system"
 }
@@ -181,7 +189,6 @@ The reason of an error is in the `run` output. `cues play [start|success|error|a
 - `ptt.binding`: a game device button (`kind: joystick`, `guid`, `button` from 1) or a key (`kind: keyboard`, `vk` virtual-key code); `null` until assigned. `ptt.mode`: `hold` or `toggle`.
 - `microphone`, `outputDevice`: device names as `devices` prints them; `null` is the system default. A missing device falls back to the default with a warning.
 - `cueVolume`: 0 to 100; 0 mutes the cues. `defaultUnit`: `liters` or `gallons`. `threshold`: confidence threshold 0 to 1.
-- `setupCheckDone`: set by the app after the first phrase check; hides the last item of the setup checklist.
 - `interfaceLanguage`: `ru` or `en` for the window and the tray menu; `null` follows `language`. `theme`: `system`, `light` or `dark`.
 
 A missing field gets its default; an invalid value gets its default (the volume is clamped to 0..100) with a warning. A file that is not valid JSON is renamed to `settings.json.bak` and the defaults are used.

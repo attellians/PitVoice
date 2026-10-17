@@ -1,4 +1,3 @@
-using PitVoice.Core.Intents;
 using PitVoice.Core.Parsing;
 
 namespace PitVoice.Core.Pit;
@@ -44,14 +43,6 @@ public sealed class PitExecutor
         ArgumentNullException.ThrowIfNull(phrase);
 
         var commands = phrase.Commands;
-        if (!commands.Any(c => IntentCatalog.Get(c.Intent).ChangesPitSetup))
-        {
-            // Cancel and fuel status touch nothing in the game, so the connection does not matter.
-            return ExecutionResult.Of(commands.Any(c => c.Intent == IntentCatalog.StatusFuel)
-                ? ExecutionOutcome.NotSupported
-                : ExecutionOutcome.Applied);
-        }
-
         var before = _telemetry.Current;
         switch (before.State)
         {

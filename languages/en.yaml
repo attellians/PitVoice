@@ -1,10 +1,10 @@
 # PitVoice language pack: English.
-# Format: docs/adding-a-language.md. Validate with `pitvoice-cli validate`.
+# Format 2: words by class, the rules are the same for every language. See docs/adding-a-language.md.
+# Validate with `pitvoice-cli validate`.
 language: en
 name: English
-version: 1
+version: 2
 asr_model: vosk-model-small-en-us-0.15
-default_voice: piper-en-us-lessac-medium
 plural_rules: en
 
 units:
@@ -16,273 +16,73 @@ units:
     forms: { one: gallon, other: gallons }
 
 conjunctions: [and, and then, then, plus, also, as well as]
-fillers: [please, just, hey, um, uh, okay, ok, now]
-negations: [no, not, don't, dont, without, never]
+fillers: [please, just, hey, um, uh, okay, ok, now, the]
+# "keep" and "leave" mean "do not change": "keep tires", "leave the rears".
+negations: [no, not, don't, without, never, skip, keep, leave]
+# Words that reject the whole phrase: the driver asks for something PitVoice cannot do, e.g. a tire compound.
+reject_words: [wet, wets, dry, slicks, slick, rain, rains, intermediates]
 
-intents:
-  fuel.add:
-    patterns:
-      - "add {amount} {unit?}"
-      - "fuel {amount} {unit?}"
-      - "{amount} {unit} of fuel"
-      - "put in {amount} {unit?}"
-      - "add {amount} {unit?} of fuel"
-      - "refuel {amount} {unit?}"
-    response: "adding {amount} {unit}"
-
-  fuel.none:
-    patterns:
-      - "no fuel"
-      - "don't refuel"
-      - "dont refuel"
-      - "no refuel"
-      - "skip fuel"
-      - "without fuel"
-    response: "no fuel"
-
-  tires.all:
-    patterns:
-      - "change all tires"
-      - "change tires"
-      - "change the tires"
-      - "all four"
-      - "change all four tires"
-      - "new tires"
-      - "all tires"
-    response: "changing all tires"
-
-  tires.left:
-    patterns:
-      - "left side tires"
-      - "left side"
-      - "change left tires"
-      - "left tires"
-      - "change left side"
-    response: "changing left side"
-
-  tires.right:
-    patterns:
-      - "right side tires"
-      - "right side"
-      - "change right tires"
-      - "right tires"
-      - "change right side"
-    response: "changing right side"
-
-  tires.front:
-    patterns:
-      - "front tires"
-      - "change front tires"
-      - "change fronts"
-      - "front side"
-    response: "changing front tires"
-
-  tires.rear:
-    patterns:
-      - "rear tires"
-      - "change rear tires"
-      - "change rears"
-      - "rear side"
-    response: "changing rear tires"
-
-  tires.lf:
-    patterns:
-      - "front left tire"
-      - "front left"
-      - "change front left"
-      - "left front tire"
-      - "change left front"
-    response: "changing front left"
-
-  tires.rf:
-    patterns:
-      - "front right tire"
-      - "front right"
-      - "change front right"
-      - "right front tire"
-      - "change right front"
-    response: "changing front right"
-
-  tires.lr:
-    patterns:
-      - "rear left tire"
-      - "rear left"
-      - "change rear left"
-      - "left rear tire"
-      - "change left rear"
-    response: "changing rear left"
-
-  tires.rr:
-    patterns:
-      - "rear right tire"
-      - "rear right"
-      - "change rear right"
-      - "right rear tire"
-      - "change right rear"
-    response: "changing rear right"
-
-  tires.none:
-    patterns:
-      - "no tires"
-      - "don't change tires"
-      - "don't change all tires"
-      - "dont change tires"
-      - "no tire change"
-      - "keep tires"
-      - "no new tires"
-    response: "no tire change"
-
-  tires.none.left:
-    patterns:
-      - "no left side tires"
-      - "no left tires"
-      - "no left side"
-      - "don't change left tires"
-      - "dont change left tires"
-      - "keep left tires"
-    response: "keeping left side"
-
-  tires.none.right:
-    patterns:
-      - "no right side tires"
-      - "no right tires"
-      - "no right side"
-      - "don't change right tires"
-      - "dont change right tires"
-      - "keep right tires"
-    response: "keeping right side"
-
-  tires.none.front:
-    patterns:
-      - "no front tires"
-      - "no fronts"
-      - "don't change front tires"
-      - "dont change front tires"
-      - "keep front tires"
-    response: "keeping front tires"
-
-  tires.none.rear:
-    patterns:
-      - "no rear tires"
-      - "no rears"
-      - "don't change rear tires"
-      - "dont change rear tires"
-      - "keep rear tires"
-    response: "keeping rear tires"
-
-  tires.none.lf:
-    patterns:
-      - "no front left"
-      - "no front left tire"
-      - "no left front"
-      - "don't change front left"
-      - "dont change front left"
-      - "keep front left"
-    response: "keeping front left"
-
-  tires.none.rf:
-    patterns:
-      - "no front right"
-      - "no front right tire"
-      - "no right front"
-      - "don't change front right"
-      - "dont change front right"
-      - "keep front right"
-    response: "keeping front right"
-
-  tires.none.lr:
-    patterns:
-      - "no rear left"
-      - "no rear left tire"
-      - "no left rear"
-      - "don't change rear left"
-      - "dont change rear left"
-      - "keep rear left"
-    response: "keeping rear left"
-
-  tires.none.rr:
-    patterns:
-      - "no rear right"
-      - "no rear right tire"
-      - "no right rear"
-      - "don't change rear right"
-      - "dont change rear right"
-      - "keep rear right"
-    response: "keeping rear right"
-
-  windshield.tearoff:
-    patterns:
-      - "tear off"
-      - "clean windshield"
-      - "new tear off"
-    response: "tear off"
-
-  windshield.none:
-    patterns:
-      - "no tear off"
-      - "keep windshield"
-      - "don't tear off"
-      - "dont tear off"
-      - "no windshield"
-    response: "no tear off"
-
-  repair.fast:
-    patterns:
-      - "fast repair"
-      - "quick repair"
-      - "fix it"
-      - "fix the car"
-      - "use fast repair"
-    response: "fast repair"
-
-  repair.none:
-    patterns:
-      - "no fast repair"
-      - "no repair"
-      - "don't repair"
-      - "dont repair"
-      - "skip repair"
-      - "no fix"
-    response: "no repair"
-
-  pit.clear:
-    patterns:
-      - "clear all"
-      - "clear everything"
-      - "clear pit"
-      - "reset everything"
-    response: "cleared everything"
-
-  status.fuel:
-    patterns:
-      - "how much fuel"
-      - "fuel level"
-      - "fuel status"
-      - "how much gas"
-      - "fuel left"
-      - "remaining fuel"
-    response: "checking fuel"
-
-  assistant.cancel:
-    patterns:
-      - "cancel"
-      - "never mind"
-      - "nevermind"
-      - "stop"
-      - "forget it"
-      - "abort"
-    response: "cancelled"
+lexicon:
+  fuel:
+    action: [add, fuel, refuel, put in, fill, give me]
+    object: [fuel]
+  tires:
+    action: [change, swap, replace, new]
+    object: [tires, tire]
+    targets:
+      all: [all, all four]
+      left: [left, left side]
+      right: [right, right side]
+      front: [front, fronts]
+      rear: [rear, rears]
+      lf: [front left, left front]
+      rf: [front right, right front]
+      lr: [rear left, left rear]
+      rr: [rear right, right rear]
+  windshield:
+    action: [tear off, clean, wipe]
+    object: [windshield]
+  repair:
+    action: [fix, repair]
+    object: [car, repair]
+    fast: [fast, quick]
+  clear:
+    action: [clear, reset]
+    object: [all, everything, pit]
 
 responses:
+  fuel.add: "adding {amount} {unit}"
+  fuel.none: "no fuel"
+  tires.all: "changing all tires"
+  tires.left: "changing left side"
+  tires.right: "changing right side"
+  tires.front: "changing front tires"
+  tires.rear: "changing rear tires"
+  tires.lf: "changing front left"
+  tires.rf: "changing front right"
+  tires.lr: "changing rear left"
+  tires.rr: "changing rear right"
+  tires.none: "no tire change"
+  tires.none.left: "keeping left side"
+  tires.none.right: "keeping right side"
+  tires.none.front: "keeping front tires"
+  tires.none.rear: "keeping rear tires"
+  tires.none.lf: "keeping front left"
+  tires.none.rf: "keeping front right"
+  tires.none.lr: "keeping rear left"
+  tires.none.rr: "keeping rear right"
+  windshield.tearoff: "tear off"
+  windshield.none: "no tear off"
+  repair.fast: "fast repair"
+  repair.none: "no repair"
+  pit.clear: "cleared everything"
   not_understood: "sorry, say again"
   not_connected: "no connection to the game"
   not_in_car: "you are not in the car"
   apply_failed: "the command was not applied"
-  not_supported: "not available yet"
-  cancelled: "cancelled"
 
 tests:
-  # fuel.add
+  # fuel.add: every verb
   - say: "add thirty liters"
     expect: [{ intent: fuel.add, amount: 30, unit: liters }]
   - say: "add thirty-five liters"
@@ -293,16 +93,20 @@ tests:
     expect: [{ intent: fuel.add, amount: 20 }]          # unit comes from settings
   - say: "fuel a hundred liters"
     expect: [{ intent: fuel.add, amount: 100, unit: liters }]
+  - say: "refuel forty"
+    expect: [{ intent: fuel.add, amount: 40 }]
   - say: "put in one hundred and five liters"
     expect: [{ intent: fuel.add, amount: 105, unit: liters }]
-  - say: "twelve gallons of fuel"
+  - say: "fill twenty five liters"
+    expect: [{ intent: fuel.add, amount: 25, unit: liters }]
+  - say: "give me twenty liters"
+    expect: [{ intent: fuel.add, amount: 20, unit: liters }]
+  - say: "twelve gallons fuel"
     expect: [{ intent: fuel.add, amount: 12, unit: gallons }]
   - say: "Please add 40 liters now"
     expect: [{ intent: fuel.add, amount: 40, unit: liters }]
   - say: "add one liter"
     expect: [{ intent: fuel.add, amount: 1, unit: liters }]
-  - say: "add a thousand liters"
-    expect: reject
 
   # fuel.none
   - say: "no fuel"
@@ -312,24 +116,30 @@ tests:
   - say: "skip fuel"
     expect: [{ intent: fuel.none }]
 
-  # tires.all
+  # tires.all: every verb
   - say: "change all tires"
     expect: [{ intent: tires.all }]
   - say: "change tires"
     expect: [{ intent: tires.all }]
+  - say: "tires change"
+    expect: [{ intent: tires.all }]
   - say: "change all four tires"
+    expect: [{ intent: tires.all }]
+  - say: "swap tires"
+    expect: [{ intent: tires.all }]
+  - say: "replace all tires"
     expect: [{ intent: tires.all }]
   - say: "new tires"
     expect: [{ intent: tires.all }]
 
-  # tires.left / right / front / rear
+  # sides and axles
   - say: "left side tires"
     expect: [{ intent: tires.left }]
   - say: "change left side"
     expect: [{ intent: tires.left }]
   - say: "right side tires"
     expect: [{ intent: tires.right }]
-  - say: "change right tires"
+  - say: "swap right tires"
     expect: [{ intent: tires.right }]
   - say: "front tires"
     expect: [{ intent: tires.front }]
@@ -337,43 +147,53 @@ tests:
     expect: [{ intent: tires.front }]
   - say: "rear tires"
     expect: [{ intent: tires.rear }]
-  - say: "change rears"
+  - say: "replace rears"
     expect: [{ intent: tires.rear }]
 
-  # tires.none
+  # single wheels: both orders of the name
+  - say: "front left tire"
+    expect: [{ intent: tires.lf }]
+  - say: "left front"
+    expect: [{ intent: tires.lf }]
+  - say: "change right front"
+    expect: [{ intent: tires.rf }]
+  - say: "front right tire"
+    expect: [{ intent: tires.rf }]
+  - say: "rear left"
+    expect: [{ intent: tires.lr }]
+  - say: "left rear tire"
+    expect: [{ intent: tires.lr }]
+  - say: "change rear right"
+    expect: [{ intent: tires.rr }]
+  - say: "right rear tire"
+    expect: [{ intent: tires.rr }]
+
+  # several targets, action said once after a conjunction
+  - say: "change front left and rear right"
+    expect: [{ intent: tires.lf }, { intent: tires.rr }]
+  - say: "change left side and fronts"
+    expect: [{ intent: tires.left }, { intent: tires.front }]
+  - say: "keep left side and rear right"
+    expect: [{ intent: tires.none.left }, { intent: tires.none.rr }]
+  - say: "add twenty and fronts"
+    expect: reject
+
+  # removal
   - say: "no tires"
     expect: [{ intent: tires.none }]
   - say: "don't change tires"
     expect: [{ intent: tires.none }]
   - say: "keep tires"
     expect: [{ intent: tires.none }]
-
-  # single wheels
-  - say: "front left tire"
-    expect: [{ intent: tires.lf }]
-  - say: "change right front"
-    expect: [{ intent: tires.rf }]
-  - say: "rear left"
-    expect: [{ intent: tires.lr }]
-  - say: "change rear right"
-    expect: [{ intent: tires.rr }]
-  - say: "change left front"
-    expect: [{ intent: tires.lf }]
-  - say: "front right tire"
-    expect: [{ intent: tires.rf }]
-  - say: "left rear tire"
-    expect: [{ intent: tires.lr }]
-  - say: "right rear tire"
-    expect: [{ intent: tires.rr }]
-
-  # removing sides and wheels
   - say: "no left side tires"
     expect: [{ intent: tires.none.left }]
+  - say: "no right side"
+    expect: [{ intent: tires.none.right }]
   - say: "don't change right tires"
     expect: [{ intent: tires.none.right }]
   - say: "no front tires"
     expect: [{ intent: tires.none.front }]
-  - say: "keep rear tires"
+  - say: "leave the rears"
     expect: [{ intent: tires.none.rear }]
   - say: "no front left"
     expect: [{ intent: tires.none.lf }]
@@ -383,109 +203,101 @@ tests:
     expect: [{ intent: tires.none.lr }]
   - say: "don't change rear right"
     expect: [{ intent: tires.none.rr }]
-  - say: "keep left tires"
-    expect: [{ intent: tires.none.left }]
-  - say: "no right side"
-    expect: [{ intent: tires.none.right }]
-  - say: "no fronts"
+  - say: "keep fronts"
     expect: [{ intent: tires.none.front }]
-  - say: "no rears"
+  - say: "don't swap rears"
     expect: [{ intent: tires.none.rear }]
-  - say: "no left front"
+  - say: "keep left front"
     expect: [{ intent: tires.none.lf }]
-  - say: "no front right tire"
+  - say: "no right front tire"
     expect: [{ intent: tires.none.rf }]
-  - say: "keep rear left"
+  - say: "leave left rear"
     expect: [{ intent: tires.none.lr }]
-  - say: "no right rear"
-    expect: [{ intent: tires.none.rr }]
 
-  # windshield
+  # windshield: every verb
   - say: "tear off"
     expect: [{ intent: windshield.tearoff }]
   - say: "clean windshield"
+    expect: [{ intent: windshield.tearoff }]
+  - say: "wipe windshield"
     expect: [{ intent: windshield.tearoff }]
   - say: "no tear off"
     expect: [{ intent: windshield.none }]
   - say: "keep windshield"
     expect: [{ intent: windshield.none }]
 
-  # repair
+  # repair: every verb
   - say: "fast repair"
     expect: [{ intent: repair.fast }]
+  - say: "quick repair"
+    expect: [{ intent: repair.fast }]
   - say: "fix the car"
+    expect: [{ intent: repair.fast }]
+  - say: "repair car"
     expect: [{ intent: repair.fast }]
   - say: "no fast repair"
     expect: [{ intent: repair.none }]
   - say: "skip repair"
     expect: [{ intent: repair.none }]
 
-  # pit.clear
+  # pit.clear: every verb
   - say: "clear all"
     expect: [{ intent: pit.clear }]
-  - say: "front"                                      # single words never change the pit stop
-    expect: reject
   - say: "reset everything"
     expect: [{ intent: pit.clear }]
-  - say: "clear all and add twenty"
-    expect: reject
+  - say: "clear pit"
+    expect: [{ intent: pit.clear }]
 
-  # status.fuel
-  - say: "how much fuel"
-    expect: [{ intent: status.fuel }]
-  - say: "fuel level"
-    expect: [{ intent: status.fuel }]
-
-  # assistant.cancel
-  - say: "cancel"
-    expect: [{ intent: assistant.cancel }]
-  - say: "never mind"
-    expect: [{ intent: assistant.cancel }]
-  - say: "cancel and add twenty"
-    expect: reject
-
-  # compound commands
+  # compound commands, also with the conjunction lost
   - say: "change tires and add twenty five liters"
     expect: [{ intent: tires.all }, { intent: fuel.add, amount: 25, unit: liters }]
-  - say: "change all tires add twenty five liters"       # recognizer lost the conjunction
+  - say: "change tires add twenty five liters"
     expect: [{ intent: tires.all }, { intent: fuel.add, amount: 25, unit: liters }]
-  - say: "left side and add ten gallons"
-    expect: [{ intent: tires.left }, { intent: fuel.add, amount: 10, unit: gallons }]
-  - say: "add thirty liters as well as tear off"
-    expect: [{ intent: fuel.add, amount: 30, unit: liters }, { intent: windshield.tearoff }]
-  - say: "change tires plus fast repair and then add fifty"
-    expect: [{ intent: tires.all }, { intent: repair.fast }, { intent: fuel.add, amount: 50 }]
-  - say: "change tires and change tires"
-    expect: [{ intent: tires.all }]
-  - say: "add twenty and add thirty"
-    expect: [{ intent: fuel.add, amount: 30 }]
-  - say: "change tires and sing a song"
-    expect: reject
+  - say: "add ten liters then tear off"
+    expect: [{ intent: fuel.add, amount: 10, unit: liters }, { intent: windshield.tearoff }]
+  - say: "change right tires and keep left side"
+    expect: [{ intent: tires.right }, { intent: tires.none.left }]
 
   # conflicts
   - say: "change tires and no tires"
     expect: reject
-  - say: "add twenty and no fuel"
+  - say: "clear all and add twenty"
     expect: reject
-  - say: "tear off and no tear off"
-    expect: reject
-  - say: "fast repair and no repair"
-    expect: reject
-  - say: "left side tires and no front left"
+  - say: "change tires and clear all"
     expect: reject
 
-  # tires: add and remove different wheels, overlapping additions
-  - say: "right side tires and no left side tires"
-    expect: [{ intent: tires.right }, { intent: tires.none.left }]
-  - say: "left side tires and front tires"
-    expect: [{ intent: tires.left }, { intent: tires.front }]
+  # fractions, removed noise words, single words
+  - say: "add thirty point two"
+    expect: reject
+  - say: "add a thousand liters"
+    expect: reject
+  - say: "add one thousand liters"
+    expect: reject
+  - say: "fix it"
+    expect: reject
+  - say: "how much gas"
+    expect: reject
+  - say: "cancel"
+    expect: reject
+  - say: "front"
+    expect: reject
+  - say: "reset"
+    expect: reject
+  - say: "fuel tires"
+    expect: reject
 
-  # foreign phrases
+  # unrelated speech
   - say: "what is the weather today"
     expect: reject
-  - say: "please okay"
+  - say: "who is ahead of me"
     expect: reject
-  - say: "change this side"
+  - say: "left front right"
     expect: reject
-  - say: "go faster"
+  - say: "change tires and sing a song"
+    expect: reject
+
+  # reject words: tire compounds are not commands
+  - say: "change to wet tires"
+    expect: reject
+  - say: "swap tires for slicks"
     expect: reject

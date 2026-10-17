@@ -10,11 +10,12 @@ using PitVoice.Models;
 using PitVoice.Speech.Asr;
 using PitVoice.Speech.Audio;
 using PitVoice.Speech.Cues;
+using PitVoice.Speech.Samples;
 
 namespace PitVoice.Cli;
 
 /// <summary>Settings shared by <c>recognize</c> and <c>listen</c>.</summary>
-internal sealed record SpeechSettings(string PacksDirectory, string Language, ModelStore Store, ParseOptions Options, GrammarMode Grammar);
+internal sealed record SpeechSettings(string PacksDirectory, string Language, ModelStore Store, ParseOptions Options);
 
 /// <summary><c>devices</c>, <c>recognize</c> and <c>listen</c>: speech in, parse result out, nothing executed.</summary>
 internal static class SpeechRunner
@@ -168,6 +169,161 @@ internal static class SpeechRunner
         return 0;
     }
 
+    /// <summary>
+    /// <c>listen --script</c> (design D9): records the phrases of a script into the acceptance set. Arguments, the script and
+    /// its intents are checked before the model loads and the microphone opens.
+    /// </summary>
+    public static async Task<int> ListenScriptAsync(
+        SpeechSettings settings, string? microphone, string scriptPath, string? saveDirectory, int from, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(saveDirectory))
+        {
+            Console.Error.WriteLine($"error: {ScriptedRecording.CheckArguments(scriptPath, saveDirectory, from, 0)}");
+            return 2;
+        }
+
+        IReadOnlyList<SampleEntry> script;
+        try
+        {
+            script = SampleFile.Load(scriptPath, requireFile: false);
+        }
+        catch (SampleFileException e)
+        {
+            Console.Error.WriteLine($"error: {e.Message}");
+            return 1;
+        }
+
+        if (ScriptedRecording.CheckArguments(scriptPath, saveDirectory, from, script.Count) is { } problem)
+        {
+            Console.Error.WriteLine($"error: {problem}");
+            return 2;
+        }
+
+        var pack = Packs.LoadLanguage(settings.PacksDirectory, settings.Language, Console.Error);
+        if (pack is null)
+        {
+            return 1;
+        }
+
+        var unknown = SampleFile.CheckIntents(script, pack, scriptPath);
+        if (unknown.Count > 0)
+        {
+            foreach (var line in unknown)
+            {
+                Console.Error.WriteLine($"error: {line}");
+            }
+
+            return 1;
+        }
+
+        if (!OperatingSystem.IsWindows())
+        {
+            Console.Error.WriteLine("Microphone access is only available on Windows.");
+            return 1;
+        }
+
+        using var session = await LoadAsync(settings, cancellationToken).ConfigureAwait(false);
+        if (session is null)
+        {
+            return 1;
+        }
+
+        using var capture = new NAudioCapture();
+        AudioBuffer? Record()
+        {
+            if (!OperatingSystem.IsWindows())
+            {
+                return null;
+            }
+
+            var start = capture.Start(microphone);
+            if (start.Warning is not null)
+            {
+                Console.Error.WriteLine($"warning: {start.Warning}");
+            }
+
+            if (!start.Started)
+            {
+                Console.Error.WriteLine($"error: {start.Error}");
+                return null;
+            }
+
+            Console.WriteLine($"recording from '{start.DeviceName}'... press Enter to stop");
+            WaitForEnter(AudioBuffer.MaxDuration, cancellationToken);
+            var recorded = capture.Stop();
+            if (recorded.Error is not null)
+            {
+                Console.Error.WriteLine($"error: {recorded.Error}");
+            }
+
+            return recorded.Buffer;
+        }
+
+        string Describe(AudioBuffer take)
+        {
+            session.RecognizeAndPrint(take);
+            return string.Empty;
+        }
+
+        var directory = Path.GetFullPath(saveDirectory);
+        Console.WriteLine($"{script.Count} phrase(s) from {scriptPath}; takes go to {directory}");
+        var result = new ScriptedRecording(new ConsoleScriptKeys(), Record, Describe).Run(script, directory, from);
+        Console.WriteLine($"saved {result.Saved.Count}, skipped {result.Skipped.Count}{(result.Quit ? ", quit" : string.Empty)}");
+        return 0;
+    }
+
+    /// <summary>Enter, R, S and Q from the console; other keys are ignored.</summary>
+    private sealed class ConsoleScriptKeys : IScriptConsole
+    {
+        public ScriptKey ReadKey()
+        {
+            while (true)
+            {
+                if (Console.IsInputRedirected)
+                {
+                    var line = Console.ReadLine();
+                    switch (line?.Trim().ToLowerInvariant())
+                    {
+                        case null or "q":
+                            return ScriptKey.Quit;
+                        case "":
+                            return ScriptKey.Enter;
+                        case "r":
+                            return ScriptKey.Retake;
+                        case "s":
+                            return ScriptKey.Skip;
+                    }
+
+                    continue;
+                }
+
+                switch (Console.ReadKey(intercept: true).Key)
+                {
+                    case ConsoleKey.Enter:
+                        return ScriptKey.Enter;
+                    case ConsoleKey.R:
+                        return ScriptKey.Retake;
+                    case ConsoleKey.S:
+                        return ScriptKey.Skip;
+                    case ConsoleKey.Q or ConsoleKey.Escape:
+                        return ScriptKey.Quit;
+                }
+            }
+        }
+
+        public void WriteLine(string text)
+        {
+            if (text.Length > 0)
+            {
+                Console.WriteLine(text);
+            }
+            else
+            {
+                Console.WriteLine();
+            }
+        }
+    }
+
     private static async Task<Session?> LoadAsync(SpeechSettings settings, CancellationToken cancellationToken)
     {
         var pack = Packs.LoadLanguage(settings.PacksDirectory, settings.Language, Console.Error);
@@ -183,7 +339,7 @@ internal static class SpeechRunner
             return null;
         }
 
-        var engine = new VoskAsrEngine(settings.Grammar);
+        var engine = new VoskAsrEngine();
         var started = Stopwatch.GetTimestamp();
         var loaded = await engine.LoadAsync(pack, settings.Store.GetInstalledPath(modelId), cancellationToken).ConfigureAwait(false);
         if (!loaded.IsLoaded)
@@ -198,7 +354,7 @@ internal static class SpeechRunner
             return null;
         }
 
-        Console.WriteLine($"model {modelId} loaded in {Milliseconds(Stopwatch.GetElapsedTime(started))} ms, grammar: {settings.Grammar.ToString().ToLowerInvariant()}");
+        Console.WriteLine($"model {modelId} loaded in {Milliseconds(Stopwatch.GetElapsedTime(started))} ms");
         if (engine.Vocabulary is { Missing.Count: > 0 } vocabulary)
         {
             Console.Error.WriteLine($"warning: {vocabulary.Missing.Count} pack word(s) are not in the model and cannot be recognized: {string.Join(", ", vocabulary.Missing)} (see 'validate')");

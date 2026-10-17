@@ -1,6 +1,5 @@
 using System.Text.RegularExpressions;
 using PitVoice.Core.Events;
-using PitVoice.Core.Parsing;
 using PitVoice.Core.Pit;
 using PitVoice.Host.Diagnostics;
 using Xunit;
@@ -8,8 +7,8 @@ using Xunit;
 namespace PitVoice.Host.Tests.Diagnostics;
 
 /// <summary>
-/// Spec: No phrase records. Phrases with a word and numbers found nowhere else go through the host with every outcome
-/// and through the "Check" page; afterwards the log directory holds only log files, none of them mentions the phrases,
+/// Spec: No phrase records. Phrases with a word and numbers found nowhere else go through the host with every outcome;
+/// afterwards the log directory holds only log files, none of them mentions the phrases,
 /// and nothing was logged for an applied or a rejected phrase.
 /// </summary>
 public sealed partial class NoPhraseRecordsTests
@@ -17,7 +16,7 @@ public sealed partial class NoPhraseRecordsTests
     private const string Word = "зюзюка";
 
     [Fact]
-    public async Task Phrases_and_checks_leave_no_trace_in_the_log()
+    public async Task Phrases_leave_no_trace_in_the_log()
     {
         var capture = new LogCapture();
         await using var fixture = new HostFixture();
@@ -50,31 +49,15 @@ public sealed partial class NoPhraseRecordsTests
         fixture.PressAndRelease();
         var failed = await fixture.WaitForAsync<ResultSignaled>(e => e.PhraseId > partial.PhraseId);
 
-        // The "Check" page: typed and spoken.
-        using (var check = new CommandCheck(host))
-        {
-            Assert.True(check.CheckText("залей тридцать семь литров").Accepted);
-            check.CheckText($"{Word} сорок три");
-            fixture.Platform.Script.Say(RecognizedPhrase.FromText("залей сорок три литра"));
-            var pending = check.StartMicrophone();
-            check.StopMicrophone();
-            Assert.True((await pending.WaitAsync(HostFixture.Wait))!.Accepted);
-        }
-
-        // The checklist flag is applied (and logged) once the pipeline is free, not when the check returns.
-        await host.WhenAppliedAsync().WaitAsync(HostFixture.Wait);
         await host.Events.DrainAsync();
         var afterPhrases = capture.LinesAfter(before);
         await fixture.Host.DisposeAsync();
         file.Dispose();
 
-        // Only the failures are there: the partial outcome (without commands) and the stage failure; the first check marks
-        // the setup checklist item done, which is a settings change. Pipeline failures reach the log through the event
-        // bus, the settings line comes from the host directly, so their order may vary.
-        Assert.Equal(3, afterPhrases.Count);
+        // Only the failures are there: the partial outcome (without commands) and the stage failure.
+        Assert.Equal(2, afterPhrases.Count);
         Assert.Single(afterPhrases, l => l.StartsWith("WRN Pit commands \"partially applied\": ", StringComparison.Ordinal));
         Assert.Single(afterPhrases, l => l == $"ERR Stage Recognition failed, phrase {failed.PhraseId}: \"recognition failed: engine crashed\"");
-        Assert.Single(afterPhrases, l => l.Contains("setup check done True", StringComparison.Ordinal));
 
         var files = Directory.GetFiles(directory);
         Assert.NotEmpty(files);

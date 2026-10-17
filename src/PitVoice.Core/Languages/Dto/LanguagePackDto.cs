@@ -1,6 +1,9 @@
 namespace PitVoice.Core.Languages.Dto;
 
-/// <summary>Raw YAML shape of a language pack (TZ §6). Validation and compilation happen afterwards.</summary>
+/// <summary>
+/// Raw YAML shape of a language pack (TZ §6, format 2). Loading is strict: a field that is not here, such as the removed
+/// <c>default_voice</c> or the old <c>intents</c>, makes the pack invalid. Validation happens afterwards.
+/// </summary>
 public sealed class LanguagePackDto
 {
     public string? Language { get; set; }
@@ -10,8 +13,6 @@ public sealed class LanguagePackDto
     public int? Version { get; set; }
 
     public string? AsrModel { get; set; }
-
-    public string? DefaultVoice { get; set; }
 
     public string? PluralRules { get; set; }
 
@@ -23,7 +24,14 @@ public sealed class LanguagePackDto
 
     public List<string?>? Negations { get; set; }
 
-    public Dictionary<string, IntentDto?>? Intents { get; set; }
+    /// <summary>Words that make a phrase rejected (design D12): "на" of "меняем резину на слики".</summary>
+    public List<string?>? RejectWords { get; set; }
+
+    /// <summary>
+    /// Word classes: group → role → words, and for <c>tires.targets</c> target → words. Kept untyped so that an
+    /// unknown group, role or target gets an error with its name and line instead of a generic YAML error.
+    /// </summary>
+    public Dictionary<string, Dictionary<string, object?>?>? Lexicon { get; set; }
 
     public Dictionary<string, string?>? Responses { get; set; }
 
@@ -35,13 +43,6 @@ public sealed class UnitDto
     public List<string?>? Synonyms { get; set; }
 
     public Dictionary<string, string?>? Forms { get; set; }
-}
-
-public sealed class IntentDto
-{
-    public List<string?>? Patterns { get; set; }
-
-    public string? Response { get; set; }
 }
 
 public sealed class TestDto

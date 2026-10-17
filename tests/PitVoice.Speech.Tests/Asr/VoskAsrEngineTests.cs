@@ -119,7 +119,7 @@ public sealed class VoskAsrEngineTests
     public async Task Vosk_ThreeRecognitions_ModelLoadedOnce()
     {
         var loads = 0;
-        using var engine = new VoskAsrEngine(GrammarBuilder.DefaultMode, path =>
+        using var engine = new VoskAsrEngine(path =>
         {
             Interlocked.Increment(ref loads);
             return VoskModelHandle.Load(path);
@@ -209,7 +209,7 @@ public sealed class VoskAsrEngineTests
     public async Task Vosk_LanguageSwitch_Reloads()
     {
         var loads = new List<string>();
-        using var engine = new VoskAsrEngine(GrammarBuilder.DefaultMode, path =>
+        using var engine = new VoskAsrEngine(path =>
         {
             loads.Add(path);
             return VoskModelHandle.Load(path);

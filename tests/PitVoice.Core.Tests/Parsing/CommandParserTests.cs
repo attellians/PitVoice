@@ -68,12 +68,14 @@ public class CommandParserTests
     [InlineData("ru", "залей тысячу литров")]
     [InlineData("ru", "залей 1000 литров")]
     [InlineData("en", "add a thousand liters")]
+    [InlineData("en", "add one thousand liters")]
+    [InlineData("ru", "залей двадцать тысяч литров")]
     public void Number_out_of_range_is_rejected(string language, string phrase)
     {
         Rejected(Parse(language, phrase), RejectReason.NotUnderstood);
     }
 
-    // --- Template matching
+    // --- Word-class matching
 
     [Fact]
     public void Exact_match_has_confidence_one()
@@ -106,7 +108,7 @@ public class CommandParserTests
     {
         var command = Assert.Single(Accepted(Parse("ru", "меняй все эти шины")));
         Assert.Equal(IntentCatalog.TiresAll, command.Intent);
-        Assert.Equal(TemplateMatcher.FuzzyQuality, command.Confidence);
+        Assert.Equal(CommandParser.FuzzyQuality, command.Confidence);
     }
 
     [Fact]
@@ -153,14 +155,6 @@ public class CommandParserTests
         Assert.False(Parse(language, phrase).IsAccepted);
     }
 
-    [Theory]
-    [InlineData("ru", "отмена", "assistant.cancel")]
-    [InlineData("en", "cancel", "assistant.cancel")]
-    public void Single_word_allowed_for_intents_that_change_nothing(string language, string phrase, string intent)
-    {
-        Assert.Equal(intent, Assert.Single(Accepted(Parse(language, phrase))).Intent.Value);
-    }
-
     [Fact]
     public void Two_commands_keep_their_order()
     {
@@ -194,19 +188,9 @@ public class CommandParserTests
     }
 
     [Fact]
-    public void Conjunction_inside_a_template_does_not_split()
+    public void Conjunction_inside_a_number_does_not_split()
     {
-        var pack = TestPacks.Ru;
-        var template = new Template(IntentCatalog.TiresAll, "шины и резина", [new WordLiteral("шины"), new WordLiteral("и"), new WordLiteral("резина")]);
-        var matcher = new TemplateMatcher([.. pack.Templates, template], pack.Negations);
-        var tokens = pack.Normalizer.Normalize("шины и резина");
-
-        var best = matcher.Match(tokens).Best;
-        Assert.NotNull(best);
-        Assert.Equal(0, best.Distance);
-        Assert.Same(template, best.Template);
-
-        // The parser matches the whole phrase before splitting, so a whole-phrase exact match yields one intent.
+        // "and" inside a spoken number is part of the number, not a conjunction.
         var whole = Assert.Single(Accepted(Parse("en", "fuel a hundred and five liters")));
         Assert.Equal(105, whole.Amount);
     }
@@ -258,9 +242,7 @@ public class CommandParserTests
     }
 
     [Theory]
-    [InlineData("ru", "отмена и залей двадцать")]
     [InlineData("ru", "сбрось все и меняй шины")]
-    [InlineData("en", "cancel and add twenty")]
     [InlineData("en", "change tires and clear all")]
     public void Standalone_intents_cannot_be_combined(string language, string phrase)
     {
@@ -383,7 +365,7 @@ public class CommandParserTests
         ]);
 
         var command = Assert.Single(Accepted(new CommandParser(TestPacks.Ru).Parse(phrase)));
-        Assert.Equal(TemplateMatcher.FuzzyQuality * 0.8, command.Confidence, precision: 10);
+        Assert.Equal(CommandParser.FuzzyQuality * 0.8, command.Confidence, precision: 10);
     }
 
     [Fact]

@@ -30,23 +30,6 @@
                 Message="{Binding CollectError}"
                 Severity="Error" />
 
-            <ui:Card Margin="0,0,0,12" Visibility="{Binding ChecklistVisible, Converter={StaticResource Visible}}">
-                <StackPanel>
-                    <TextBlock FontWeight="SemiBold" Text="{loc:Tr ChecklistTitle}" />
-                    <ItemsControl Margin="0,8,0,0" ItemsSource="{Binding Checklist}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <ui:HyperlinkButton
-                                    Margin="0,2"
-                                    Padding="4,2"
-                                    Command="{Binding Open}"
-                                    Content="{Binding Text}" />
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </StackPanel>
-            </ui:Card>
-
             <ui:InfoBar
                 Title="{loc:Tr ElevationTitle}"
                 Margin="0,0,0,12"

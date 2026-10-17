@@ -15,12 +15,8 @@ public sealed class UserAdditionsVocabularyTests
     {
         var additions = UserAdditionsLoader.LoadText(
             $$"""
-            language: ru
-            intents:
-              fuel.add:
-                patterns:
-                  - "плесни {amount} {unit?}"
-                  - "{{UnknownWord}} {amount} {unit?}"
+            lexicon:
+              fuel: { action: [плесни, {{UnknownWord}}] }
             """,
             "ru.yaml");
         var merged = UserAdditions.Merge(TestEnvironment.Pack("ru"), additions.Additions!);

@@ -1,0 +1,135 @@
+# Phrases of the Russian acceptance set (design D9). Record them with:
+#   pitvoice-cli listen --lang ru --mic "<name>" --script tests/PitVoice.Speech.Tests/Samples/script.ru.yaml --save-wav tests/PitVoice.Speech.Tests/Samples/ru
+# Only words the model knows: forms missing from vosk-model-small-ru-0.22 are not used here.
+samples:
+  # fuel
+  - say: "залей тридцать литров"
+    expect: [{ intent: fuel.add, amount: 30, unit: liters }]
+  - say: "добавь двадцать пять литров топлива"
+    expect: [{ intent: fuel.add, amount: 25, unit: liters }]
+  - say: "долей пятнадцать литров"
+    expect: [{ intent: fuel.add, amount: 15, unit: liters }]
+  - say: "налей сорок"
+    expect: [{ intent: fuel.add, amount: 40 }]
+  - say: "заправить сто двадцать литров"
+    expect: [{ intent: fuel.add, amount: 120, unit: liters }]
+  - say: "заливай десять галлонов"
+    expect: [{ intent: fuel.add, amount: 10, unit: gallons }]
+  - say: "двадцать литров залей"
+    expect: [{ intent: fuel.add, amount: 20, unit: liters }]
+  - say: "без топлива"
+    expect: [{ intent: fuel.none }]
+  - say: "топливо не надо"
+    expect: [{ intent: fuel.none }]
+  # all tires
+  - say: "меняй шины"
+    expect: [{ intent: tires.all }]
+  - say: "шины меняй"
+    expect: [{ intent: tires.all }]
+  - say: "поменяй резину"
+    expect: [{ intent: tires.all }]
+  - say: "заменяем все шины"
+    expect: [{ intent: tires.all }]
+  # sides and axles
+  - say: "меняй левые"
+    expect: [{ intent: tires.left }]
+  - say: "правые меняй"
+    expect: [{ intent: tires.right }]
+  - say: "поменяем левую сторону"
+    expect: [{ intent: tires.left }]
+  - say: "смени передние"
+    expect: [{ intent: tires.front }]
+  - say: "задние шины"
+    expect: [{ intent: tires.rear }]
+  # single wheels, both orders
+  - say: "меняй переднее левое"
+    expect: [{ intent: tires.lf }]
+  - say: "замени левое переднее"
+    expect: [{ intent: tires.lf }]
+  - say: "сменим переднее правое"
+    expect: [{ intent: tires.rf }]
+  - say: "правое переднее меняем"
+    expect: [{ intent: tires.rf }]
+  - say: "заменим заднее левое"
+    expect: [{ intent: tires.lr }]
+  - say: "заднее правое"
+    expect: [{ intent: tires.rr }]
+  # several targets, verb said once
+  - say: "меняй левые передние"
+    expect: [{ intent: tires.left }, { intent: tires.front }]
+  - say: "меняй переднее левое заднее правое"
+    expect: [{ intent: tires.lf }, { intent: tires.rr }]
+  - say: "меняй левые и передние"
+    expect: [{ intent: tires.left }, { intent: tires.front }]
+  - say: "меняй переднее левое и заднее правое"
+    expect: [{ intent: tires.lf }, { intent: tires.rr }]
+  # removal
+  - say: "не меняй шины"
+    expect: [{ intent: tires.none }]
+  - say: "без шин"
+    expect: [{ intent: tires.none }]
+  - say: "не меняй левые"
+    expect: [{ intent: tires.none.left }]
+  - say: "правые не меняй"
+    expect: [{ intent: tires.none.right }]
+  - say: "не трогай передние"
+    expect: [{ intent: tires.none.front }]
+  - say: "задние не меняем"
+    expect: [{ intent: tires.none.rear }]
+  - say: "не меняй переднее левое"
+    expect: [{ intent: tires.none.lf }]
+  - say: "не меняй левые и переднее правое"
+    expect: [{ intent: tires.none.left }, { intent: tires.none.rf }]
+  - say: "не трогай заднее левое"
+    expect: [{ intent: tires.none.lr }]
+  - say: "заднее правое не меняй"
+    expect: [{ intent: tires.none.rr }]
+  # windshield, repair, clear
+  - say: "сорви плёнку"
+    expect: [{ intent: windshield.tearoff }]
+  - say: "протри стекло"
+    expect: [{ intent: windshield.tearoff }]
+  - say: "стекло не трогай"
+    expect: [{ intent: windshield.none }]
+  - say: "быстрый ремонт"
+    expect: [{ intent: repair.fast }]
+  - say: "почини машину"
+    expect: [{ intent: repair.fast }]
+  - say: "без ремонта"
+    expect: [{ intent: repair.none }]
+  - say: "сбрось всё"
+    expect: [{ intent: pit.clear }]
+  - say: "очисти все команды"
+    expect: [{ intent: pit.clear }]
+  # compound, also with a lost conjunction
+  - say: "меняй шины и залей двадцать пять литров"
+    expect: [{ intent: tires.all }, { intent: fuel.add, amount: 25, unit: liters }]
+  - say: "меняй шины залей двадцать литров"
+    expect: [{ intent: tires.all }, { intent: fuel.add, amount: 20, unit: liters }]
+  - say: "залей десять литров и сорви плёнку"
+    expect: [{ intent: fuel.add, amount: 10, unit: liters }, { intent: windshield.tearoff }]
+  - say: "меняй правые и не меняй левые"
+    expect: [{ intent: tires.right }, { intent: tires.none.left }]
+  # must be rejected: conflict, fraction, noise and unrelated speech
+  - say: "меняем резину на дождевую"
+    expect: reject
+  - say: "меняй шины и не меняй шины"
+    expect: reject
+  - say: "залей тридцать точка два"
+    expect: reject
+  - say: "кто впереди меня"
+    expect: reject
+  - say: "левее"
+    expect: reject
+  - say: "отмени"
+    expect: reject
+  - say: "какая сегодня погода"
+    expect: reject
+  - say: "сколько горючего"
+    expect: reject
+  - say: "передние"
+    expect: reject
+  - say: "давай быстрее"
+    expect: reject
+  - say: "отмена"
+    expect: reject

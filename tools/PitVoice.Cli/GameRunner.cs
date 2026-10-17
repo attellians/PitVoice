@@ -131,7 +131,6 @@ internal static class GameRunner
         ExecutionOutcome.NotApplied => "not applied",
         ExecutionOutcome.NotConnected => "no connection (game not running)",
         ExecutionOutcome.NotInCar => "not in the car",
-        ExecutionOutcome.NotSupported => "not supported yet",
         _ => outcome.ToString(),
     };
 

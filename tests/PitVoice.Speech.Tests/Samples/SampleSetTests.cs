@@ -1,6 +1,7 @@
 using System.Globalization;
 using NAudio.Wave;
 using PitVoice.Core.Asr;
+using PitVoice.Core.Languages;
 using PitVoice.Core.Parsing;
 using PitVoice.Speech.Asr;
 using PitVoice.Speech.Audio;
@@ -17,7 +18,8 @@ namespace PitVoice.Speech.Tests.Samples;
 public sealed class SampleSetTests(ITestOutputHelper output)
 {
     private const double MinCorrectShare = 0.9;
-    private const int MinSamplesPerLanguage = 30;
+    private const int MinSamplesPerLanguage = 50;
+    private const int MinRejections = 8;
     private const long MaxSetBytes = 15L * 1024 * 1024;
 
     [SampleTheory]
@@ -39,7 +41,7 @@ public sealed class SampleSetTests(ITestOutputHelper output)
         var times = new List<double>();
         foreach (var sample in samples)
         {
-            var result = recognizer.Recognize(WavFile.Load(Path.Combine(SampleSet.Directory(language), sample.File)));
+            var result = recognizer.Recognize(WavFile.Load(Path.Combine(SampleSet.Directory(language), sample.File!)));
             Assert.True(result.IsSuccess, $"{sample.File}: {result.Error}");
             times.Add(result.RecognitionTime.TotalMilliseconds);
 
@@ -48,7 +50,7 @@ public sealed class SampleSetTests(ITestOutputHelper output)
             switch (parsed, sample.Expect)
             {
                 case (ParseResult.Rejected, null):
-                case (ParseResult.Accepted accepted, { } expect) when SampleSet.Matches(expect, accepted.Commands):
+                case (ParseResult.Accepted accepted, { } expect) when SampleFile.Matches(expect, accepted.Commands):
                     correct++;
                     break;
                 case (ParseResult.Rejected, _):
@@ -88,10 +90,11 @@ public sealed class SampleSetTests(ITestOutputHelper output)
         var directory = SampleSet.Directory(language);
 
         Assert.True(samples.Count >= MinSamplesPerLanguage, $"{samples.Count} samples, need at least {MinSamplesPerLanguage}");
-        Assert.True(samples.Count(s => s.Expect is null) >= 5, "need at least 5 samples that must be rejected");
+        var rejections = samples.Count(s => s.Expect is null);
+        Assert.True(rejections >= MinRejections, $"{rejections} samples that must be rejected, need at least {MinRejections}");
         foreach (var sample in samples)
         {
-            using var reader = new WaveFileReader(Path.Combine(directory, sample.File));
+            using var reader = new WaveFileReader(Path.Combine(directory, sample.File!));
             Assert.True(
                 reader.WaveFormat is { SampleRate: 16000, Channels: 1, BitsPerSample: 16, Encoding: WaveFormatEncoding.Pcm },
                 $"{sample.File}: {reader.WaveFormat}, expected 16 kHz mono 16-bit PCM");
@@ -110,7 +113,7 @@ internal sealed class SampleTheoryAttribute : TheoryAttribute
         var missing = new[] { "ru", "en" }.Where(l => !SampleSet.Exists(l)).ToArray();
         if (missing.Length > 0)
         {
-            Skip = $"no recorded samples for {string.Join(", ", missing)} yet: record them with 'pitvoice-cli listen --save-wav' into tests/PitVoice.Speech.Tests/Samples/<lang>/ and describe them in {SampleSet.FileName}";
+            Skip = $"no recorded samples for {string.Join(", ", missing)} yet: record them with 'pitvoice-cli listen --lang <lang> --script tests/PitVoice.Speech.Tests/Samples/script.<lang>.yaml --save-wav tests/PitVoice.Speech.Tests/Samples/<lang>' (see Samples/README.md)";
             return;
         }
 

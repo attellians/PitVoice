@@ -33,7 +33,6 @@ internal sealed class AppServices : IAsyncDisposable
             Platform);
         var (manifest, error) = ModelService.LoadManifest();
         Models = new ModelService(Host, manifest, error, _http);
-        Check = new CommandCheck(Host);
         Diagnostics = new DiagnosticsActions(Host);
     }
 
@@ -51,8 +50,6 @@ internal sealed class AppServices : IAsyncDisposable
 
     public ModelService Models { get; }
 
-    public CommandCheck Check { get; }
-
     /// <summary>The built-in packs next to the exe.</summary>
     public static string PacksDirectory => Path.Combine(AppContext.BaseDirectory, "languages");
 
@@ -63,7 +60,6 @@ internal sealed class AppServices : IAsyncDisposable
     {
         var stopping = Task.Run(async () =>
         {
-            Check.Dispose();
             await Models.DisposeAsync().ConfigureAwait(false);
             await Host.DisposeAsync().ConfigureAwait(false);
         });

@@ -74,9 +74,9 @@ internal static class Packs
         {
             errors.WriteLine($"Additions {result.File} not applied; using the built-in '{result.Pack.Language}' pack.");
         }
-        else if (result.Pack.Templates.Count(t => t.IsUserAddition) is var count and > 0)
+        else if (result.Pack.UserEntries.Count is var count and > 0)
         {
-            errors.WriteLine($"additions:  {count} own pattern(s) from {result.File}");
+            errors.WriteLine($"additions:  {count} own word(s) from {result.File}");
         }
     }
 }

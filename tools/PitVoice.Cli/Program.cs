@@ -6,7 +6,6 @@ using PitVoice.Core;
 using PitVoice.Core.Parsing;
 using PitVoice.Core.Settings;
 using PitVoice.Models;
-using PitVoice.Speech.Asr;
 
 Console.OutputEncoding = Encoding.UTF8;
 Console.InputEncoding = Encoding.UTF8;
@@ -104,11 +103,6 @@ var modelsCommand = new Command("models", "Manage speech models.")
 var devicesCommand = new Command("devices", "List microphones, output devices for the cues and game devices for PTT.");
 devicesCommand.SetAction(_ => SpeechRunner.Devices());
 
-var grammarOption = new Option<GrammarMode>("--grammar")
-{
-    Description = "Recognizer grammar: words (vocabulary) or phrases (templates with numbers expanded).",
-    DefaultValueFactory = _ => GrammarBuilder.DefaultMode,
-};
 
 var wavOption = new Option<string>("--wav", "-w")
 {
@@ -123,7 +117,6 @@ var recognizeCommand = new Command("recognize", "Recognize a WAV file and show t
     modelsDirOption,
     unitOption,
     thresholdOption,
-    grammarOption,
     dirOption,
 };
 recognizeCommand.SetAction((result, cancellationToken) =>
@@ -136,7 +129,18 @@ var micOption = new Option<string?>("--mic", "-m")
 
 var saveWavOption = new Option<string?>("--save-wav")
 {
-    Description = "Save every recording as 16 kHz mono WAV at this path (later takes get -2, -3, ...). Off by default.",
+    Description = "Save every recording as 16 kHz mono WAV at this path (later takes get -2, -3, ...). With --script: the directory of the sample set. Off by default.",
+};
+
+var scriptOption = new Option<string?>("--script")
+{
+    Description = "Record the phrases of this list (say/expect, see tests/PitVoice.Speech.Tests/Samples/README.md) into the --save-wav directory.",
+};
+
+var fromOption = new Option<int>("--from")
+{
+    Description = "With --script: start at this phrase number; takes already saved are kept.",
+    DefaultValueFactory = _ => 1,
 };
 
 var listenCommand = new Command("listen", "Record from the microphone, recognize and show the parse result without executing anything.")
@@ -144,14 +148,16 @@ var listenCommand = new Command("listen", "Record from the microphone, recognize
     langOption,
     micOption,
     saveWavOption,
+    scriptOption,
+    fromOption,
     modelsDirOption,
     unitOption,
     thresholdOption,
-    grammarOption,
     dirOption,
 };
-listenCommand.SetAction((result, cancellationToken) =>
-    SpeechRunner.ListenAsync(SpeechSettingsFrom(result), result.GetValue(micOption), result.GetValue(saveWavOption), cancellationToken));
+listenCommand.SetAction((result, cancellationToken) => result.GetValue(scriptOption) is { } script
+    ? SpeechRunner.ListenScriptAsync(SpeechSettingsFrom(result), result.GetValue(micOption), script, result.GetValue(saveWavOption), result.GetValue(fromOption), cancellationToken)
+    : SpeechRunner.ListenAsync(SpeechSettingsFrom(result), result.GetValue(micOption), result.GetValue(saveWavOption), cancellationToken));
 
 var watchOption = new Option<bool>("--watch")
 {
@@ -283,5 +289,4 @@ SpeechSettings SpeechSettingsFrom(System.CommandLine.ParseResult result) => new(
     {
         DefaultUnit = result.GetValue(unitOption)!,
         ConfidenceThreshold = result.GetValue(thresholdOption),
-    },
-    result.GetValue(grammarOption));
+    });

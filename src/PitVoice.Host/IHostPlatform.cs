@@ -18,9 +18,6 @@ public interface IHostPlatform
     /// <summary>Microphone recording for the pipeline (the device is chosen per recording).</summary>
     IAudioCapture Capture { get; }
 
-    /// <summary>A separate recording for the microphone check, so it never meets the pipeline's recording.</summary>
-    IAudioCapture CreateCheckCapture();
-
     IReadOnlyList<AudioDevice> GetInputDevices();
 
     IReadOnlyList<AudioDevice> GetOutputDevices();

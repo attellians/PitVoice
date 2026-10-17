@@ -8,25 +8,20 @@ using PitVoice.Host;
 
 namespace PitVoice.App.ViewModels;
 
-/// <summary>An item of "What is left to set up" with the page it leads to.</summary>
-internal sealed record ChecklistEntry(string Text, IRelayCommand Open);
-
 /// <summary>A line of the recent phrases.</summary>
 internal sealed record PhraseRow(string Time, string Text, string Outcome, string Response, string Detail, bool IsSuccess);
 
 /// <summary>
-/// "Home": the setup checklist, the state of the game and the button, the elevation hint and the recent phrases
-/// (spec: Setup checklist, Recent phrases, Elevation hint).
+/// "Home": the state of the game and the button, the elevation hint and the recent phrases
+/// (spec: Recent phrases, Elevation hint).
 /// </summary>
 internal sealed partial class HomeViewModel : ObservableObject
 {
     private readonly AppServices _services;
-    private readonly Action<SetupItem> _open;
 
-    public HomeViewModel(AppServices services, Action<SetupItem> open)
+    public HomeViewModel(AppServices services)
     {
         _services = services;
-        _open = open;
         services.Host.StatusChanged += _ => Ui.Post(Refresh);
         services.Host.SettingsChanged += _ => Ui.Post(Refresh);
         services.Host.Journal.Changed += () => Ui.Post(RefreshPhrases);
@@ -48,12 +43,7 @@ internal sealed partial class HomeViewModel : ObservableObject
     [ObservableProperty]
     public partial string CollectError { get; set; } = string.Empty;
 
-    public ObservableCollection<ChecklistEntry> Checklist { get; } = [];
-
     public ObservableCollection<PhraseRow> Phrases { get; } = [];
-
-    [ObservableProperty]
-    public partial bool ChecklistVisible { get; set; }
 
     /// <summary>"Error — PTT button is not assigned".</summary>
     [ObservableProperty]
@@ -75,14 +65,6 @@ internal sealed partial class HomeViewModel : ObservableObject
     {
         var status = _services.Host.Status;
         var settings = _services.Host.Settings;
-
-        Checklist.Clear();
-        foreach (var item in SetupChecklist.Pending(status, settings))
-        {
-            Checklist.Add(new ChecklistEntry(Loc.T($"setup.{item}"), new RelayCommand(() => _open(item))));
-        }
-
-        ChecklistVisible = Checklist.Count > 0;
         var state = Texts.State(status.State);
         var reason = Texts.Reason(status);
         state = char.ToUpper(state[0], CultureInfo.InvariantCulture) + state[1..];

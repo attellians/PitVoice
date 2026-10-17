@@ -14,9 +14,6 @@ public sealed record UnitDefinition(
     IReadOnlyList<string> Synonyms,
     IReadOnlyDictionary<PluralCategory, string> Forms);
 
-/// <summary>Templates and response of one intent in one language.</summary>
-public sealed record IntentPhrases(IntentId Id, IReadOnlyList<Template> Templates, string Response);
-
 /// <summary>A command the pack expects a test phrase to produce; <c>null</c> fields are not checked.</summary>
 public sealed record ExpectedCommand(IntentId Intent, int? Amount, string? Unit)
 {
@@ -46,7 +43,7 @@ public sealed record PackTest(string Say, IReadOnlyList<ExpectedCommand>? Expect
     public bool ExpectsRejection => Expect is null;
 }
 
-/// <summary>A validated, compiled language pack (TZ §6).</summary>
+/// <summary>A validated language pack (TZ §6): word classes, responses and self-tests.</summary>
 public sealed class LanguagePack
 {
     internal LanguagePack(
@@ -55,35 +52,35 @@ public sealed class LanguagePack
         string name,
         int version,
         string? asrModel,
-        string? defaultVoice,
         INumberParser numberParser,
         IPluralRules pluralRules,
         IReadOnlyDictionary<string, UnitDefinition> units,
         IReadOnlyList<IReadOnlyList<string>> conjunctions,
         IReadOnlySet<string> fillers,
         IReadOnlySet<string> negations,
-        IReadOnlyDictionary<IntentId, IntentPhrases> intents,
+        Lexicon lexicon,
         IReadOnlyDictionary<string, string> responses,
         IReadOnlyList<PackTest> tests,
-        Normalizer normalizer)
+        Normalizer normalizer,
+        IReadOnlyList<IntentId>? intents = null)
     {
         SourceFile = sourceFile;
         Language = language;
         Name = name;
         Version = version;
         AsrModel = asrModel;
-        DefaultVoice = defaultVoice;
         NumberParser = numberParser;
         PluralRules = pluralRules;
         Units = units;
         Conjunctions = conjunctions;
         Fillers = fillers;
         Negations = negations;
-        Intents = intents;
+        Lexicon = lexicon;
         Responses = responses;
         Tests = tests;
         Normalizer = normalizer;
-        Templates = intents.Values.SelectMany(i => i.Templates).ToArray();
+        // Additions never make new intents available: their responses and tests come from the built-in pack.
+        Intents = intents ?? IntentCatalog.All.Select(d => d.Id).Where(id => WordRules.IsAvailable(id, lexicon, negations.Count > 0)).ToArray();
     }
 
     public string SourceFile { get; }
@@ -96,11 +93,8 @@ public sealed class LanguagePack
 
     public int Version { get; }
 
-    /// <summary>ASR model id from the models manifest (used from stage 2 on).</summary>
+    /// <summary>ASR model id from the models manifest.</summary>
     public string? AsrModel { get; }
-
-    /// <summary>Default TTS voice id (used from stage 4 on).</summary>
-    public string? DefaultVoice { get; }
 
     public INumberParser NumberParser { get; }
 
@@ -115,35 +109,46 @@ public sealed class LanguagePack
 
     public IReadOnlySet<string> Negations { get; }
 
-    public IReadOnlyDictionary<IntentId, IntentPhrases> Intents { get; }
+    /// <summary>
+    /// Words that reject the whole phrase (design D12). They are in the recognizer grammar so that the recognizer hears
+    /// them instead of dropping a phrase tail it cannot write ("меняем резину на слики" → "меняем резину на").
+    /// </summary>
+    public IReadOnlySet<string> RejectWords { get; internal init; } = new HashSet<string>(StringComparer.Ordinal);
 
-    /// <summary>All templates of all intents.</summary>
-    public IReadOnlyList<Template> Templates { get; }
+    /// <summary>Word classes of the language, built-in and the user's own.</summary>
+    public Lexicon Lexicon { get; }
 
-    /// <summary>Generic responses: <c>not_understood</c>, <c>not_connected</c>, ...</summary>
+    /// <summary>Catalog intents the word classes of this pack can produce, in catalog order.</summary>
+    public IReadOnlyList<IntentId> Intents { get; }
+
+    /// <summary>Responses of intents (by intent id) and generic ones: <c>not_understood</c>, <c>not_connected</c>, ...</summary>
     public IReadOnlyDictionary<string, string> Responses { get; }
 
     public IReadOnlyList<PackTest> Tests { get; }
 
     public Normalizer Normalizer { get; }
 
-    /// <summary>Catalog intents this pack does not describe; phrases for them are rejected in this language.</summary>
+    public bool Supports(IntentId intent) => Intents.Contains(intent);
+
+    /// <summary>The response of <paramref name="intent"/>.</summary>
+    public string ResponseOf(IntentId intent) => Responses[intent.Value];
+
+    /// <summary>Catalog intents this pack cannot produce; phrases for them are rejected in this language.</summary>
     public IReadOnlyList<IntentId> MissingIntents =>
-        IntentCatalog.All.Select(d => d.Id).Where(id => !Intents.ContainsKey(id)).ToArray();
+        IntentCatalog.All.Select(d => d.Id).Where(id => !Supports(id)).ToArray();
 
     /// <summary>User additions file merged into this pack (FR-LANG-5), or null for the built-in pack alone.</summary>
     public string? AdditionsFile { get; private init; }
 
-    /// <summary>A copy with <paramref name="extra"/> templates appended to their intents (already validated).</summary>
-    internal LanguagePack WithTemplates(IReadOnlyDictionary<IntentId, List<Template>> extra, string additionsFile)
-    {
-        var intents = Intents.ToDictionary(
-            p => p.Key,
-            p => extra.TryGetValue(p.Key, out var added) ? p.Value with { Templates = [.. p.Value.Templates, .. added] } : p.Value);
-        return new LanguagePack(SourceFile, Language, Name, Version, AsrModel, DefaultVoice, NumberParser, PluralRules, Units,
-            Conjunctions, Fillers, Negations, intents, Responses, Tests, Normalizer)
+    /// <summary>Entries from the user's additions.</summary>
+    public IReadOnlyList<LexiconEntry> UserEntries => Lexicon.Entries.Where(e => e.IsUserAddition).ToArray();
+
+    /// <summary>A copy with <paramref name="extra"/> entries added to the lexicon (already validated).</summary>
+    internal LanguagePack WithEntries(IReadOnlyList<LexiconEntry> extra, string additionsFile) =>
+        new(SourceFile, Language, Name, Version, AsrModel, NumberParser, PluralRules, Units, Conjunctions, Fillers, Negations,
+            Lexicon.With(extra), Responses, Tests, Normalizer, Intents)
         {
             AdditionsFile = additionsFile,
+            RejectWords = RejectWords,
         };
-    }
 }

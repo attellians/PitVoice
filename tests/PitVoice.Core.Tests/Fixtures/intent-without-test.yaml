@@ -1,22 +1,28 @@
+name: Без теста
 language: ru
-name: Intent без теста
+plural_rules: ru
 units:
   liters:
-    synonyms: [литр]
+    synonyms: [литр, литра, литров]
     forms: { one: литр, few: литра, many: литров }
-intents:
-  tires.all:
-    patterns: ["меняй шины"]
-    response: "меняем шины"
-  repair.fast:
-    patterns: ["быстрый ремонт"]
-    response: "ремонт"
+conjunctions: [и]
+fillers: [пожалуйста]
+lexicon:
+  fuel: { action: [залей] }
+  tires: { action: [меняй], object: [шины] }
+  repair: { action: [почини], object: [машину] }
 responses:
+  fuel.add: "заливаем {amount} {unit}"
+  tires.all: "меняем шины"
   not_understood: "не понял"
   not_connected: "no connection"
   not_in_car: "not in car"
   apply_failed: "failed"
-  not_supported: "not supported"
+  repair.fast: "чиним"
 tests:
+  - say: "залей десять литров"
+    expect: [{ intent: fuel.add, amount: 10, unit: liters }]
   - say: "меняй шины"
     expect: [{ intent: tires.all }]
+  - say: "привет"
+    expect: reject

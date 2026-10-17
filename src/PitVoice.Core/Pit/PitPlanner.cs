@@ -19,8 +19,7 @@ public sealed record PlannedStep(
 
 /// <summary>What to send for a phrase and how to confirm it.</summary>
 /// <param name="Steps">Steps in the order the phrase named them.</param>
-/// <param name="Skipped">Commands that send nothing (<c>status.fuel</c>, <c>assistant.cancel</c>).</param>
-public sealed record PitPlan(IReadOnlyList<PlannedStep> Steps, IReadOnlyList<ParsedCommand> Skipped)
+public sealed record PitPlan(IReadOnlyList<PlannedStep> Steps)
 {
     public IEnumerable<SentCommand> Commands => Steps.SelectMany(s => s.Commands);
 }
@@ -48,19 +47,12 @@ public static class PitPlanner
         ArgumentNullException.ThrowIfNull(current);
 
         var steps = new List<PlannedStep>();
-        var skipped = new List<ParsedCommand>();
         var tires = commands.Where(c => IntentCatalog.Get(c.Intent).ExclusionGroup == IntentCatalog.TiresGroup).ToList();
         var tiresPlanned = false;
 
         foreach (var command in commands)
         {
             var definition = IntentCatalog.Get(command.Intent);
-            if (!definition.ChangesPitSetup)
-            {
-                skipped.Add(command);
-                continue;
-            }
-
             if (definition.ExclusionGroup == IntentCatalog.TiresGroup)
             {
                 if (!tiresPlanned)
@@ -75,7 +67,7 @@ public static class PitPlanner
             steps.Add(PlanOther(command, fuelCapacity));
         }
 
-        return new PitPlan(steps, skipped);
+        return new PitPlan(steps);
     }
 
     /// <summary>Liters to send for a <c>fuel.add</c> amount: gallons are converted and rounded to whole liters.</summary>

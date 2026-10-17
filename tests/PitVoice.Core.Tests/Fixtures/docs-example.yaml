@@ -1,0 +1,64 @@
+language: ru                       # language code; must have a number parser in code
+name: Пример
+version: 2
+asr_model: vosk-model-small-ru-0.22    # model id from the models manifest
+plural_rules: ru                   # plural rule set in code; defaults to `language`
+
+units:                             # only `liters` and `gallons` are known
+  liters:
+    synonyms: [литр, литра, литров]                 # single words that mean this unit in speech
+    forms: { one: литр, few: литра, many: литров }  # one form per plural category of `plural_rules`
+
+conjunctions: [и, а также]         # split compound phrases; multi-word entries are allowed
+fillers: [пожалуйста, ну]          # removed before parsing; must not appear in the lexicon
+negations: [не, без]               # turn a command into its removal
+reject_words: [на]                 # reject the whole phrase ("меняем резину на слики")
+
+lexicon:
+  fuel:
+    action: [залей, долей]
+    object: [топливо, топлива]
+  tires:
+    action: [меняй, замени]
+    object: [шины, шин]
+    keep: [трогай]                 # only with a negation: "не трогай шины"
+    targets:
+      all: [все]
+      front: [передние]
+      lf: [переднее левое, левое переднее]
+
+responses:
+  fuel.add: "заливаем {amount} {unit}"
+  fuel.none: "без топлива"
+  tires.all: "меняем все шины"
+  tires.front: "меняем передние"
+  tires.lf: "меняем переднее левое"
+  tires.none: "шины не меняем"
+  tires.none.front: "передние не меняем"
+  tires.none.lf: "переднее левое не меняем"
+  not_understood: "не понял, повтори"    # required
+  not_connected: "нет связи с игрой"     # required
+  not_in_car: "ты не в машине"           # required
+  apply_failed: "команда не применилась" # required
+
+tests:
+  - say: "залей тридцать пять литров"
+    expect: [{ intent: fuel.add, amount: 35, unit: liters }]
+  - say: "долей двадцать"
+    expect: [{ intent: fuel.add, amount: 20 }]    # unit not checked: it comes from settings
+  - say: "без топлива"
+    expect: [{ intent: fuel.none }]
+  - say: "меняй шины"
+    expect: [{ intent: tires.all }]
+  - say: "замени передние"
+    expect: [{ intent: tires.front }]
+  - say: "левое переднее"
+    expect: [{ intent: tires.lf }]
+  - say: "не трогай шины"
+    expect: [{ intent: tires.none }]
+  - say: "передние не меняй"
+    expect: [{ intent: tires.none.front }]
+  - say: "не меняй переднее левое"
+    expect: [{ intent: tires.none.lf }]
+  - say: "меняй шины и не меняй шины"
+    expect: reject

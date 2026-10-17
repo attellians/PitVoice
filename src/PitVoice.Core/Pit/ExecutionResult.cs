@@ -5,7 +5,7 @@ namespace PitVoice.Core.Pit;
 /// <summary>How the execution of one phrase ended. Exactly one per phrase.</summary>
 public enum ExecutionOutcome
 {
-    /// <summary>Every command was confirmed by telemetry, or the phrase changes nothing (cancel).</summary>
+    /// <summary>Every command was confirmed by telemetry.</summary>
     Applied,
 
     /// <summary>Some commands were confirmed, some were not.</summary>
@@ -19,9 +19,6 @@ public enum ExecutionOutcome
 
     /// <summary>The game runs but the driver is not in the car; nothing was sent.</summary>
     NotInCar,
-
-    /// <summary>The phrase asks for something this version cannot do yet (<c>status.fuel</c>); nothing was sent.</summary>
-    NotSupported,
 }
 
 /// <summary>Result of executing an accepted phrase. Expected race situations are values here, not exceptions.</summary>

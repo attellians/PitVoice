@@ -20,10 +20,7 @@ public class OutcomeResponseTests
     [InlineData("ru", "быстрый ремонт", ExecutionOutcome.NotApplied, "команда не применилась")]
     [InlineData("ru", "залей двадцать литров", ExecutionOutcome.NotConnected, "нет связи с игрой")]
     [InlineData("ru", "меняй шины", ExecutionOutcome.NotInCar, "ты не в машине")]
-    [InlineData("ru", "сколько топлива", ExecutionOutcome.NotSupported, "пока не умею")]
-    [InlineData("ru", "отмена", ExecutionOutcome.Applied, "отменил")]
     [InlineData("ru", "меняй левые и залей десять литров", ExecutionOutcome.Applied, "меняем левые, заливаем 10 литров")]
-    [InlineData("ru", "залей двадцать и сколько топлива", ExecutionOutcome.Applied, "заливаем 20 литров")]
     [InlineData("ru", "залей ноль литров", ExecutionOutcome.Applied, "без топлива")]
     [InlineData("ru", "меняй шины и залей ноль", ExecutionOutcome.Applied, "меняем все шины, без топлива")]
     [InlineData("en", "add zero liters", ExecutionOutcome.Applied, "no fuel")]
@@ -33,7 +30,6 @@ public class OutcomeResponseTests
     [InlineData("en", "fast repair", ExecutionOutcome.NotApplied, "the command was not applied")]
     [InlineData("en", "add twenty liters", ExecutionOutcome.NotConnected, "no connection to the game")]
     [InlineData("en", "change tires", ExecutionOutcome.NotInCar, "you are not in the car")]
-    [InlineData("en", "how much fuel", ExecutionOutcome.NotSupported, "not available yet")]
     public void Response_by_outcome(string language, string phrase, ExecutionOutcome outcome, string expected)
     {
         Assert.Equal(expected, Respond(language, phrase, outcome));

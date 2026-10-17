@@ -12,7 +12,6 @@ namespace PitVoice.Speech.Asr;
 /// </summary>
 public sealed class VoskAsrEngine : IAsrEngine, IDisposable
 {
-    private readonly GrammarMode _mode;
     private readonly Func<string, VoskModelHandle> _loadModel;
     private readonly Lock _lock = new();
     private VoskModelHandle? _model;
@@ -23,17 +22,15 @@ public sealed class VoskAsrEngine : IAsrEngine, IDisposable
         VoskNative.SetLogLevel(-1);
     }
 
-    public VoskAsrEngine(GrammarMode mode = GrammarBuilder.DefaultMode)
-        : this(mode, VoskModelHandle.Load)
+    public VoskAsrEngine()
+        : this(VoskModelHandle.Load)
     {
     }
 
-    /// <param name="mode">Grammar shape.</param>
     /// <param name="loadModel">Loads a model from disk; replaceable so tests can count loads.</param>
-    internal VoskAsrEngine(GrammarMode mode, Func<string, VoskModelHandle> loadModel)
+    internal VoskAsrEngine(Func<string, VoskModelHandle> loadModel)
     {
         ArgumentNullException.ThrowIfNull(loadModel);
-        _mode = mode;
         _loadModel = loadModel;
     }
 
@@ -52,8 +49,6 @@ public sealed class VoskAsrEngine : IAsrEngine, IDisposable
 
     /// <summary>Directory of the loaded model.</summary>
     public string? ModelPath { get; private set; }
-
-    public GrammarMode Mode => _mode;
 
     public async Task<AsrLoadResult> LoadAsync(LanguagePack pack, string? modelPath, CancellationToken cancellationToken = default)
     {
@@ -79,7 +74,7 @@ public sealed class VoskAsrEngine : IAsrEngine, IDisposable
 
         var isKnown = IsKnownWord(model);
         var vocabulary = GrammarBuilder.CheckVocabulary(pack, isKnown);
-        var grammar = GrammarBuilder.ToJson(GrammarBuilder.Build(pack, _mode, isKnown));
+        var grammar = GrammarBuilder.ToJson(GrammarBuilder.Build(pack, isKnown));
         lock (_lock)
         {
             _model = model;

@@ -15,7 +15,7 @@ public class IntentCatalogTests
         "tires.none.lf", "tires.none.rf", "tires.none.lr", "tires.none.rr",
         "windshield.tearoff", "windshield.none",
         "repair.fast", "repair.none",
-        "pit.clear", "status.fuel", "assistant.cancel",
+        "pit.clear",
     ];
 
     public static TheoryData<string> AllIntentIds
@@ -82,20 +82,11 @@ public class IntentCatalogTests
 
     [Theory]
     [InlineData("pit.clear")]
-    [InlineData("assistant.cancel")]
-    public void Clear_and_cancel_are_standalone(string id)
+    public void Clear_is_standalone(string id)
     {
         var definition = IntentCatalog.Get(new IntentId(id));
         Assert.True(definition.IsStandalone);
         Assert.Null(definition.ExclusionGroup);
-    }
-
-    [Fact]
-    public void Status_fuel_is_neither_grouped_nor_standalone()
-    {
-        var definition = IntentCatalog.Get(IntentCatalog.StatusFuel);
-        Assert.Null(definition.ExclusionGroup);
-        Assert.False(definition.IsStandalone);
     }
 
     [Fact]

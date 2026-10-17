@@ -53,47 +53,6 @@ public class PitExecutorTests
         Assert.Empty(_sink.Sent);
     }
 
-    // --- Commands that change nothing
-
-    [Fact]
-    public async Task Cancel_without_game()
-    {
-        _game.State = ConnectionState.NotRunning;
-
-        var result = await Execute("отмена");
-
-        Assert.Equal(ExecutionOutcome.Applied, result.Outcome);
-        Assert.Empty(_sink.Sent);
-    }
-
-    [Fact]
-    public async Task Fuel_status_is_not_supported_yet()
-    {
-        var result = await Execute("сколько топлива");
-
-        Assert.Equal(ExecutionOutcome.NotSupported, result.Outcome);
-        Assert.Empty(_sink.Sent);
-    }
-
-    [Fact]
-    public async Task Fuel_status_without_game_is_still_not_supported()
-    {
-        _game.State = ConnectionState.NotRunning;
-
-        Assert.Equal(ExecutionOutcome.NotSupported, (await Execute("сколько топлива")).Outcome);
-    }
-
-    [Fact]
-    public async Task Fuel_status_mixed_with_a_pit_command()
-    {
-        var result = await Execute("залей двадцать и сколько топлива");
-
-        Assert.Equal(ExecutionOutcome.Applied, result.Outcome);
-        Assert.Equal([new SentCommand(PitCommand.Fuel, 20)], _sink.Sent);
-        Assert.True(_game.Pit.FuelFill);
-        Assert.Equal(20, _game.Pit.FuelToAdd);
-    }
-
     // --- Accumulating and removing tires, end to end on the fake
 
     [Fact]

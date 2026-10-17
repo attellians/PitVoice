@@ -1,5 +1,4 @@
 using PitVoice.Core.Audio;
-using PitVoice.Core.Intents;
 using PitVoice.Core.Parsing;
 using PitVoice.Core.Pit;
 
@@ -11,10 +10,10 @@ public enum Cue
     /// <summary>Recording started.</summary>
     Start,
 
-    /// <summary>The phrase was applied, or it was "cancel".</summary>
+    /// <summary>The phrase was applied.</summary>
     Success,
 
-    /// <summary>Anything else: not understood, no game, not in the car, not applied, not supported, a failed stage.</summary>
+    /// <summary>Anything else: not understood, no game, not in the car, not applied, a failed stage.</summary>
     Error,
 }
 
@@ -58,20 +57,15 @@ public interface IAudioOutputCatalog
 public static class CueSelector
 {
     /// <summary>
-    /// <c>success</c> for <see cref="ExecutionOutcome.Applied"/> and for a phrase that is only <c>assistant.cancel</c>;
-    /// <c>error</c> for a rejected phrase and every other outcome.
+    /// <c>success</c> for <see cref="ExecutionOutcome.Applied"/>; <c>error</c> for a rejected phrase and every other
+    /// outcome.
     /// </summary>
     public static Cue ForResult(ParseResult parse, ExecutionResult? execution)
     {
         ArgumentNullException.ThrowIfNull(parse);
-        if (parse is not ParseResult.Accepted accepted)
+        if (parse is not ParseResult.Accepted)
         {
             return Cue.Error;
-        }
-
-        if (accepted.Commands.Count > 0 && accepted.Commands.All(c => c.Intent == IntentCatalog.AssistantCancel))
-        {
-            return Cue.Success;
         }
 
         return execution?.Outcome == ExecutionOutcome.Applied ? Cue.Success : Cue.Error;

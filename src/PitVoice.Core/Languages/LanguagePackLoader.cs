@@ -41,7 +41,7 @@ public static class LanguagePackLoader
         }
         catch (YamlException ex)
         {
-            var issue = new PackIssue(IssueSeverity.Error, fileName, (int)ex.Start.Line, string.Empty, $"invalid YAML: {ex.Message}");
+            var issue = new PackIssue(IssueSeverity.Error, fileName, (int)ex.Start.Line, string.Empty, Describe(ex));
             return new LanguagePackLoadResult(fileName, null, [issue]);
         }
         catch (Exception ex) when (ex is InvalidOperationException or ArgumentException or FormatException)
@@ -60,6 +60,30 @@ public static class LanguagePackLoader
         var validation = LanguagePackValidator.Validate(dto, fileName, lines);
         return new LanguagePackLoadResult(fileName, validation.Pack, validation.Issues);
     }
+
+    /// <summary>
+    /// The YAML error in words of the pack format: a field the format does not have is named, with a hint for the fields
+    /// removed in format 2.
+    /// </summary>
+    private static string Describe(YamlException ex)
+    {
+        var unknown = UnknownProperty.Match(ex.Message);
+        if (!unknown.Success)
+        {
+            return $"invalid YAML: {ex.Message}";
+        }
+
+        var field = unknown.Groups[1].Value;
+        return field switch
+        {
+            "default_voice" => "unknown field 'default_voice': packs have no voice, the result is a sound cue (TZ §4.7); remove the field",
+            "intents" => "unknown field 'intents': format 2 lists words in 'lexicon' classes and intent responses in 'responses' (docs/adding-a-language.md)",
+            _ => $"unknown field '{field}'",
+        };
+    }
+
+    private static readonly System.Text.RegularExpressions.Regex UnknownProperty =
+        new("Property '([^']+)' not found on type", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
 
     public static LanguagePackLoadResult LoadFile(string path)
     {

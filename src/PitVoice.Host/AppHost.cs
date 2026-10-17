@@ -159,9 +159,6 @@ public sealed class AppHost : IAsyncDisposable
     /// <summary>The bound game device was connected or removed; raised on the source's thread.</summary>
     public event Action<PttDeviceChange>? PttDeviceChanged;
 
-    /// <summary>The PTT started a recording; the microphone check stops on it (spec: PTT pressed during microphone check).</summary>
-    public event Action? RecordingStarted;
-
     public IHostPlatform Platform => _platform;
 
     public TimeProvider Time => _time;
@@ -573,10 +570,10 @@ public sealed class AppHost : IAsyncDisposable
         }
     }
 
-    /// <summary>Settings that only the window reads (checklist flag, interface language, theme) do not rebuild the session.</summary>
+    /// <summary>Settings that only the window reads (interface language, theme) do not rebuild the session.</summary>
     private static bool SameSession(AppSettings? applied, AppSettings target) =>
         applied is not null
-        && applied == target with { SetupCheckDone = applied.SetupCheckDone, InterfaceLanguage = applied.InterfaceLanguage, Theme = applied.Theme };
+        && applied == target with { InterfaceLanguage = applied.InterfaceLanguage, Theme = applied.Theme };
 
     private async Task WaitIdleAsync(CancellationToken token)
     {
@@ -841,15 +838,7 @@ public sealed class AppHost : IAsyncDisposable
 
         _sourceBinding = binding;
         var machine = new PttStateMachine(binding, target.PttMode, _time);
-        machine.Transition += transition =>
-        {
-            if (transition is PttTransition.Started)
-            {
-                RecordingStarted?.Invoke();
-            }
-
-            handler.OnTransition(transition);
-        };
+        machine.Transition += handler.OnTransition;
         Interlocked.Exchange(ref _machine, machine)?.Dispose();
         UpdateFacts(f => f with { Binding = binding });
     }

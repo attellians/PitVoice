@@ -19,9 +19,6 @@ public sealed record ValidationResult(LanguagePack? Pack, IReadOnlyList<PackIssu
 /// </summary>
 public static class LanguagePackValidator
 {
-    /// <summary>Minimum number of required words in a pattern of an intent that changes the pit stop.</summary>
-    public const int MinPitPatternWords = 2;
-
     public static ValidationResult Validate(LanguagePackDto dto, string fileName)
     {
         ArgumentNullException.ThrowIfNull(dto);
@@ -163,6 +160,7 @@ public static class LanguagePackValidator
         // --- word lists
         var fillers = NormalizeWordSet(dto.Fillers, "fillers", Error);
         var negations = NormalizeWordSet(dto.Negations, "negations", Error);
+        var rejectWords = NormalizeWordSet(dto.RejectWords, "reject_words", Error);
         var conjunctions = new List<IReadOnlyList<string>>();
         if (dto.Conjunctions is not null)
         {
@@ -185,124 +183,132 @@ public static class LanguagePackValidator
             return byLength != 0 ? byLength : string.CompareOrdinal(string.Join(' ', a), string.Join(' ', b));
         });
 
-        // --- intents (needs the normalizer, which needs the number parser)
-        var intents = new Dictionary<IntentId, IntentPhrases>();
+        // --- lexicon (needs the normalizer, which needs the number parser)
         Normalizer? normalizer = null;
         if (numberParser is not null)
         {
             normalizer = new Normalizer(new NormalizationRules(numberParser, fillers, unitSynonyms));
         }
 
-        if (dto.Intents is null || dto.Intents.Count == 0)
+        var entries = new List<LexiconEntry>();
+        if (dto.Lexicon is null || dto.Lexicon.Count == 0)
         {
-            Error("'intents' must describe at least one intent", "intents");
+            Error("'lexicon' must describe the words of at least one group", "lexicon");
         }
         else
         {
-            var compiler = normalizer is null ? null : new TemplateCompiler(normalizer);
-            var seenPatterns = new Dictionary<string, (IntentId Intent, string Source)>(StringComparer.Ordinal);
-
-            foreach (var (intentKey, intentDto) in dto.Intents)
+            // Without a number parser the words cannot be normalized, but the classes are still checked.
+            var words = normalizer is null ? null : new LexiconWords(normalizer, conjunctions, negations);
+            foreach (var raw in LexiconReader.Read(dto.Lexicon, (message, path) => Error(message, ["lexicon", .. path])))
             {
-                var intentId = new IntentId(intentKey);
-                if (!IntentCatalog.TryGet(intentId, out var definition))
+                string[] path = ["lexicon", .. raw.Path];
+                var entry = words?.Check(raw.Class, raw.Text, isUserAddition: false, message => Error(message, path));
+                if (entry is null)
                 {
-                    Error($"unknown intent '{intentKey}'; the catalog has: {string.Join(", ", IntentCatalog.All.Select(d => d.Id))}", "intents", intentKey);
                     continue;
                 }
 
-                var templates = new List<Template>();
-                if (intentDto?.Patterns is null || intentDto.Patterns.Count == 0)
+                if (entries.Any(e => e.Class == entry.Class && e.Text == entry.Text))
                 {
-                    Error($"intent '{intentKey}' has no patterns", "intents", intentKey, "patterns");
-                }
-                else if (compiler is not null)
-                {
-                    for (var i = 0; i < intentDto.Patterns.Count; i++)
-                    {
-                        var index = i.ToString(CultureInfo.InvariantCulture);
-                        var pattern = intentDto.Patterns[i];
-                        if (string.IsNullOrWhiteSpace(pattern))
-                        {
-                            Error("empty pattern", "intents", intentKey, "patterns", index);
-                            continue;
-                        }
-
-                        var errors = new List<string>();
-                        var template = compiler.Compile(pattern, definition, errors);
-                        foreach (var error in errors)
-                        {
-                            Error($"pattern \"{pattern}\": {error}", "intents", intentKey, "patterns", index);
-                        }
-
-                        if (template is null)
-                        {
-                            continue;
-                        }
-
-                        if (definition.ChangesPitSetup && template.RequiredLength < MinPitPatternWords)
-                        {
-                            Error($"pattern \"{pattern}\" has a single word; intent '{intentKey}' changes the pit stop and needs at least {MinPitPatternWords} words, because one word is too easily heard in unrelated speech", "intents", intentKey, "patterns", index);
-                            continue;
-                        }
-
-                        var key = string.Join(' ', template.Tokens.Select(t => t.ToString()));
-                        if (seenPatterns.TryGetValue(key, out var previous))
-                        {
-                            Error($"pattern \"{pattern}\" duplicates \"{previous.Source}\" of intent '{previous.Intent}'", "intents", intentKey, "patterns", index);
-                            continue;
-                        }
-
-                        seenPatterns[key] = (intentId, pattern);
-                        templates.Add(template);
-                    }
+                    Warn($"'{entry.Text}' is repeated in '{entry.Class}'; skipped", path);
+                    continue;
                 }
 
-                var response = intentDto?.Response?.Trim();
-                if (string.IsNullOrEmpty(response))
-                {
-                    Error($"intent '{intentKey}' has no response", "intents", intentKey, "response");
-                    response = string.Empty;
-                }
-                else
-                {
-                    foreach (var placeholder in Placeholders(response))
-                    {
-                        var allowed = placeholder switch
-                        {
-                            "amount" => definition.HasSlot(SlotKind.Amount),
-                            "unit" => definition.HasSlot(SlotKind.Unit),
-                            _ => false,
-                        };
-                        if (!allowed)
-                        {
-                            Error($"response uses {{{placeholder}}}, which intent '{intentKey}' does not provide", "intents", intentKey, "response");
-                        }
-                    }
-                }
-
-                intents[intentId] = new IntentPhrases(intentId, templates, response);
+                entries.Add(entry);
             }
-        }
 
-        foreach (var definition in IntentCatalog.All)
-        {
-            if (!intents.ContainsKey(definition.Id))
+            foreach (var (action, keep) in LexiconWords.Opposites(entries))
             {
-                Warn($"intent '{definition.Id}' is not described; phrases for it will be rejected in this language", "intents");
+                Error($"'{action.Text}' is in both '{action.Class}' and '{keep.Class}': a word cannot mean the command and keeping it",
+                    "lexicon", LexiconSchema.Name(keep.Class.Group));
             }
         }
 
-        // --- responses
+        // A reject word must not be a word of any command, or that command could never be said (design D12).
+        var commandWords = new Dictionary<string, string>(StringComparer.Ordinal);
+        void Claim(IEnumerable<string> words, string where)
+        {
+            foreach (var word in words)
+            {
+                commandWords.TryAdd(word, where);
+            }
+        }
+
+        foreach (var entry in entries)
+        {
+            Claim(entry.Words, $"'{entry.Class}'");
+        }
+
+        Claim(fillers, "'fillers'");
+        Claim(negations, "'negations'");
+        Claim(conjunctions.SelectMany(c => c), "'conjunctions'");
+        Claim(unitSynonyms.Keys, "'units'");
+        if (numberParser is not null)
+        {
+            Claim(numberParser.Words, "number words");
+        }
+
+        foreach (var word in rejectWords.Order(StringComparer.Ordinal))
+        {
+            if (commandWords.TryGetValue(word, out var where))
+            {
+                Error($"reject word '{word}' is also in {where}: a phrase with it would always be rejected", "reject_words");
+            }
+        }
+
+        var lexicon = new Lexicon(entries);
+        var available = IntentCatalog.All
+            .Select(d => d.Id)
+            .Where(id => WordRules.IsAvailable(id, lexicon, negations.Count > 0))
+            .ToHashSet();
+        var unavailable = IntentCatalog.All.Select(d => d.Id).Where(id => !available.Contains(id)).ToArray();
+        if (dto.Lexicon is { Count: > 0 } && unavailable.Length > 0)
+        {
+            Warn($"the pack is incomplete: the lexicon has no words for {string.Join(", ", unavailable)}; phrases for them will be rejected in this language", "lexicon");
+        }
+
+        // --- responses: of intents and of outcomes
         var responses = new Dictionary<string, string>(StringComparer.Ordinal);
         if (dto.Responses is not null)
         {
             foreach (var (key, value) in dto.Responses)
             {
+                if (Responses.ResponseBuilder.UnusedKeys.Contains(key))
+                {
+                    Warn($"response '{key}' is not used: the intent or outcome it answered was removed", "responses", key);
+                    continue;
+                }
+
+                var isIntent = IntentCatalog.TryGet(new IntentId(key), out var definition);
+                if (!isIntent && !Responses.ResponseBuilder.RequiredKeys.Contains(key))
+                {
+                    Error($"unknown response '{key}': it is neither a catalog intent nor one of {string.Join(", ", Responses.ResponseBuilder.RequiredKeys)}", "responses", key);
+                    continue;
+                }
+
                 if (string.IsNullOrWhiteSpace(value))
                 {
                     Error($"response '{key}' is empty", "responses", key);
                     continue;
+                }
+
+                foreach (var placeholder in Placeholders(value))
+                {
+                    var allowed = isIntent && placeholder switch
+                    {
+                        "amount" => definition!.HasSlot(SlotKind.Amount),
+                        "unit" => definition!.HasSlot(SlotKind.Unit),
+                        _ => false,
+                    };
+                    if (!allowed)
+                    {
+                        Error($"response '{key}' uses {{{placeholder}}}, which it does not provide", "responses", key);
+                    }
+                }
+
+                if (isIntent && !available.Contains(definition!.Id))
+                {
+                    Warn($"response '{key}' is not used: the lexicon has no words for this intent", "responses", key);
                 }
 
                 responses[key] = value.Trim();
@@ -314,6 +320,14 @@ public static class LanguagePackValidator
             if (!responses.ContainsKey(required))
             {
                 Error($"'responses.{required}' is required", "responses");
+            }
+        }
+
+        foreach (var intent in IntentCatalog.All.Select(d => d.Id).Where(available.Contains))
+        {
+            if (!responses.ContainsKey(intent.Value))
+            {
+                Error($"intent '{intent}' has no response", "responses");
             }
         }
 
@@ -342,9 +356,9 @@ public static class LanguagePackValidator
                 {
                     foreach (var command in expect.Commands)
                     {
-                        if (!intents.ContainsKey(command.Intent))
+                        if (!available.Contains(command.Intent))
                         {
-                            Error($"expected intent '{command.Intent}' is not described in this pack", "tests", index, "expect");
+                            Error($"expected intent '{command.Intent}' has no words in this pack", "tests", index, "expect");
                         }
 
                         testedIntents.Add(command.Intent);
@@ -355,7 +369,7 @@ public static class LanguagePackValidator
             }
         }
 
-        foreach (var intentId in intents.Keys.Order())
+        foreach (var intentId in available.Order())
         {
             if (!testedIntents.Contains(intentId))
             {
@@ -374,17 +388,19 @@ public static class LanguagePackValidator
             name!,
             dto.Version ?? 1,
             dto.AsrModel?.Trim(),
-            dto.DefaultVoice?.Trim(),
             numberParser!,
             pluralRules!,
             units,
             conjunctions,
             fillers,
             negations,
-            intents,
+            lexicon,
             responses,
             tests,
-            normalizer!);
+            normalizer!)
+        {
+            RejectWords = rejectWords,
+        };
 
         return new ValidationResult(pack, issues);
     }
@@ -434,9 +450,10 @@ public static class LanguagePackValidator
         }
     }
 
-    private readonly record struct ExpectParse(IReadOnlyList<ExpectedCommand>? Commands, bool Invalid);
+    internal readonly record struct ExpectParse(IReadOnlyList<ExpectedCommand>? Commands, bool Invalid);
 
-    private static ExpectParse ParseExpect(object? expect, Action<string, string> error)
+    /// <summary>Reads an <c>expect</c> value: <c>reject</c> or a list of commands (also used by the sample set format).</summary>
+    internal static ExpectParse ParseExpect(object? expect, Action<string, string> error)
     {
         switch (expect)
         {

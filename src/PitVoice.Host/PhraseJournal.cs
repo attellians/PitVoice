@@ -20,8 +20,6 @@ public enum PhraseOutcome
 
     NotInCar,
 
-    NotSupported,
-
     /// <summary>The parser rejected the phrase (not understood, conflict, low confidence, silence).</summary>
     NotUnderstood,
 
@@ -171,7 +169,6 @@ public sealed class PhraseJournal
         ExecutionOutcome.PartiallyApplied => PhraseOutcome.PartiallyApplied,
         ExecutionOutcome.NotConnected => PhraseOutcome.NotConnected,
         ExecutionOutcome.NotInCar => PhraseOutcome.NotInCar,
-        ExecutionOutcome.NotSupported => PhraseOutcome.NotSupported,
         _ => PhraseOutcome.NotApplied,
     };
 }

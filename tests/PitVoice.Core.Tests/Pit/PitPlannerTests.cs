@@ -1,4 +1,3 @@
-using PitVoice.Core.Intents;
 using PitVoice.Core.Parsing;
 using PitVoice.Core.Pit;
 using Xunit;
@@ -232,23 +231,5 @@ public class PitPlannerTests
         Assert.Equal([Cmd(command)], plan.Commands);
         Assert.True(plan.Steps[0].IsConfirmed(PitServiceState.Empty));
         Assert.False(plan.Steps[0].IsConfirmed(new PitServiceState(flag, 0, 0)));
-    }
-
-    [Fact]
-    public void Fuel_status_sends_nothing_and_does_not_hide_other_commands()
-    {
-        var plan = Plan("залей двадцать и сколько топлива");
-
-        Assert.Equal([Cmd(PitCommand.Fuel, 20)], plan.Commands);
-        Assert.Equal(IntentCatalog.StatusFuel, Assert.Single(plan.Skipped).Intent);
-    }
-
-    [Fact]
-    public void Cancel_sends_nothing()
-    {
-        var plan = Plan("отмена");
-
-        Assert.Empty(plan.Steps);
-        Assert.Equal(IntentCatalog.AssistantCancel, Assert.Single(plan.Skipped).Intent);
     }
 }

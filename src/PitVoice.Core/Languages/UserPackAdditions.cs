@@ -1,26 +1,25 @@
 using System.Globalization;
-using PitVoice.Core.Intents;
 using YamlDotNet.Core;
 using YamlDotNet.RepresentationModel;
 
 namespace PitVoice.Core.Languages;
 
-/// <summary>A pattern the user added to an intent of a built-in pack.</summary>
-/// <param name="Intent">Intent the pattern is added to.</param>
-/// <param name="Pattern">Pattern text as written in the file.</param>
-/// <param name="Line">1-based line of the pattern in the file, when known.</param>
-public sealed record AdditionPattern(IntentId Intent, string Pattern, int? Line);
+/// <summary>A word the user added to a class of the built-in lexicon.</summary>
+/// <param name="Class">Class the word is added to.</param>
+/// <param name="Text">Word as written in the file.</param>
+/// <param name="Line">1-based line of the word in the file, when known.</param>
+public sealed record AdditionWord(WordClass Class, string Text, int? Line);
 
 /// <summary>
-/// Contents of a user additions file <c>&lt;language&gt;.yaml</c> (FR-LANG-5, design decision 9): only extra patterns for
-/// intents of the built-in pack. An empty file (for example the template with comments only) adds nothing.
+/// Contents of a user additions file <c>&lt;language&gt;.yaml</c> (FR-LANG-5, design D7): only words for classes of the
+/// lexicon format. An empty file (for example the template with comments only) adds nothing.
 /// </summary>
 /// <param name="File">Path of the file.</param>
-/// <param name="Language">Language named in the file; null when the file is empty.</param>
-/// <param name="Patterns">Patterns in file order.</param>
-public sealed record UserPackAdditions(string File, string? Language, IReadOnlyList<AdditionPattern> Patterns)
+/// <param name="Language">Language named in the file; null when the file does not name one.</param>
+/// <param name="Words">Words in file order.</param>
+public sealed record UserPackAdditions(string File, string? Language, IReadOnlyList<AdditionWord> Words)
 {
-    public bool IsEmpty => Patterns.Count == 0;
+    public bool IsEmpty => Words.Count == 0;
 }
 
 /// <summary>Result of reading an additions file: the additions when the format is valid, plus every problem found.</summary>
@@ -31,8 +30,8 @@ public sealed record UserAdditionsLoadResult(string File, UserPackAdditions? Add
 
 /// <summary>
 /// Reads user additions files. The directory is an explicit parameter, else <see cref="EnvironmentVariable"/>, else
-/// <c>%AppData%\PitVoice\languages</c>. Only <c>language</c> and <c>intents.&lt;id&gt;.patterns</c> are allowed; anything
-/// else is an error with the file and line, so a typo never silently changes nothing.
+/// <c>%AppData%\PitVoice\languages</c>. Only <c>language</c> and <c>lexicon</c> are allowed; anything else is an error
+/// with the file and line, so a typo never silently changes nothing.
 /// </summary>
 public static class UserAdditionsLoader
 {
@@ -62,7 +61,7 @@ public static class UserAdditionsLoader
 
     /// <summary>
     /// Creates the additions file of <paramref name="language"/> with a comment about the format, unless it exists. The
-    /// template adds nothing until the user writes patterns (spec: No additions file).
+    /// template adds nothing until the user writes words (spec: No additions file).
     /// </summary>
     public static string CreateTemplate(string directory, string language)
     {
@@ -73,16 +72,19 @@ public static class UserAdditionsLoader
         }
 
         Directory.CreateDirectory(directory);
+        var (verb, target) = language == "ru" ? ("плесни", "перёд") : ("pour", "noses");
         File.WriteAllText(path, $$"""
-            # PitVoice: your own phrases for the '{{language}}' language pack.
-            # Add patterns to intents of the built-in pack; they work together with the built-in ones.
-            # Only 'language' and 'intents.<id>.patterns' are allowed. Slots: {amount}, {unit}, {unit?}.
-            # Commands that change the pit stop need at least two words. After saving, press "Reload".
+            # PitVoice: your own words for the '{{language}}' language pack.
+            # Words are added to classes of the built-in lexicon and work with all its other words:
+            # a new fuel verb works with every amount, a new tire target with every tire verb.
+            # Groups: fuel, tires, windshield, repair, clear. Classes: action, object, keep (tires, windshield),
+            # fast (repair), targets (tires: all, left, right, front, rear, lf, rf, lr, rr).
+            # Plain words only: no {slots} and no digits. One word never changes the pit stop by itself.
+            # After saving, press "Reload". See docs/adding-a-language.md.
             #
-            # language: {{language}}
-            # intents:
-            #   fuel.add:
-            #     patterns: ["pour {amount} {unit?}"]
+            # lexicon:
+            #   fuel: { action: [{{verb}}] }
+            #   tires: { targets: { front: [{{target}}] } }
 
             """);
         return path;
@@ -137,12 +139,11 @@ public static class UserAdditionsLoader
 
         if (stream.Documents[0].RootNode is not YamlMappingNode root)
         {
-            return Fail(file, (int)stream.Documents[0].RootNode.Start.Line, "the file must be a mapping with 'language' and 'intents'");
+            return Fail(file, (int)stream.Documents[0].RootNode.Start.Line, "the file must be a mapping with 'lexicon'");
         }
 
         string? language = null;
-        var patterns = new List<AdditionPattern>();
-        YamlNode? intentsNode = null;
+        var words = new List<AdditionWord>();
         foreach (var (keyNode, value) in root.Children)
         {
             var key = (keyNode as YamlScalarNode)?.Value;
@@ -157,87 +158,106 @@ public static class UserAdditionsLoader
 
                     break;
 
+                case "lexicon":
+                    ReadLexicon(value, words, Error);
+                    break;
+
                 case "intents":
-                    intentsNode = value;
-                    ReadIntents(value, patterns, Error);
+                    Error(keyNode, "intents",
+                        "the old format with phrases in 'intents' is not supported: words are added to classes of 'lexicon', e.g. lexicon: { fuel: { action: [pour] } } (docs/adding-a-language.md)");
                     break;
 
                 default:
-                    Error(keyNode, key ?? string.Empty,
-                        $"unknown field '{key}': an additions file may only have 'language' and 'intents' with 'patterns'");
+                    Error(keyNode, key ?? string.Empty, $"unknown field '{key}': an additions file may only have 'language' and 'lexicon'");
                     break;
             }
-        }
-
-        if (language is null && !issues.Any(i => i.Path == "language"))
-        {
-            Error(root, "language", "'language' is required");
-        }
-
-        if (intentsNode is null)
-        {
-            Error(root, "intents", "'intents' is required");
         }
 
         return issues.Count > 0
             ? new UserAdditionsLoadResult(file, null, issues)
-            : new UserAdditionsLoadResult(file, new UserPackAdditions(file, language, patterns), issues);
+            : new UserAdditionsLoadResult(file, new UserPackAdditions(file, language, words), issues);
     }
 
-    private static void ReadIntents(YamlNode node, List<AdditionPattern> patterns, Action<YamlNode, string, string> error)
+    private static void ReadLexicon(YamlNode node, List<AdditionWord> words, Action<YamlNode, string, string> error)
     {
-        if (node is not YamlMappingNode intents)
+        if (node is not YamlMappingNode groups)
         {
-            error(node, "intents", "'intents' must map intent ids to their 'patterns'");
+            error(node, "lexicon", "'lexicon' must map groups (fuel, tires, ...) to their classes");
             return;
         }
 
-        foreach (var (keyNode, value) in intents.Children)
+        foreach (var (groupKey, rolesNode) in groups.Children)
         {
-            var intent = (keyNode as YamlScalarNode)?.Value?.Trim() ?? string.Empty;
-            var path = $"intents/{intent}";
-            if (value is not YamlMappingNode entry)
+            var groupName = (groupKey as YamlScalarNode)?.Value?.Trim() ?? string.Empty;
+            var groupPath = $"lexicon/{groupName}";
+            if (!LexiconSchema.TryGetGroup(groupName, out var group))
             {
-                error(value, path, $"intent '{intent}' must contain 'patterns'");
+                error(groupKey, groupPath, $"unknown word class group '{groupName}'; the format has: {string.Join(", ", LexiconSchema.GroupNames)}");
                 continue;
             }
 
-            var hasPatterns = false;
-            foreach (var (fieldNode, fieldValue) in entry.Children)
+            if (rolesNode is not YamlMappingNode roles)
             {
-                var field = (fieldNode as YamlScalarNode)?.Value;
-                if (field != "patterns")
-                {
-                    error(fieldNode, $"{path}/{field}",
-                        $"unknown field '{field}': additions can only add 'patterns' to an intent; responses and other fields come from the built-in pack");
-                    continue;
-                }
+                error(rolesNode, groupPath, $"group '{groupName}' must map classes ({string.Join(", ", LexiconSchema.RoleNames(group))}) to words");
+                continue;
+            }
 
-                hasPatterns = true;
-                if (fieldValue is not YamlSequenceNode list)
+            foreach (var (roleKey, value) in roles.Children)
+            {
+                var roleName = (roleKey as YamlScalarNode)?.Value?.Trim() ?? string.Empty;
+                var rolePath = $"{groupPath}/{roleName}";
+                if (roleName == LexiconSchema.TargetsKey && LexiconSchema.HasRole(group, WordRole.Target))
                 {
-                    error(fieldValue, $"{path}/patterns", "'patterns' must be a list of phrases");
-                    continue;
-                }
-
-                for (var i = 0; i < list.Children.Count; i++)
-                {
-                    var item = list.Children[i];
-                    var itemPath = $"{path}/patterns/{i.ToString(CultureInfo.InvariantCulture)}";
-                    if (item is not YamlScalarNode scalar)
+                    if (value is not YamlMappingNode targets)
                     {
-                        error(item, itemPath, "a pattern must be a phrase in quotes");
+                        error(value, rolePath, $"'{groupName}.targets' must map targets ({string.Join(", ", LexiconSchema.TargetNames)}) to words");
                         continue;
                     }
 
-                    patterns.Add(new AdditionPattern(new IntentId(intent), scalar.Value ?? string.Empty, (int)item.Start.Line));
+                    foreach (var (targetKey, targetWords) in targets.Children)
+                    {
+                        var targetName = (targetKey as YamlScalarNode)?.Value?.Trim() ?? string.Empty;
+                        if (!LexiconSchema.TryGetTarget(targetName, out var target))
+                        {
+                            error(targetKey, $"{rolePath}/{targetName}", $"unknown tire target '{targetName}'; targets: {string.Join(", ", LexiconSchema.TargetNames)}");
+                            continue;
+                        }
+
+                        ReadWords(new WordClass(group, WordRole.Target, target), targetWords, $"{rolePath}/{targetName}", words, error);
+                    }
+
+                    continue;
                 }
+
+                if (!LexiconSchema.TryGetRole(group, roleName, out var role))
+                {
+                    error(roleKey, rolePath, $"unknown word class '{groupName}.{roleName}'; group '{groupName}' has: {string.Join(", ", LexiconSchema.RoleNames(group))}");
+                    continue;
+                }
+
+                ReadWords(new WordClass(group, role), value, rolePath, words, error);
+            }
+        }
+    }
+
+    private static void ReadWords(WordClass wordClass, YamlNode node, string path, List<AdditionWord> words, Action<YamlNode, string, string> error)
+    {
+        if (node is not YamlSequenceNode list)
+        {
+            error(node, path, $"'{wordClass}' must be a list of words");
+            return;
+        }
+
+        for (var i = 0; i < list.Children.Count; i++)
+        {
+            var item = list.Children[i];
+            if (item is not YamlScalarNode scalar)
+            {
+                error(item, $"{path}/{i.ToString(CultureInfo.InvariantCulture)}", "a word must be a word or words in quotes");
+                continue;
             }
 
-            if (!hasPatterns)
-            {
-                error(entry, path, $"intent '{intent}' must contain 'patterns'");
-            }
+            words.Add(new AdditionWord(wordClass, scalar.Value ?? string.Empty, (int)item.Start.Line));
         }
     }
 

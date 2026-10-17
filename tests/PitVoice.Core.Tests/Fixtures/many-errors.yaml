@@ -1,13 +1,11 @@
 language: xx
 name: ""
 units: {}
-intents:
-  tires.all:
-    patterns: ["меняй шины", "{amount} шины", "шины {oops}"]
-  fuel.add:
-    patterns: ["залей"]
-    response: "заливаем {laps}"
+lexicon:
+  tires: { action: ["меняй {amount}"], flip: [переверни] }
+  fuel: { action: [залей] }
 responses:
+  fuel.add: "заливаем {laps}"
   cancelled: "ок"
 tests:
   - say: ""

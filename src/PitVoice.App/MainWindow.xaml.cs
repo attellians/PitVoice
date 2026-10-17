@@ -3,7 +3,6 @@ using System.Windows;
 using PitVoice.App.Localization;
 using PitVoice.App.Pages;
 using PitVoice.App.ViewModels;
-using PitVoice.Host;
 using Wpf.Ui.Abstractions;
 using Wpf.Ui.Controls;
 
@@ -49,12 +48,8 @@ internal partial class MainWindow : FluentWindow
         Focus();
     }
 
-    public void Open(SetupItem item) => RootNavigation.Navigate(item switch
-    {
-        SetupItem.DownloadModel => typeof(ModelsPage),
-        SetupItem.AssignButton => typeof(SettingsPage),
-        _ => typeof(CheckPage),
-    });
+    /// <summary>Opens the "Models" page (a link of the settings page).</summary>
+    public void OpenModels() => RootNavigation.Navigate(typeof(ModelsPage));
 
     protected override void OnClosing(CancelEventArgs e)
     {
@@ -96,10 +91,9 @@ internal partial class MainWindow : FluentWindow
 
             page = pageType.Name switch
             {
-                nameof(HomePage) => new HomePage(new HomeViewModel(services, window.Open)),
-                nameof(SettingsPage) => new SettingsPage(Settings = new SettingsViewModel(services, () => window.Open(SetupItem.DownloadModel))),
+                nameof(HomePage) => new HomePage(new HomeViewModel(services)),
+                nameof(SettingsPage) => new SettingsPage(Settings = new SettingsViewModel(services, window.OpenModels)),
                 nameof(ModelsPage) => new ModelsPage(new ModelsViewModel(services, window.ConfirmDeleteAsync)),
-                nameof(CheckPage) => new CheckPage(new CheckViewModel(services)),
                 nameof(CommandsPage) => new CommandsPage(new CommandsViewModel(services)),
                 nameof(AboutPage) => new AboutPage(new AboutViewModel(services)),
                 _ => null,

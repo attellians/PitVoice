@@ -1,5 +1,5 @@
-language: ru
 name: Минимальный
+language: ru
 plural_rules: ru
 units:
   liters:
@@ -7,20 +7,16 @@ units:
     forms: { one: литр, few: литра, many: литров }
 conjunctions: [и]
 fillers: [пожалуйста]
-negations: [не]
-intents:
-  fuel.add:
-    patterns: ["залей {amount} {unit?}"]
-    response: "заливаем {amount} {unit}"
-  tires.all:
-    patterns: ["меняй шины"]
-    response: "меняем шины"
+lexicon:
+  fuel: { action: [залей] }
+  tires: { action: [меняй], object: [шины] }
 responses:
+  fuel.add: "заливаем {amount} {unit}"
+  tires.all: "меняем шины"
   not_understood: "не понял"
   not_connected: "no connection"
   not_in_car: "not in car"
   apply_failed: "failed"
-  not_supported: "not supported"
 tests:
   - say: "залей десять литров"
     expect: [{ intent: fuel.add, amount: 10, unit: liters }]

@@ -87,13 +87,11 @@ public class LanguagePacksTests
 
     [Theory]
     [MemberData(nameof(Languages))]
-    public void Every_intent_has_three_to_eight_patterns_and_at_least_two_tests(string language)
+    public void Every_intent_has_at_least_two_tests(string language)
     {
         var pack = Pack(language);
-        foreach (var (id, phrases) in pack.Intents)
+        foreach (var id in pack.Intents)
         {
-            // 3–6 is the guideline for authors; a couple of extra variants (e.g. "all four tires") are fine.
-            Assert.InRange(phrases.Templates.Count, 3, 8);
             var tests = pack.Tests.Count(t => t.Expect is not null && t.Expect.Any(e => e.Intent == id));
             Assert.True(tests >= 2, $"{language}: intent {id} has {tests} test(s), expected at least 2");
         }
@@ -112,7 +110,7 @@ public class LanguagePacksTests
     public void Pack_has_every_generic_response(string language)
     {
         var pack = Pack(language);
-        foreach (var key in new[] { "not_understood", "not_connected", "not_in_car", "apply_failed", "not_supported", "cancelled" })
+        foreach (var key in new[] { "not_understood", "not_connected", "not_in_car", "apply_failed" })
         {
             Assert.True(pack.Responses.ContainsKey(key), $"{language}: responses.{key} is missing");
         }

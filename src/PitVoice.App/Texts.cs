@@ -38,6 +38,14 @@ internal static class Texts
 
     public static string Group(CommandGroup group) => Loc.T($"group.{group}");
 
+    /// <summary>"Действия", "Переднее левое", "Отрицания": the name of a class of words in the reference.</summary>
+    public static string WordClass(Core.Languages.WordClass? wordClass) => wordClass switch
+    {
+        null => Loc.T("class.negations"),
+        { Target: { } target } => Loc.T($"target.{Core.Languages.LexiconSchema.Name(target)}"),
+        { } other => Loc.T($"class.{Core.Languages.LexiconSchema.Name(other.Role)}"),
+    };
+
     public static string Unit(string unit) => Loc.T($"unit.{unit}");
 
     /// <summary>"Fuel 25 l" for a parsed command.</summary>
@@ -110,14 +118,20 @@ internal static class Texts
             yield return $"group.{group}";
         }
 
+        yield return "class.negations";
+        foreach (var role in Enum.GetValues<Core.Languages.WordRole>().Where(r => r != Core.Languages.WordRole.Target))
+        {
+            yield return $"class.{Core.Languages.LexiconSchema.Name(role)}";
+        }
+
+        foreach (var target in Enum.GetValues<Core.Languages.TireTarget>())
+        {
+            yield return $"target.{Core.Languages.LexiconSchema.Name(target)}";
+        }
+
         foreach (var unit in FuelUnits.All)
         {
             yield return $"unit.{unit}";
-        }
-
-        foreach (var item in Enum.GetValues<SetupItem>())
-        {
-            yield return $"setup.{item}";
         }
 
         foreach (var state in Enum.GetValues<ModelState>())

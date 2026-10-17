@@ -1,5 +1,5 @@
 using PitVoice.Core.Languages;
-using PitVoice.Core.Parsing;
+using PitVoice.Core.Asr;
 using PitVoice.Models;
 using PitVoice.Speech.Asr;
 
@@ -46,7 +46,7 @@ internal static class ValidateRunner
 
             failures += packFailures.Count;
             passed += pack.Tests.Count - packFailures.Count;
-            Console.WriteLine($"{result.File}: {pack.Language} ({pack.Name}), {pack.Intents.Count} intents, {pack.Templates.Count} templates, {pack.Tests.Count - packFailures.Count}/{pack.Tests.Count} tests passed");
+            Console.WriteLine($"{result.File}: {pack.Language} ({pack.Name}), {pack.Intents.Count} intents, {pack.Lexicon.Entries.Count} lexicon entries, {pack.Tests.Count - packFailures.Count}/{pack.Tests.Count} tests passed");
 
             var additions = UserAdditions.Apply(pack, additionsDirectory);
             if (additions.Exists)
@@ -59,7 +59,7 @@ internal static class ValidateRunner
                 errors += additions.Errors.Count();
                 warnings += additions.Warnings.Count();
                 Console.WriteLine(additions.Applied
-                    ? $"{additions.File}: {additions.Pack.Templates.Count(t => t.IsUserAddition)} own pattern(s) added to {pack.Language}"
+                    ? $"{additions.File}: {additions.Pack.UserEntries.Count} own word(s) added to {pack.Language}"
                     : $"{additions.File}: FAILED validation, the built-in {pack.Language} pack is used");
             }
 
@@ -102,7 +102,7 @@ internal static class ValidateRunner
 
         foreach (var word in report.Missing)
         {
-            var message = $"word '{word}' is not in model {modelId} and cannot be recognized; used in {Usage(pack, word)}";
+            var message = $"word '{word}' is not in model {modelId} and cannot be recognized; used in {VocabularyBuilder.Usage(pack, word)}";
             Console.WriteLine(new PackIssue(IssueSeverity.Warning, file, null, "asr_model", message));
         }
 
@@ -114,34 +114,5 @@ internal static class ValidateRunner
 
         Console.WriteLine($"{file}: vocabulary checked against {modelId}: {report.Missing.Count} word(s) missing");
         return report.Missing.Count;
-    }
-
-    private static string Usage(LanguagePack pack, string word)
-    {
-        var templates = pack.Templates
-            .Where(t => t.Tokens.Any(token => token is WordLiteral literal && literal.Text == word))
-            .Select(t => $"{t.Intent} \"{t.Source}\"")
-            .ToArray();
-        if (templates.Length > 0)
-        {
-            return string.Join("; ", templates);
-        }
-
-        if (pack.Units.Values.Any(u => u.Synonyms.Contains(word)))
-        {
-            return "unit synonyms";
-        }
-
-        if (pack.NumberParser.Words.Contains(word))
-        {
-            return "number words";
-        }
-
-        if (pack.Conjunctions.Any(c => c.Contains(word)))
-        {
-            return "conjunctions";
-        }
-
-        return pack.Fillers.Contains(word) ? "fillers" : pack.Negations.Contains(word) ? "negations" : "vocabulary";
     }
 }

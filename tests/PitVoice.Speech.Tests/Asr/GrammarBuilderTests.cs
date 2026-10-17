@@ -7,25 +7,21 @@ namespace PitVoice.Speech.Tests.Asr;
 public sealed class GrammarBuilderTests
 {
     [Theory]
-    [InlineData("ru", GrammarMode.Words)]
-    [InlineData("en", GrammarMode.Words)]
-    [InlineData("ru", GrammarMode.Phrases)]
-    [InlineData("en", GrammarMode.Phrases)]
-    public void Grammar_SamePack_Deterministic(string language, GrammarMode mode)
+    [InlineData("ru")]
+    [InlineData("en")]
+    public void Grammar_SamePack_Deterministic(string language)
     {
         var pack = TestEnvironment.Pack(language);
 
-        Assert.Equal(GrammarBuilder.Build(pack, mode), GrammarBuilder.Build(pack, mode));
+        Assert.Equal(GrammarBuilder.Build(pack), GrammarBuilder.Build(pack));
     }
 
     [Theory]
-    [InlineData("ru", GrammarMode.Words)]
-    [InlineData("en", GrammarMode.Words)]
-    [InlineData("ru", GrammarMode.Phrases)]
-    [InlineData("en", GrammarMode.Phrases)]
-    public void Grammar_HasUnknownMarkerAndNoSlots(string language, GrammarMode mode)
+    [InlineData("ru")]
+    [InlineData("en")]
+    public void Grammar_HasUnknownMarkerAndNoSlots(string language)
     {
-        var grammar = GrammarBuilder.Build(TestEnvironment.Pack(language), mode);
+        var grammar = GrammarBuilder.Build(TestEnvironment.Pack(language));
 
         Assert.Contains(SpeechRecognizer.UnknownWord, grammar);
         Assert.DoesNotContain(grammar, e => e.Contains('{', StringComparison.Ordinal) || e.Contains('}', StringComparison.Ordinal));
@@ -40,43 +36,27 @@ public sealed class GrammarBuilderTests
     {
         var pack = TestEnvironment.Pack(language);
 
-        var grammar = GrammarBuilder.Build(pack, GrammarMode.Words);
+        var grammar = GrammarBuilder.Build(pack);
 
         Assert.Equal(VocabularyBuilder.Build(pack).Append(SpeechRecognizer.UnknownWord).Order(StringComparer.Ordinal), grammar);
     }
 
-    [Theory]
-    [InlineData("ru", "залей двадцать пять литров")]
-    [InlineData("ru", "залей девятьсот девяносто девять")]
-    [InlineData("ru", "залей ноль литров")]
-    [InlineData("ru", "заправить сто двадцать один галлон")]
-    [InlineData("en", "add twenty five liters")]
-    [InlineData("en", "add nine hundred ninety nine gallons")]
-    public void Grammar_Phrases_ExpandAmountAndUnit(string language, string phrase)
-    {
-        var grammar = GrammarBuilder.Build(TestEnvironment.Pack(language), GrammarMode.Phrases);
-
-        Assert.Contains(phrase, grammar);
-    }
-
-    [Theory]
-    [InlineData(GrammarMode.Words)]
-    [InlineData(GrammarMode.Phrases)]
-    public void Grammar_ModelVocabulary_UsesYoSpellingAndDropsMissingWords(GrammarMode mode)
+    [Fact]
+    public void Grammar_ModelVocabulary_UsesYoSpellingAndDropsMissingWords()
     {
         var pack = TestEnvironment.Pack("ru");
-        var plain = GrammarBuilder.Build(pack, mode);
-        var model = FakeModelVocabulary(pack, spelledWithYo: [("еще", "ещё")], absent: ["заправить"]);
+        var plain = GrammarBuilder.Build(pack);
+        var model = FakeModelVocabulary(pack, spelledWithYo: [("еще", "ещё")], absent: ["долей"]);
 
-        var grammar = GrammarBuilder.Build(pack, mode, model.Contains);
+        var grammar = GrammarBuilder.Build(pack, model.Contains);
 
         Assert.Contains(plain, e => e.Split(' ').Contains("еще"));
-        Assert.Contains(plain, e => e.Split(' ').Contains("заправить"));
+        Assert.Contains(plain, e => e.Split(' ').Contains("долей"));
         Assert.Contains(grammar, e => e.Split(' ').Contains("ещё"));
         Assert.DoesNotContain(grammar, e => e.Split(' ').Contains("еще"));
-        Assert.DoesNotContain(grammar, e => e.Split(' ').Contains("заправить"));
+        Assert.DoesNotContain(grammar, e => e.Split(' ').Contains("долей"));
         Assert.Contains(SpeechRecognizer.UnknownWord, grammar);
-        Assert.Equal(grammar, GrammarBuilder.Build(pack, mode, model.Contains));
+        Assert.Equal(grammar, GrammarBuilder.Build(pack, model.Contains));
     }
 
     [Fact]
@@ -134,45 +114,5 @@ public sealed class GrammarBuilderTests
         var json = GrammarBuilder.ToJson(["залей", "don't", "[unk]"]);
 
         Assert.Equal("""["залей","don't","[unk]"]""", json);
-    }
-
-    [Fact]
-    public void Grammar_Phrases_EveryAmountFrom0To999()
-    {
-        var pack = TestEnvironment.Pack("ru");
-        var grammar = GrammarBuilder.Build(pack, GrammarMode.Phrases).Where(p => p.StartsWith("залей ", StringComparison.Ordinal));
-        var parser = pack.NumberParser;
-
-        var amounts = new HashSet<int>();
-        foreach (var phrase in grammar)
-        {
-            var words = phrase.Split(' ')[1..];
-            if (parser.TryParse(words, out var value, out _))
-            {
-                amounts.Add(value);
-            }
-        }
-
-        Assert.Equal(Enumerable.Range(0, 1000), amounts.Order());
-    }
-
-    [Fact]
-    public void Grammar_Phrases_SpellingsParseBack()
-    {
-        var parser = TestEnvironment.Pack("en").NumberParser;
-
-        var spellings = NumberSpellings.Build(parser);
-
-        Assert.Equal(1000, spellings.Count);
-        foreach (var (value, variants) in spellings)
-        {
-            foreach (var variant in variants)
-            {
-                var words = variant.Split(' ');
-                Assert.True(parser.TryParse(words, out var parsed, out var consumed), variant);
-                Assert.Equal(value, parsed);
-                Assert.Equal(words.Length, consumed);
-            }
-        }
     }
 }

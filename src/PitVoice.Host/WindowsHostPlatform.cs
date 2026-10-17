@@ -37,8 +37,6 @@ public sealed class WindowsHostPlatform : IHostPlatform, IDisposable
 
     public IExecutionLog ExecutionLog { get; }
 
-    public IAudioCapture CreateCheckCapture() => new NAudioCapture();
-
     public IReadOnlyList<AudioDevice> GetInputDevices() => _capture.GetInputDevices();
 
     public IReadOnlyList<AudioDevice> GetOutputDevices() => _outputs.Value.GetOutputDevices();
@@ -47,7 +45,7 @@ public sealed class WindowsHostPlatform : IHostPlatform, IDisposable
 
     public IAudioCuePlayer CreateCuePlayer(string? deviceName, int volume) => new NAudioCuePlayer(deviceName, volume);
 
-    public IAsrEngine CreateEngine() => new VoskAsrEngine(GrammarBuilder.DefaultMode);
+    public IAsrEngine CreateEngine() => new VoskAsrEngine();
 
     public IPttSource CreatePttSource(PttBinding binding)
     {

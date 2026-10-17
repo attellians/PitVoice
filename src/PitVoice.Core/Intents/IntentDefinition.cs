@@ -22,12 +22,6 @@ public sealed record IntentDefinition(
     bool IsStandalone)
 {
     /// <summary>
-    /// True for intents that change what happens in the pit stop. Their patterns must have at least two words: a single
-    /// word is too easily heard in unrelated speech (spike of stage 2: "кто впереди меня" was recognized as "перед").
-    /// </summary>
-    public bool ChangesPitSetup { get; init; } = true;
-
-    /// <summary>
     /// Wheels a tire intent works on; <see cref="Wheels.None"/> for other intents. Whether they are added to the
     /// selection or removed from it is given by <see cref="IsNegation"/> (see <see cref="AddsWheels"/>,
     /// <see cref="RemovesWheels"/>).

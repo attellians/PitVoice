@@ -5,7 +5,7 @@ using Xunit;
 
 namespace PitVoice.Core.Tests.Languages;
 
-/// <summary>User pack additions (FR-LANG-5): reading the file, checking it and merging it into the built-in pack.</summary>
+/// <summary>User pack additions (FR-LANG-5, design D7): words added to classes of the built-in lexicon.</summary>
 public sealed class UserAdditionsTests : IDisposable
 {
     private readonly string _directory = Path.Combine(Path.GetTempPath(), "pitvoice-additions-" + Guid.NewGuid().ToString("N"));
@@ -35,13 +35,11 @@ public sealed class UserAdditionsTests : IDisposable
     }
 
     [Fact]
-    public void Own_phrase_works_and_built_in_patterns_still_work()
+    public void Own_word_works_with_every_amount_and_built_in_words_still_work()
     {
         var result = ApplyRu("""
-            language: ru
-            intents:
-              fuel.add:
-                patterns: ["плесни {amount} {unit?}"]
+            lexicon:
+              fuel: { action: [плесни] }
             """);
 
         Assert.True(result.Applied, string.Join('\n', result.Issues));
@@ -52,26 +50,45 @@ public sealed class UserAdditionsTests : IDisposable
         Assert.Equal("liters", command.Unit);
 
         var builtIn = Single(result.Pack, "залей двадцать литров");
-        Assert.Equal(IntentCatalog.FuelAdd, builtIn.Intent);
         Assert.Equal(20, builtIn.Amount);
+        Assert.Equal(IntentCatalog.FuelNone, Single(result.Pack, "не плесни").Intent);
     }
 
     [Fact]
-    public void Added_templates_are_marked_and_the_pack_names_the_file()
+    public void Own_tire_target_works_with_every_tire_verb()
     {
         var result = ApplyRu("""
             language: ru
-            intents:
-              fuel.add:
-                patterns: ["плесни {amount} {unit?}"]
+            lexicon:
+              tires: { targets: { front: [перёд] } }
             """);
 
-        var templates = result.Pack.Intents[IntentCatalog.FuelAdd].Templates;
-        var own = Assert.Single(templates, t => t.IsUserAddition);
-        Assert.Equal("плесни {amount} {unit?}", own.Source);
-        Assert.Contains(templates, t => !t.IsUserAddition);
+        Assert.True(result.Applied, string.Join('\n', result.Issues));
+        Assert.Equal(IntentCatalog.TiresFront, Single(result.Pack, "заменяем перёд").Intent);
+        Assert.Equal(IntentCatalog.TiresNoneFront, Single(result.Pack, "перёд не меняй").Intent);
+    }
+
+    [Fact]
+    public void One_own_word_never_changes_the_pit_stop_alone()
+    {
+        var result = ApplyRu("lexicon:\n  tires: { targets: { front: [перёд] } }\n");
+
+        Assert.True(result.Applied);
+        Assert.False(new CommandParser(result.Pack).Parse("перёд").IsAccepted);
+    }
+
+    [Fact]
+    public void Added_words_are_marked_and_the_pack_names_the_file()
+    {
+        var result = ApplyRu("lexicon:\n  fuel: { action: [плесни] }\n");
+
+        var own = Assert.Single(result.Pack.UserEntries);
+        Assert.Equal("плесни", own.Text);
+        Assert.Equal(new WordClass(LexiconGroup.Fuel, WordRole.Action), own.Class);
+        Assert.Contains(result.Pack.Lexicon.Entries, e => !e.IsUserAddition && e.Text == "залей");
         Assert.Equal(result.File, result.Pack.AdditionsFile);
         Assert.Null(TestPacks.Ru.AdditionsFile);
+        Assert.Equal(TestPacks.Ru.Intents, result.Pack.Intents);
     }
 
     [Fact]
@@ -90,23 +107,34 @@ public sealed class UserAdditionsTests : IDisposable
     public void Template_with_comments_only_adds_nothing()
     {
         var result = ApplyRu("""
-            # Your own phrases for the Russian pack.
-            # language: ru
+            # Your own words for the Russian pack.
+            # lexicon:
             """);
 
         Assert.True(result.Applied);
         Assert.Empty(result.Issues);
-        Assert.DoesNotContain(result.Pack.Templates, t => t.IsUserAddition);
+        Assert.Empty(result.Pack.UserEntries);
+    }
+
+    [Fact]
+    public void Created_template_loads_without_errors()
+    {
+        var path = UserAdditionsLoader.CreateTemplate(_directory, "ru");
+
+        var result = UserAdditions.Apply(TestPacks.Ru, _directory);
+
+        Assert.Equal(path, result.File);
+        Assert.True(result.Applied, string.Join('\n', result.Issues));
+        Assert.Empty(result.Issues);
+        Assert.Contains("lexicon:", File.ReadAllText(path), StringComparison.Ordinal);
     }
 
     [Fact]
     public void Malformed_file_keeps_the_built_in_pack_and_names_the_file_and_line()
     {
         var path = Write("ru", """
-            language: ru
-            intents:
-              fuel.add:
-                patterns: ["плесни {amount} {unit?}"
+            lexicon:
+              fuel: { action: [плесни }
             """);
 
         var result = UserAdditions.Apply(TestPacks.Ru, _directory);
@@ -120,85 +148,93 @@ public sealed class UserAdditionsTests : IDisposable
     }
 
     [Fact]
-    public void Unknown_intent_rejects_the_whole_file_with_file_line_and_intent()
+    public void Unknown_class_rejects_the_whole_file_with_file_line_and_class()
+    {
+        var path = Write("ru", """
+            lexicon:
+              fuel: { action: [плесни] }
+              tire_flip: { action: [переверни] }
+            """);
+
+        var result = UserAdditions.Apply(TestPacks.Ru, _directory);
+
+        Assert.False(result.Applied);
+        Assert.Same(TestPacks.Ru, result.Pack);
+        var error = Assert.Single(result.Errors);
+        Assert.Equal(path, error.File);
+        Assert.Equal(3, error.Line);
+        Assert.Contains("'tire_flip'", error.Message, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("lexicon:\n  tires: { flip: [переверни] }\n", "'tires.flip'")]
+    [InlineData("lexicon:\n  tires: { targets: { middle: [середина] } }\n", "'middle'")]
+    [InlineData("lexicon:\n  fuel: { fast: [быстро] }\n", "'fuel.fast'")]
+    public void Unknown_role_or_target_rejects_the_file(string yaml, string expected)
+    {
+        var result = ApplyRu(yaml);
+
+        Assert.False(result.Applied);
+        Assert.Contains(expected, Assert.Single(result.Errors).Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Old_additions_format_is_not_applied_and_explains_the_new_one()
     {
         var result = ApplyRu("""
             language: ru
             intents:
               fuel.add:
                 patterns: ["плесни {amount} {unit?}"]
-              tires.flip:
-                patterns: ["переверни шины"]
             """);
 
         Assert.False(result.Applied);
         Assert.Same(TestPacks.Ru, result.Pack);
         var error = Assert.Single(result.Errors);
-        Assert.Equal(result.File, error.File);
-        Assert.Equal(6, error.Line);
-        Assert.Contains("tires.flip", error.Message, StringComparison.Ordinal);
-        Assert.Contains("tires.flip", error.ToString(), StringComparison.Ordinal);
+        Assert.Contains("'intents'", error.Message, StringComparison.Ordinal);
+        Assert.Contains("classes of 'lexicon'", error.Message, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void Unknown_slot_rejects_the_whole_file_and_names_pattern_and_slot()
+    public void Word_with_a_slot_rejects_the_whole_file_and_names_word_and_class()
     {
-        var result = ApplyRu("""
-            language: ru
-            intents:
-              fuel.add:
-                patterns:
-                  - "плесни {amount} {unit?}"
-                  - "залей {liters}"
-            """);
+        var result = ApplyRu("lexicon:\n  fuel: { action: [плесни, \"залей {amount}\"] }\n");
 
         Assert.False(result.Applied);
-        Assert.Same(TestPacks.Ru, result.Pack);
-        var error = Assert.Single(result.Errors, e => e.Message.Contains("unknown slot {liters}", StringComparison.Ordinal));
-        Assert.Equal(6, error.Line);
-        Assert.Contains("залей {liters}", error.Message, StringComparison.Ordinal);
+        var error = Assert.Single(result.Errors);
+        Assert.Contains("'залей {amount}'", error.Message, StringComparison.Ordinal);
+        Assert.Contains("'fuel.action'", error.Message, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void Duplicate_of_a_built_in_pattern_is_skipped_with_a_warning_and_the_rest_applies()
+    public void Duplicate_of_a_built_in_word_is_skipped_with_a_warning_and_the_rest_applies()
     {
-        var result = ApplyRu("""
-            language: ru
-            intents:
-              fuel.add:
-                patterns:
-                  - "залей {amount} {unit?}"
-                  - "плесни {amount} {unit?}"
-            """);
+        var result = ApplyRu("lexicon:\n  fuel: { action: [залей, плесни, плесни] }\n");
 
         Assert.True(result.Applied, string.Join('\n', result.Issues));
-        var warning = Assert.Single(result.Warnings);
-        Assert.Contains("залей {amount} {unit?}", warning.Message, StringComparison.Ordinal);
-        Assert.Equal(5, warning.Line);
-        Assert.Single(result.Pack.Templates, t => t.IsUserAddition);
-    }
-
-    [Fact]
-    public void Single_word_pattern_of_a_pit_command_is_an_error()
-    {
-        var result = ApplyRu("""
-            language: ru
-            intents:
-              tires.all:
-                patterns: ["резина"]
-            """);
-
-        Assert.False(result.Applied);
-        var error = Assert.Single(result.Errors);
-        Assert.Contains("single word", error.Message, StringComparison.Ordinal);
+        Assert.Equal(2, result.Warnings.Count());
+        Assert.Contains(result.Warnings, w => w.Message.Contains("'залей' is already built into 'fuel.action'", StringComparison.Ordinal));
+        Assert.Single(result.Pack.UserEntries);
     }
 
     [Theory]
-    [InlineData("language: ru\nintents:\n  fuel.add:\n    response: \"льём\"\n", "response")]
-    [InlineData("language: ru\nconjunctions: [плюс]\nintents: {}\n", "conjunctions")]
-    [InlineData("language: ru\nintents:\n  fuel.add:\n    patterns: \"плесни {amount}\"\n", "list")]
-    [InlineData("intents:\n  fuel.add:\n    patterns: [\"плесни {amount}\"]\n", "'language' is required")]
-    public void Only_language_and_patterns_are_allowed(string yaml, string expected)
+    [InlineData("lexicon:\n  tires: { action: [не] }\n", "'не' is in 'negations'", "'tires.action'")]
+    [InlineData("lexicon:\n  tires: { action: [трогай] }\n", "'tires.action'", "'tires.keep'")]
+    public void Word_with_opposite_meaning_rejects_the_file_and_names_both_classes(string yaml, string first, string second)
+    {
+        var result = ApplyRu(yaml);
+
+        Assert.False(result.Applied);
+        var error = Assert.Single(result.Errors);
+        Assert.Contains(first, error.Message, StringComparison.Ordinal);
+        Assert.Contains(second, error.Message, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("conjunctions: [плюс]\nlexicon: {}\n", "conjunctions")]
+    [InlineData("lexicon:\n  fuel: { action: \"плесни\" }\n", "list")]
+    [InlineData("lexicon: [плесни]\n", "map groups")]
+    public void Only_language_and_lexicon_are_allowed(string yaml, string expected)
     {
         var result = ApplyRu(yaml);
 
@@ -209,12 +245,7 @@ public sealed class UserAdditionsTests : IDisposable
     [Fact]
     public void File_for_another_language_is_not_applied()
     {
-        var result = ApplyRu("""
-            language: en
-            intents:
-              fuel.add:
-                patterns: ["pour {amount} {unit?}"]
-            """);
+        var result = ApplyRu("language: en\nlexicon:\n  fuel: { action: [pour] }\n");
 
         Assert.False(result.Applied);
         Assert.Contains("'en'", Assert.Single(result.Errors).Message, StringComparison.Ordinal);
@@ -223,13 +254,8 @@ public sealed class UserAdditionsTests : IDisposable
     [Fact]
     public void Additions_for_a_language_without_pack_are_ignored_with_a_warning()
     {
-        var path = Write("de", """
-            language: de
-            intents:
-              fuel.add:
-                patterns: ["tanke {amount} {unit?}"]
-            """);
-        Write("ru", "language: ru\nintents: {}\n");
+        var path = Write("de", "lexicon:\n  fuel: { action: [tanke] }\n");
+        Write("ru", "lexicon: {}\n");
 
         var orphans = UserAdditions.FindOrphans(_directory, ["ru", "en"]);
 

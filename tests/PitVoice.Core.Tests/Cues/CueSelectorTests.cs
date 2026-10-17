@@ -11,19 +11,9 @@ public sealed class CueSelectorTests
     private static readonly ParseResult.Accepted Fuel =
         new([new ParsedCommand(IntentCatalog.FuelAdd, 30, FuelUnits.Liters, 1.0)]);
 
-    private static readonly ParseResult.Accepted Cancel =
-        new([new ParsedCommand(IntentCatalog.AssistantCancel, null, null, 1.0)]);
-
     [Fact]
     public void Applied_IsSuccess() =>
         Assert.Equal(Cue.Success, CueSelector.ForResult(Fuel, ExecutionResult.Of(ExecutionOutcome.Applied)));
-
-    [Fact]
-    public void Cancel_IsSuccess()
-    {
-        Assert.Equal(Cue.Success, CueSelector.ForResult(Cancel, ExecutionResult.Of(ExecutionOutcome.Applied)));
-        Assert.Equal(Cue.Success, CueSelector.ForResult(Cancel, null));
-    }
 
     [Theory]
     [InlineData(RejectReason.Empty)]
@@ -38,7 +28,6 @@ public sealed class CueSelectorTests
     [InlineData(ExecutionOutcome.NotInCar)]
     [InlineData(ExecutionOutcome.PartiallyApplied)]
     [InlineData(ExecutionOutcome.NotApplied)]
-    [InlineData(ExecutionOutcome.NotSupported)]
     public void OtherOutcomes_AreError(ExecutionOutcome outcome) =>
         Assert.Equal(Cue.Error, CueSelector.ForResult(Fuel, ExecutionResult.Of(outcome)));
 

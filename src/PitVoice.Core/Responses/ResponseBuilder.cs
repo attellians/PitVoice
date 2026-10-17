@@ -18,11 +18,16 @@ public sealed class ResponseBuilder
     public const string NotConnectedKey = "not_connected";
     public const string NotInCarKey = "not_in_car";
     public const string ApplyFailedKey = "apply_failed";
-    public const string NotSupportedKey = "not_supported";
 
     /// <summary>Responses every pack must have: for a rejected phrase and for every execution outcome.</summary>
     public static IReadOnlyList<string> RequiredKeys { get; } =
-        [NotUnderstoodKey, NotConnectedKey, NotInCarKey, ApplyFailedKey, NotSupportedKey];
+        [NotUnderstoodKey, NotConnectedKey, NotInCarKey, ApplyFailedKey];
+
+    /// <summary>
+    /// Responses of the removed fuel status and cancel intents and of their outcome. A pack that still has them
+    /// loads with a warning.
+    /// </summary>
+    public static IReadOnlyList<string> UnusedKeys { get; } = ["not_supported", "cancelled"];
 
     private readonly LanguagePack _pack;
 
@@ -43,8 +48,7 @@ public sealed class ResponseBuilder
     }
 
     /// <summary>
-    /// Response after execution: the intents' responses when applied (commands that were skipped because they are not
-    /// supported yet are left out), otherwise the response of the outcome.
+    /// Response after execution: the intents' responses when applied, otherwise the response of the outcome.
     /// </summary>
     public string Build(ParseResult result, ExecutionResult execution)
     {
@@ -57,13 +61,10 @@ public sealed class ResponseBuilder
 
         return execution.Outcome switch
         {
-            ExecutionOutcome.Applied => string.Join(", ", accepted.Commands
-                .Where(c => c.Intent != IntentCatalog.StatusFuel)
-                .Select(BuildApplied)),
+            ExecutionOutcome.Applied => string.Join(", ", accepted.Commands.Select(BuildApplied)),
             ExecutionOutcome.PartiallyApplied or ExecutionOutcome.NotApplied => _pack.Responses[ApplyFailedKey],
             ExecutionOutcome.NotConnected => _pack.Responses[NotConnectedKey],
             ExecutionOutcome.NotInCar => _pack.Responses[NotInCarKey],
-            ExecutionOutcome.NotSupported => _pack.Responses[NotSupportedKey],
             _ => throw new ArgumentOutOfRangeException(nameof(execution), execution.Outcome, "unknown outcome"),
         };
     }
@@ -74,14 +75,14 @@ public sealed class ResponseBuilder
     /// </summary>
     private string BuildApplied(ParsedCommand command) =>
         command is { Amount: 0 } && command.Intent == IntentCatalog.FuelAdd
-            && _pack.Intents.TryGetValue(IntentCatalog.FuelNone, out var fuelNone)
-            ? fuelNone.Response
+            && _pack.Supports(IntentCatalog.FuelNone)
+            ? _pack.ResponseOf(IntentCatalog.FuelNone)
             : Build(command);
 
     public string Build(ParsedCommand command)
     {
         ArgumentNullException.ThrowIfNull(command);
-        var template = _pack.Intents[command.Intent].Response;
+        var template = _pack.ResponseOf(command.Intent);
         return template
             .Replace("{amount}", command.Amount?.ToString(CultureInfo.InvariantCulture) ?? string.Empty, StringComparison.Ordinal)
             .Replace("{unit}", UnitForm(command.Unit, command.Amount), StringComparison.Ordinal);

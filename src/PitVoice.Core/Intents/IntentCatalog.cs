@@ -34,8 +34,6 @@ public static class IntentCatalog
     public static readonly IntentId RepairFast = new("repair.fast");
     public static readonly IntentId RepairNone = new("repair.none");
     public static readonly IntentId PitClear = new("pit.clear");
-    public static readonly IntentId StatusFuel = new("status.fuel");
-    public static readonly IntentId AssistantCancel = new("assistant.cancel");
 
     public const string FuelGroup = "fuel";
     public const string TiresGroup = "tires";
@@ -73,8 +71,6 @@ public static class IntentCatalog
         new(RepairFast, NoSlots, RepairGroup, IsNegation: false, IsStandalone: false),
         new(RepairNone, NoSlots, RepairGroup, IsNegation: true, IsStandalone: false),
         new(PitClear, NoSlots, null, IsNegation: false, IsStandalone: true),
-        new(StatusFuel, NoSlots, null, IsNegation: false, IsStandalone: false) { ChangesPitSetup = false },
-        new(AssistantCancel, NoSlots, null, IsNegation: false, IsStandalone: true) { ChangesPitSetup = false },
     ];
 
     private static IntentDefinition AddTires(IntentId id, Wheels wheels) =>

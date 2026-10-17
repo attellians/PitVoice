@@ -32,9 +32,6 @@ public sealed record AppSettings
     /// <summary>Confidence threshold of the parser, 0..1.</summary>
     public double Threshold { get; init; } = ParseOptions.DefaultConfidenceThreshold;
 
-    /// <summary>True once the user checked a phrase in the window; the setup checklist then hides its last item.</summary>
-    public bool SetupCheckDone { get; init; }
-
     /// <summary>Language of the window and the tray menu; null follows <see cref="Language"/>.</summary>
     public string? InterfaceLanguage { get; init; }
 

@@ -192,18 +192,6 @@ public sealed class JsonSettingsStore : ISettingsStore
             }
         }
 
-        if (TryGet(root, "setupCheckDone", out var checkDone))
-        {
-            if (checkDone.ValueKind is JsonValueKind.True or JsonValueKind.False)
-            {
-                settings = settings with { SetupCheckDone = checkDone.GetBoolean() };
-            }
-            else
-            {
-                warnings.Add($"settings: invalid setupCheckDone {checkDone.GetRawText()}, using false");
-            }
-        }
-
         if (TryGet(root, "interfaceLanguage", out var interfaceLanguage) && interfaceLanguage.ValueKind != JsonValueKind.Null)
         {
             if (interfaceLanguage.ValueKind == JsonValueKind.String && !string.IsNullOrWhiteSpace(interfaceLanguage.GetString()))
@@ -335,7 +323,6 @@ public sealed class JsonSettingsStore : ISettingsStore
             writer.WriteNumber("cueVolume", settings.CueVolume);
             writer.WriteString("defaultUnit", settings.DefaultUnit);
             writer.WriteNumber("threshold", settings.Threshold);
-            writer.WriteBoolean("setupCheckDone", settings.SetupCheckDone);
             WriteNullable(writer, "interfaceLanguage", settings.InterfaceLanguage);
             writer.WriteString("theme", settings.Theme.ToString().ToLowerInvariant());
             writer.WriteEndObject();

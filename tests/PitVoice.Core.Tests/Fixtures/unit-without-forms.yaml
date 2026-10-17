@@ -6,16 +6,14 @@ units:
   gallons:
     synonyms: [галлон]
     forms: { one: галлон }
-intents:
-  tires.all:
-    patterns: ["меняй шины"]
-    response: "меняем шины"
+lexicon:
+  tires: { action: [меняй], object: [шины] }
 responses:
+  tires.all: "меняем шины"
   not_understood: "не понял"
   not_connected: "no connection"
   not_in_car: "not in car"
   apply_failed: "failed"
-  not_supported: "not supported"
 tests:
   - say: "меняй шины"
     expect: [{ intent: tires.all }]

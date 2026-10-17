@@ -100,20 +100,18 @@ public sealed class JsonSettingsStoreTests : IDisposable
         Assert.Equal(40, settings.CueVolume);
         Assert.Equal(FuelUnits.Gallons, settings.DefaultUnit);
         Assert.Equal(0.7, settings.Threshold);
-        Assert.False(settings.SetupCheckDone); // a stage 4 file has no checklist flag
     }
 
     [Fact]
-    public void SetupCheckDone_RoundTrips_AndInvalidValueWarns()
+    public void Removed_setupCheckDone_key_is_ignored_and_dropped_on_save()
     {
-        Store().Save(AppSettings.Defaults("ru") with { SetupCheckDone = true });
-        Assert.Contains("\"setupCheckDone\": true", File.ReadAllText(FilePath), StringComparison.Ordinal);
-        Assert.True(Store().Load().Settings.SetupCheckDone);
+        var result = LoadFrom("""{ "language": "ru", "setupCheckDone": true }""");
 
-        var invalid = LoadFrom("""{ "language": "ru", "setupCheckDone": "yes" }""");
+        Assert.Empty(result.Warnings);
+        Assert.Equal("ru", result.Settings.Language);
 
-        Assert.False(invalid.Settings.SetupCheckDone);
-        Assert.Contains("setupCheckDone", Assert.Single(invalid.Warnings), StringComparison.Ordinal);
+        Store().Save(result.Settings);
+        Assert.DoesNotContain("setupCheckDone", File.ReadAllText(FilePath), StringComparison.Ordinal);
     }
 
     [Fact]

@@ -1,0 +1,27 @@
+name: Неизвестный класс
+language: ru
+plural_rules: ru
+units:
+  liters:
+    synonyms: [литр, литра, литров]
+    forms: { one: литр, few: литра, many: литров }
+conjunctions: [и]
+fillers: [пожалуйста]
+lexicon:
+  fuel: { action: [залей] }
+  tires: { action: [меняй], object: [шины] }
+  tire_flip: { action: [переверни] }
+responses:
+  fuel.add: "заливаем {amount} {unit}"
+  tires.all: "меняем шины"
+  not_understood: "не понял"
+  not_connected: "no connection"
+  not_in_car: "not in car"
+  apply_failed: "failed"
+tests:
+  - say: "залей десять литров"
+    expect: [{ intent: fuel.add, amount: 10, unit: liters }]
+  - say: "меняй шины"
+    expect: [{ intent: tires.all }]
+  - say: "привет"
+    expect: reject

@@ -58,4 +58,26 @@ public class VocabularyBuilderTests
         Assert.DoesNotContain(first, string.IsNullOrWhiteSpace);
         Assert.DoesNotContain(first, w => w.Contains(' '));
     }
+
+    [Fact]
+    public void Vocabulary_contains_every_verb_form_and_words_of_multi_word_entries()
+    {
+        var words = VocabularyBuilder.Build(TestPacks.Ru);
+
+        Assert.Contains("заменяем", words);
+        Assert.Contains("поменяй", words);
+        Assert.Contains("заправить", words);
+        Assert.Contains("долей", words);
+        Assert.Contains("переднее", words);
+        Assert.Contains("сторону", words);
+        Assert.Contains("me", VocabularyBuilder.Build(TestPacks.En));
+    }
+
+    [Fact]
+    public void Usage_names_the_classes_of_a_word()
+    {
+        Assert.Equal("tires.action, windshield.action", VocabularyBuilder.Usage(TestPacks.Ru, "смени"));
+        Assert.Equal("tires.targets.lf, tires.targets.lr", VocabularyBuilder.Usage(TestPacks.Ru, "левое"));
+        Assert.Equal("negations", VocabularyBuilder.Usage(TestPacks.Ru, "не"));
+    }
 }

@@ -417,7 +417,8 @@ internal static class SpeechRunner
             var words = result.Phrase.Words.Select(w =>
                 w.Confidence is { } c ? $"{w.Text}:{c.ToString("0.00", CultureInfo.InvariantCulture)}" : w.Text);
             Console.WriteLine($"words:    {string.Join(' ', words)}");
-            // A word unsure only of its form gets a second look with the alternatives (design D13).
+            // A word unsure only of its form gets a second look with the alternatives (design D13); a wheel name heard in
+            // other forms is read from the alternatives of forms. Both print the words that were parsed.
             var speech = SpeechParsing.Parse(_parser, _recognizer, buffer, result.Phrase, options);
             if (speech.FormsJoined)
             {

@@ -86,6 +86,32 @@ public sealed class SpeechRecognizer
         }
     }
 
+    /// <summary>
+    /// <see cref="IAsrEngine.RecognizeFormAlternatives"/>, contained: empty when the engine has no alternatives or fails,
+    /// so the first result stays.
+    /// </summary>
+    public IReadOnlyList<RecognizedPhrase> RecognizeFormAlternatives(AudioBuffer buffer, RecognizedPhrase phrase, Func<string, string> readAs)
+    {
+        ArgumentNullException.ThrowIfNull(buffer);
+        ArgumentNullException.ThrowIfNull(phrase);
+        ArgumentNullException.ThrowIfNull(readAs);
+        if (buffer.IsEmpty || !Engine.IsLoaded)
+        {
+            return [];
+        }
+
+        try
+        {
+            return Engine.RecognizeFormAlternatives(buffer, phrase, readAs).Select(MarkUnknownWords).ToArray();
+        }
+#pragma warning disable CA1031 // A failed second look keeps the first result; it must never fail the phrase.
+        catch (Exception)
+#pragma warning restore CA1031
+        {
+            return [];
+        }
+    }
+
     /// <summary>Forces confidence 0 on every <see cref="UnknownWord"/>.</summary>
     public static RecognizedPhrase MarkUnknownWords(RecognizedPhrase phrase)
     {

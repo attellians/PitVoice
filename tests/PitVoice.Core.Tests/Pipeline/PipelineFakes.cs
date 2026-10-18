@@ -85,6 +85,12 @@ internal sealed class ScriptedAsrEngine : IAsrEngine
         return step.Error is not null ? throw step.Error : step.Phrase!;
     }
 
+    /// <summary>What <see cref="RecognizeFormAlternatives"/> returns for every phrase.</summary>
+    public IReadOnlyList<RecognizedPhrase> FormAlternatives { get; set; } = [];
+
+    public IReadOnlyList<RecognizedPhrase> RecognizeFormAlternatives(AudioBuffer buffer, RecognizedPhrase phrase, Func<string, string> readAs) =>
+        FormAlternatives;
+
     public void Unload()
     {
     }

@@ -7,7 +7,10 @@ using Xunit;
 
 namespace PitVoice.Core.Tests.Asr;
 
-/// <summary>Design D13: a word unsure only of its form gets a second look with the recognizer's alternatives.</summary>
+/// <summary>
+/// Design D13: a word unsure only of its form gets a second look with the recognizer's alternatives; a phrase not
+/// understood with a word with forms is read from the alternatives of forms (read-wheel-names-from-alternatives).
+/// </summary>
 public sealed class SpeechParsingTests
 {
     private static readonly AudioBuffer OneSecond = new(new short[AudioBuffer.SampleRate]);
@@ -54,14 +57,114 @@ public sealed class SpeechParsingTests
     }
 
     [Fact]
-    public void Other_rejections_need_no_second_look()
+    public void Rejection_without_a_word_with_forms_needs_no_second_look()
     {
-        var engine = new FormsEngine();
+        var engine = new FormsEngine { Alternatives = [Phrase(("меняй", 1.0), ("шины", 1.0))] };
 
-        var result = Parse(engine, Phrase(("левые", 0.5)));
+        var result = Parse(engine, Phrase(("меняй", 1.0), ("шины", 1.0), ("меняй", 1.0), ("шины", 1.0)));
 
         Assert.Equal(0, engine.Calls);
+        Assert.Equal(0, engine.AlternativeCalls);
+        Assert.False(result.FormsJoined);
         Assert.Equal(RejectReason.NotUnderstood, Assert.IsType<ParseResult.Rejected>(result.Result).Reason);
+    }
+
+    [Fact]
+    public void Conflict_needs_no_second_look()
+    {
+        var engine = new FormsEngine { Alternatives = [Phrase(("меняй", 1.0), ("левые", 1.0))] };
+
+        var result = Parse(engine, Phrase(("меняй", 1.0), ("левые", 1.0), ("и", 1.0), ("не", 1.0), ("меняй", 1.0), ("шины", 1.0)));
+
+        Assert.Equal(0, engine.AlternativeCalls);
+        Assert.Equal(RejectReason.Conflict, Assert.IsType<ParseResult.Rejected>(result.Result).Reason);
+    }
+
+    [Fact]
+    public void Wheel_name_heard_in_other_forms_is_read_from_the_alternatives()
+    {
+        var alternative = Phrase(("меняй", 1.0), ("переднее", 1.0), ("левое", 1.0));
+        var engine = new FormsEngine { Alternatives = [alternative] };
+
+        var result = Parse(engine, Phrase(("меняй", 1.0), ("передние", 0.9), ("левое", 0.9)));
+
+        Assert.Equal(1, engine.AlternativeCalls);
+        Assert.Equal(0, engine.Calls);
+        Assert.True(result.FormsJoined);
+        Assert.Same(alternative, result.Phrase);
+        Assert.Equal(IntentCatalog.TiresLF, Assert.Single(Assert.IsType<ParseResult.Accepted>(result.Result).Commands).Intent);
+    }
+
+    [Fact]
+    public void Alternative_that_is_not_accepted_keeps_the_rejection()
+    {
+        // "меняй левые переднее" was said as "меняй левые и передние"; the alternative of forms is still side and axle.
+        var phrase = Phrase(("меняй", 1.0), ("левые", 0.9), ("переднее", 0.9));
+        var engine = new FormsEngine { Alternatives = [Phrase(("меняй", 1.0), ("левые", 1.0), ("передние", 1.0))] };
+
+        var result = Parse(engine, phrase);
+
+        Assert.Equal(1, engine.AlternativeCalls);
+        Assert.False(result.FormsJoined);
+        Assert.Same(phrase, result.Phrase);
+        Assert.Equal(RejectReason.NotUnderstood, Assert.IsType<ParseResult.Rejected>(result.Result).Reason);
+    }
+
+    [Fact]
+    public void Several_readings_among_the_alternatives_keep_the_rejection()
+    {
+        var engine = new FormsEngine
+        {
+            Alternatives =
+            [
+                Phrase(("смени", 1.0), ("переднее", 1.0), ("правое", 1.0)),
+                Phrase(("смени", 1.0), ("переднее", 1.0), ("левое", 1.0)),
+            ],
+        };
+
+        var result = Parse(engine, Phrase(("смени", 1.0), ("переднее", 0.9), ("правая", 0.9)));
+
+        Assert.False(result.FormsJoined);
+        Assert.Equal(RejectReason.NotUnderstood, Assert.IsType<ParseResult.Rejected>(result.Result).Reason);
+    }
+
+    [Fact]
+    public void Two_alternatives_with_the_same_reading_are_one_reading()
+    {
+        var engine = new FormsEngine
+        {
+            Alternatives =
+            [
+                Phrase(("смени", 1.0), ("переднее", 0.95), ("правое", 0.95)),
+                Phrase(("смени", 1.0), ("правое", 0.9), ("переднее", 0.9)),
+            ],
+        };
+
+        var result = Parse(engine, Phrase(("смени", 1.0), ("переднее", 0.9), ("правая", 0.9)));
+
+        Assert.True(result.FormsJoined);
+        Assert.Equal(IntentCatalog.TiresRF, Assert.Single(Assert.IsType<ParseResult.Accepted>(result.Result).Commands).Intent);
+    }
+
+    [Fact]
+    public void No_alternatives_or_a_failing_engine_keep_the_rejection()
+    {
+        var phrase = Phrase(("меняй", 1.0), ("передние", 0.9), ("левое", 0.9));
+
+        var none = Parse(new FormsEngine(), phrase);
+        var failing = Parse(new FormsEngine { Throw = true }, phrase);
+
+        Assert.False(none.FormsJoined);
+        Assert.False(failing.FormsJoined);
+        Assert.Equal(RejectReason.NotUnderstood, Assert.IsType<ParseResult.Rejected>(failing.Result).Reason);
+    }
+
+    [Fact]
+    public void Typed_text_is_not_affected()
+    {
+        var result = new CommandParser(TestPacks.Ru).Parse("смени переднее правая");
+
+        Assert.Equal(RejectReason.NotUnderstood, Assert.IsType<ParseResult.Rejected>(result).Reason);
     }
 
     [Fact]
@@ -108,6 +211,10 @@ public sealed class SpeechParsingTests
 
         public int Calls { get; private set; }
 
+        public IReadOnlyList<RecognizedPhrase> Alternatives { get; init; } = [];
+
+        public int AlternativeCalls { get; private set; }
+
         public bool IsLoaded => true;
 
         public string? Language => "ru";
@@ -121,6 +228,12 @@ public sealed class SpeechParsingTests
         {
             Calls++;
             return Throw ? throw new InvalidOperationException("broken") : Joined;
+        }
+
+        public IReadOnlyList<RecognizedPhrase> RecognizeFormAlternatives(AudioBuffer buffer, RecognizedPhrase phrase, Func<string, string> readAs)
+        {
+            AlternativeCalls++;
+            return Throw ? throw new InvalidOperationException("broken") : Alternatives;
         }
 
         public void Unload()

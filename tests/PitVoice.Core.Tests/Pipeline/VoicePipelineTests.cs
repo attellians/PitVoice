@@ -3,6 +3,7 @@ using PitVoice.Core.Asr;
 using PitVoice.Core.Audio;
 using PitVoice.Core.Cues;
 using PitVoice.Core.Events;
+using PitVoice.Core.Intents;
 using PitVoice.Core.Parsing;
 using PitVoice.Core.Pipeline;
 using PitVoice.Core.Pit;
@@ -227,6 +228,19 @@ public sealed class VoicePipelineTests : IAsyncLifetime
             events.Select(e => e.GetType()));
         Assert.Equal("залей тридцать литров", Assert.IsType<SpeechRecognized>(events[3]).Text);
         Assert.False(Assert.IsType<PttReleased>(events[1]).Ignored);
+    }
+
+    [Fact]
+    public async Task Events_OfPhraseReadFromFormAlternative_ShowItsWords()
+    {
+        _engine.FormAlternatives = [RecognizedPhrase.FromText("меняй переднее левое")];
+
+        Say("меняй передние левое");
+        await Result(1);
+
+        var events = EventsOf(1);
+        Assert.Equal("меняй переднее левое", Assert.Single(events.OfType<SpeechRecognized>()).Text);
+        Assert.Equal(IntentCatalog.TiresLF, Assert.Single(Assert.Single(events.OfType<CommandsParsed>()).Commands).Intent);
     }
 
     [Fact]

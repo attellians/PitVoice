@@ -44,5 +44,16 @@ public interface IAsrEngine
     /// <param name="readAs">The word a form is read as ("левое" → "левые"); other words are returned as they are.</param>
     RecognizedPhrase? RecognizeForms(AudioBuffer buffer, RecognizedPhrase phrase, Func<string, string> readAs) => null;
 
+    /// <summary>
+    /// The recognizer's alternatives for the same buffer that differ from <paramref name="phrase"/> only by forms of its
+    /// words, word for word, and score close to the best (design D2 of read-wheel-names-from-alternatives): "меняй
+    /// переднее левое" for "меняй передние левое". Word confidences are the shares of <see cref="RecognizeForms"/>.
+    /// Empty when the engine has no alternatives. May throw; <see cref="SpeechRecognizer"/> contains that.
+    /// </summary>
+    /// <param name="buffer">The same buffer.</param>
+    /// <param name="phrase">The words recognized for it.</param>
+    /// <param name="readAs">The word a form is read as ("левое" → "левые"); other words are returned as they are.</param>
+    IReadOnlyList<RecognizedPhrase> RecognizeFormAlternatives(AudioBuffer buffer, RecognizedPhrase phrase, Func<string, string> readAs) => [];
+
     void Unload();
 }

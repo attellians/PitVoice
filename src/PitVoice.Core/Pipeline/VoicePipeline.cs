@@ -280,18 +280,21 @@ public sealed class VoicePipeline : IAsyncDisposable
             return Fail(phrase.Id, PipelineStage.Recognition, recognition.Error!);
         }
 
-        Publish(new SpeechRecognized(phrase.Id, Now, recognition.Phrase, recognition.RecognitionTime));
-
-        ParseResult parse;
+        SpeechParse speech;
         try
         {
-            // A word unsure only of its form gets a second look with the alternatives (design D13).
-            parse = SpeechParsing.Parse(_services.Parser, _services.Recognizer, phrase.Audio, recognition.Phrase, _services.ParseOptions).Result;
+            // A word unsure only of its form gets a second look with the alternatives (design D13), and a wheel name
+            // heard in other forms is read from the alternatives of forms; the event shows the words that were parsed.
+            speech = SpeechParsing.Parse(_services.Parser, _services.Recognizer, phrase.Audio, recognition.Phrase, _services.ParseOptions);
         }
         catch (Exception e)
         {
+            Publish(new SpeechRecognized(phrase.Id, Now, recognition.Phrase, recognition.RecognitionTime));
             return Fail(phrase.Id, PipelineStage.Parsing, e.Message);
         }
+
+        Publish(new SpeechRecognized(phrase.Id, Now, speech.Phrase, recognition.RecognitionTime));
+        var parse = speech.Result;
 
         if (parse is not ParseResult.Accepted accepted)
         {
@@ -306,7 +309,7 @@ public sealed class VoicePipeline : IAsyncDisposable
         string response;
         try
         {
-            execution = await _services.Executor.ExecuteAsync(accepted, recognition.Phrase.Text, _stopping.Token).ConfigureAwait(false);
+            execution = await _services.Executor.ExecuteAsync(accepted, speech.Phrase.Text,_stopping.Token).ConfigureAwait(false);
             response = _services.Responses.Build(parse, execution);
         }
         catch (OperationCanceledException) when (_stopping.IsCancellationRequested)

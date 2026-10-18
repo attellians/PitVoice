@@ -185,22 +185,54 @@ public sealed class VoskAsrEngine : IAsrEngine, IDisposable
     /// <summary>Alternatives asked for when a word may be only unsure of its form.</summary>
     internal const int FormAlternatives = 10;
 
+    /// <summary>How far below the best score an alternative of forms may be (design D2 of read-wheel-names-from-alternatives).</summary>
+    internal const double FormScoreMargin = 0.5;
+
     public RecognizedPhrase? RecognizeForms(AudioBuffer buffer, RecognizedPhrase phrase, Func<string, string> readAs)
     {
         ArgumentNullException.ThrowIfNull(buffer);
         ArgumentNullException.ThrowIfNull(phrase);
         ArgumentNullException.ThrowIfNull(readAs);
+        if (buffer.IsEmpty || phrase.Words.Count == 0)
+        {
+            EnsureLoaded();
+            return phrase;
+        }
+
+        return JoinForms(phrase, RecognizeAlternatives(buffer), readAs);
+    }
+
+    public IReadOnlyList<RecognizedPhrase> RecognizeFormAlternatives(AudioBuffer buffer, RecognizedPhrase phrase, Func<string, string> readAs)
+    {
+        ArgumentNullException.ThrowIfNull(buffer);
+        ArgumentNullException.ThrowIfNull(phrase);
+        ArgumentNullException.ThrowIfNull(readAs);
+        if (buffer.IsEmpty || phrase.Words.Count == 0)
+        {
+            EnsureLoaded();
+            return [];
+        }
+
+        return SelectFormAlternatives(phrase, RecognizeAlternatives(buffer), readAs);
+    }
+
+    private void EnsureLoaded()
+    {
+        lock (_lock)
+        {
+            _ = _model ?? throw new InvalidOperationException("recognition model is not loaded");
+        }
+    }
+
+    /// <summary>Recognizes the buffer once more with up to <see cref="FormAlternatives"/> alternatives.</summary>
+    private IReadOnlyList<(double Score, IReadOnlyList<string> Words)> RecognizeAlternatives(AudioBuffer buffer)
+    {
         VoskModelHandle model;
         string grammar;
         lock (_lock)
         {
             model = _model ?? throw new InvalidOperationException("recognition model is not loaded");
             grammar = _grammar!;
-        }
-
-        if (buffer.IsEmpty || phrase.Words.Count == 0)
-        {
-            return phrase;
         }
 
         using var recognizer = VoskNative.RecognizerNewGrammar(model, AudioBuffer.SampleRate, grammar);
@@ -211,7 +243,44 @@ public sealed class VoskAsrEngine : IAsrEngine, IDisposable
 
         VoskNative.RecognizerSetWords(recognizer, 1);
         VoskNative.RecognizerSetMaxAlternatives(recognizer, FormAlternatives);
-        return JoinForms(phrase, ParseAlternatives(recognizer.Recognize(buffer.ToArray())), readAs);
+        return ParseAlternatives(recognizer.Recognize(buffer.ToArray()));
+    }
+
+    /// <summary>
+    /// Alternatives with as many words as <paramref name="phrase"/>, each read as the same word in the same place, that
+    /// differ from it in at least one form and score no lower than the best minus <see cref="FormScoreMargin"/>. An
+    /// alternative with any other word ("и", "не", "меня") is left out. Each word's confidence is its share of all
+    /// alternatives, as in <see cref="JoinForms"/>; an unknown word keeps 0.
+    /// </summary>
+    internal static IReadOnlyList<RecognizedPhrase> SelectFormAlternatives(
+        RecognizedPhrase phrase, IReadOnlyList<(double Score, IReadOnlyList<string> Words)> alternatives, Func<string, string> readAs)
+    {
+        if (alternatives.Count == 0)
+        {
+            return [];
+        }
+
+        var best = alternatives.Max(a => a.Score);
+        var selected = new List<RecognizedPhrase>();
+        foreach (var (score, words) in alternatives)
+        {
+            if (score < best - FormScoreMargin || words.Count != phrase.Words.Count)
+            {
+                continue;
+            }
+
+            var sameWords = words.Select((word, i) => readAs(word) == readAs(phrase.Words[i].Text)).All(same => same);
+            var sameForms = words.Select((word, i) => string.Equals(word, phrase.Words[i].Text, StringComparison.Ordinal)).All(same => same);
+            if (!sameWords || sameForms || selected.Any(s => s.Words.Select(w => w.Text).SequenceEqual(words, StringComparer.Ordinal)))
+            {
+                continue;
+            }
+
+            var unsure = new RecognizedPhrase(words.Select(word => new RecognizedWord(word, 0.0)).ToArray());
+            selected.Add(JoinForms(unsure, alternatives, readAs));
+        }
+
+        return selected;
     }
 
     /// <summary>

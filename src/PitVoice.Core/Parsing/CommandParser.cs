@@ -598,6 +598,13 @@ public sealed class CommandParser
             return [];
         }
 
+        // A negation with nothing after it ("right side don't") is a short word the recognizer put in place of a mumbled
+        // tail, not a request (reject-trailing-negation D1); a removed filler ("не надо") counts as a word after it.
+        if (part[^1] is { Kind: SpanKind.Negation, Tokens: [{ FillerAfter: false }] })
+        {
+            return [];
+        }
+
         var quality = part.Any(s => s.Kind == SpanKind.Unknown) ? FuzzyQuality : 1.0;
         var amounts = part.Where(s => s.Kind == SpanKind.Number).Select(s => ((NumberToken)s.Tokens[0]).Value).ToArray();
         var units = part.Where(s => s.Kind == SpanKind.Unit).Select(s => ((UnitToken)s.Tokens[0]).Unit).ToArray();

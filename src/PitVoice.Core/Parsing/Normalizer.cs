@@ -35,6 +35,7 @@ public sealed class Normalizer
     {
         var texts = new List<string>();
         var confidences = new List<double>();
+        var fillerAfter = new List<bool>();
         foreach (var word in words)
         {
             var confidence = Clamp(word.Confidence);
@@ -42,11 +43,17 @@ public sealed class Normalizer
             {
                 if (removeFillers && _rules.Fillers.Contains(piece))
                 {
+                    if (fillerAfter.Count > 0)
+                    {
+                        fillerAfter[^1] = true;
+                    }
+
                     continue;
                 }
 
                 texts.Add(piece);
                 confidences.Add(confidence);
+                fillerAfter.Add(false);
             }
         }
 
@@ -63,18 +70,21 @@ public sealed class Normalizer
                     confidence = Math.Min(confidence, confidences[k]);
                 }
 
-                result.Add(new NumberToken(value, string.Join(' ', texts.Skip(i).Take(consumed)), confidence));
+                result.Add(new NumberToken(value, string.Join(' ', texts.Skip(i).Take(consumed)), confidence)
+                {
+                    FillerAfter = fillerAfter[i + consumed - 1],
+                });
                 i += consumed;
                 continue;
             }
 
             if (_rules.UnitSynonyms.TryGetValue(texts[i], out var unit))
             {
-                result.Add(new UnitToken(unit, texts[i], confidences[i]));
+                result.Add(new UnitToken(unit, texts[i], confidences[i]) { FillerAfter = fillerAfter[i] });
             }
             else
             {
-                result.Add(new WordToken(texts[i], confidences[i]));
+                result.Add(new WordToken(texts[i], confidences[i]) { FillerAfter = fillerAfter[i] });
             }
 
             i++;

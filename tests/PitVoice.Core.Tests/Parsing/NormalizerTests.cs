@@ -29,6 +29,25 @@ public class NormalizerTests
     }
 
     [Fact]
+    public void Removed_filler_marks_the_word_before_it()
+    {
+        var withFiller = TestPacks.Ru.Normalizer.Normalize("топливо не надо");
+        var without = TestPacks.Ru.Normalizer.Normalize("топливо не");
+
+        Assert.Equal(["топливо", "не"], withFiller.Select(t => t.Text));
+        Assert.Equal([false, true], withFiller.Select(t => t.FillerAfter));
+        Assert.Equal([false, false], without.Select(t => t.FillerAfter));
+    }
+
+    [Fact]
+    public void Filler_after_a_number_marks_the_number()
+    {
+        var tokens = TestPacks.En.Normalizer.Normalize("add twenty five please");
+
+        Assert.True(Assert.IsType<NumberToken>(tokens[1]).FillerAfter);
+    }
+
+    [Fact]
     public void Number_words_are_folded_into_one_token()
     {
         var tokens = TestPacks.Ru.Normalizer.Normalize("залей сто двадцать пять литров");

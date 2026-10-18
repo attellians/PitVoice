@@ -189,6 +189,8 @@ tests:
     expect: [{ intent: tires.none.left }, { intent: tires.none.rr }]
   - say: "add twenty and fronts"
     expect: reject
+  - say: "right side don't"
+    expect: reject                                       # a negation needs words after it: "don't change right side"
 
   # removal
   - say: "no tires"

@@ -222,6 +222,8 @@ tests:
     expect: [{ intent: tires.none.right }]
   - say: "без правой стороны"
     expect: reject
+  - say: "шины не"
+    expect: reject                                       # a negation needs words after it: «шины не меняем»
   - say: "не меняй правую сторону"
     expect: [{ intent: tires.none.right }]
   - say: "не трогай передние"

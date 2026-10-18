@@ -5,6 +5,9 @@ namespace PitVoice.Core.Parsing;
 /// <param name="Confidence">Recognition confidence 0..1 (1.0 when unknown).</param>
 public abstract record Token(string Text, double Confidence)
 {
+    /// <summary>True when a filler right after this token was removed ("не надо"): the token was not the last word.</summary>
+    public bool FillerAfter { get; init; }
+
     public override string ToString() => Text;
 }
 

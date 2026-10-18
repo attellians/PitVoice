@@ -28,18 +28,18 @@ most 1% false (a different command executed). A rejection ("not understood") is 
 
 | # | Setup | Action | Expected | Result |
 |---|---|---|---|---|
-| 2.1 | `pitvoice`, PTT on the wheel, window closed (tray), game not running | Task Manager → Details, "CPU time" of `PitVoice.exe`; note it, wait 60 s, note again | under 1% of one core above what the PTT device costs (GT Neo rim ~0.4%) | earlier: 0.81% on 0.0.11 |
-| 2.2 | 2.1, say one phrase so the model is loaded | "Memory (private working set)" and "Working set" of `PitVoice.exe` | working set ≤ 450 MB | earlier: 390 MB on 0.0.11 |
+| 2.1 | `pitvoice`, PTT on the wheel, window closed (tray), game not running | Task Manager → Details, "CPU time" of `PitVoice.exe`; note it, wait 60 s, note again | under 1% of one core above what the PTT device costs (GT Neo rim ~0.4%) | ok (2026-10-18, Release 0.0.35, settings `spike\c1`: ru, PTT on GT Neo button 1): `TotalProcessorTime` of `PitVoice.exe` over 60.0 s in the tray — 0.52% of one core, the rim included (earlier: 0.81% on 0.0.11) |
+| 2.2 | 2.1, say one phrase so the model is loaded | "Memory (private working set)" and "Working set" of `PitVoice.exe` | working set ≤ 450 MB | ok (2026-10-18, 0.0.35): model loaded at start (439 ms); after one phrase working set 386 MB, peak 397 MB (earlier: 390 MB on 0.0.11). Noted: private bytes (commit) 972 MB, not measured before; TZ §12 counts the working set |
 
 ## 3. Latency
 
 TZ §7: end of the recording → start of the result cue ≤ 1000 ms for a phrase of about 2 s confirmed by telemetry. The
-host prints `cue <name> <N> ms after the recording ended` for every phrase (`pitvoice-cli run`), the app shows the
-same in the log of recent phrases.
+host prints `cue <name> <N> ms after the recording ended` for every phrase (`pitvoice-cli run`); the window of the app
+does not show it, and the app and `run` cannot run at the same time.
 
 | # | Setup | Action | Expected | Result |
 |---|---|---|---|---|
-| 3.1 | Test Drive, driver in the car, `pitvoice-cli run` | ten phrases: fuel, all tires, two wheels, windshield, fast repair, a compound, clear, two combined, one not understood | every applied phrase ≤ 1000 ms; note min–max | earlier: 173–262 ms applied, 29–71 ms rejected over 17 phrases on 0.0.10 |
+| 3.1 | Test Drive, driver in the car, `pitvoice-cli run` | ten phrases: fuel, all tires, two wheels, windshield, fast repair, a compound, clear, two combined, one not understood | every applied phrase ≤ 1000 ms; note min–max | ok (2026-10-18, Release 0.0.35, fifine mic, cues from the USB headset): 16 presses. Applied and confirmed by telemetry: fuel 30 (209 ms), all tires (169, 166), two wheels LF+RR (189), windshield (158), wet compound TC(1)+4 wheels (202), clear (180), tires + fuel 20 (212), tires.none (185) — 158–212 ms. Rejected: 41–89 ms (low confidence «залей» 0.41, «сбрось все» 0.53, «не» 0.42; «литр» alone; one empty recording). Fast repair: sent FR, not confirmed (no fast repairs in Test Drive, as in `iracing-pit.md` 5.3–5.5); its error cue was cut by the next press. No false execution. Earlier: 173–262 ms applied, 29–71 ms rejected on 0.0.10 |
 
 ## 4. Reliability and rights
 
@@ -57,4 +57,5 @@ same in the log of recent phrases.
 
 ## Result
 
-Not accepted yet: accuracy (1.1, 1.2) passes; 2.1, 2.2, 3.1 wait for the measurement on the release build.
+On 0.0.35 (2026-10-18) every measured item passes: accuracy (1.1, 1.2), idle CPU (2.1), memory (2.2), latency (3.1).
+4.1–4.3 are covered by tests and earlier checks. Left: 5.1, the size of the installer of the release v0.1.0.

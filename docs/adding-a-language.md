@@ -151,9 +151,16 @@ More rules worth knowing:
 
 - **Two words at least.** Every rule needs two words, so one word never changes the pit stop, whatever the lexicon
   and the user's additions contain. ("кто впереди меня" was once heard as "перед" and changed the front tires.)
-- **Several targets per action.** "меняй левые передние" gives `tires.left` and `tires.front`; "меняй переднее левое
-  заднее правое" gives two wheels. Multi-word targets are read by the longest match; a part of one ("меняй левые
-  переднее") and a phrase that can be cut into targets in two ways ("left front right") are rejected.
+- **Several targets per action.** "меняй переднее левое заднее правое" gives two wheels, "меняй левые и передние"
+  the left side and the front axle. Multi-word targets are read by the longest match; a part of one ("меняй правую")
+  and a phrase that can be cut into targets in two ways ("left front right") are rejected. A side and an axle in a row
+  without "и" ("меняй левые передние") are rejected too: it may be the front left wheel heard in the wrong forms.
+- **Word forms.** `word_forms` lists forms the recognizer swaps freely ("передние" and "переднее"). A form said alone
+  is its word ("меняй переднее" is the front axle), but a wheel name matches only as written ("переднее левое"). When
+  a phrase is rejected for low confidence because of such a word, the recognizer is asked once more with its list of
+  alternatives: if they differ only by the forms of that word, the word counts as certain.
+- **One action, once.** The same action twice without a conjunction ("меняй правые меняй левые") is rejected: that is
+  what is left when the recognizer lost "и не".
 - **The tire action after a conjunction may be left out.** "меняй левые и передние", "не меняй левые и переднее
   правое": a part with only tire targets (and maybe the tire object) takes the action of the tire command before it,
   along a chain of parts. This works only for tires: "залей двадцать и передние" is rejected.
@@ -170,7 +177,8 @@ More rules worth knowing:
 ## Reject words
 
 `reject_words` lists words that reject the whole phrase: what drivers say when they ask for something PitVoice cannot
-do, such as a tire compound.
+do, such as a tire compound, and words the recognizer would otherwise drop without a trace: "тридцать точка два"
+would be heard as "тридцать два", "кто впереди меня" as "передние меняй".
 
 ```yaml
 reject_words: [на, дождевую, дождевые, мокрую, сухие]

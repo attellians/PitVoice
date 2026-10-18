@@ -33,5 +33,16 @@ public interface IAsrEngine
     /// <summary>Recognizes a whole, non-empty buffer. May throw; <see cref="SpeechRecognizer"/> contains that.</summary>
     RecognizedPhrase Recognize(AudioBuffer buffer);
 
+    /// <summary>
+    /// Gives each word of <paramref name="phrase"/> (the result of <see cref="Recognize"/> for the same buffer) the
+    /// probability that the recognizer heard that word in any of its forms, from its list of alternatives (design D13):
+    /// a word split between "левые" and "левое" is certain of the word, not of the form. A confidence is never lowered.
+    /// Null when the engine has no alternatives. May throw; <see cref="SpeechRecognizer"/> contains that.
+    /// </summary>
+    /// <param name="buffer">The same buffer.</param>
+    /// <param name="phrase">The words recognized for it.</param>
+    /// <param name="readAs">The word a form is read as ("левое" → "левые"); other words are returned as they are.</param>
+    RecognizedPhrase? RecognizeForms(AudioBuffer buffer, RecognizedPhrase phrase, Func<string, string> readAs) => null;
+
     void Unload();
 }

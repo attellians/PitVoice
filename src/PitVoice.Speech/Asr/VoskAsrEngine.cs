@@ -182,6 +182,97 @@ public sealed class VoskAsrEngine : IAsrEngine, IDisposable
         return ParseResult(recognizer.Recognize(buffer.ToArray()));
     }
 
+    /// <summary>Alternatives asked for when a word may be only unsure of its form.</summary>
+    internal const int FormAlternatives = 10;
+
+    public RecognizedPhrase? RecognizeForms(AudioBuffer buffer, RecognizedPhrase phrase, Func<string, string> readAs)
+    {
+        ArgumentNullException.ThrowIfNull(buffer);
+        ArgumentNullException.ThrowIfNull(phrase);
+        ArgumentNullException.ThrowIfNull(readAs);
+        VoskModelHandle model;
+        string grammar;
+        lock (_lock)
+        {
+            model = _model ?? throw new InvalidOperationException("recognition model is not loaded");
+            grammar = _grammar!;
+        }
+
+        if (buffer.IsEmpty || phrase.Words.Count == 0)
+        {
+            return phrase;
+        }
+
+        using var recognizer = VoskNative.RecognizerNewGrammar(model, AudioBuffer.SampleRate, grammar);
+        if (recognizer.IsInvalid)
+        {
+            throw new InvalidOperationException("Vosk could not create a recognizer for the grammar");
+        }
+
+        VoskNative.RecognizerSetWords(recognizer, 1);
+        VoskNative.RecognizerSetMaxAlternatives(recognizer, FormAlternatives);
+        return JoinForms(phrase, ParseAlternatives(recognizer.Recognize(buffer.ToArray())), readAs);
+    }
+
+    /// <summary>
+    /// Each word gets the share of the alternatives that have the same word in the same place once forms are read as
+    /// one word; the share comes from the alternative scores (log scale, so a softmax). Alternatives with a different
+    /// number of words add nothing, so a confidence only rises when the alternatives agree word by word.
+    /// </summary>
+    internal static RecognizedPhrase JoinForms(
+        RecognizedPhrase phrase, IReadOnlyList<(double Score, IReadOnlyList<string> Words)> alternatives, Func<string, string> readAs)
+    {
+        if (alternatives.Count == 0)
+        {
+            return phrase;
+        }
+
+        var best = alternatives.Max(a => a.Score);
+        var weights = alternatives.Select(a => Math.Exp(a.Score - best)).ToArray();
+        var total = weights.Sum();
+        var words = phrase.Words.Select((word, i) =>
+        {
+            if (string.Equals(word.Text, SpeechRecognizer.UnknownWord, StringComparison.Ordinal))
+            {
+                return word;
+            }
+
+            var target = readAs(word.Text);
+            var share = 0.0;
+            for (var k = 0; k < alternatives.Count; k++)
+            {
+                var alternative = alternatives[k].Words;
+                if (alternative.Count == phrase.Words.Count && readAs(alternative[i]) == target)
+                {
+                    share += weights[k];
+                }
+            }
+
+            var joined = share / total;
+            return word.Confidence is { } confidence && joined > confidence ? word with { Confidence = joined } : word;
+        });
+
+        return new RecognizedPhrase(words.ToArray());
+    }
+
+    /// <summary>Vosk's JSON with alternatives: <c>{"alternatives":[{"confidence","result":[{"word"}...],"text"}...]}</c>.</summary>
+    internal static IReadOnlyList<(double Score, IReadOnlyList<string> Words)> ParseAlternatives(string json)
+    {
+        using var document = JsonDocument.Parse(json);
+        if (!document.RootElement.TryGetProperty("alternatives", out var alternatives) || alternatives.ValueKind != JsonValueKind.Array)
+        {
+            return [];
+        }
+
+        return alternatives.EnumerateArray()
+            .Select(a => (
+                a.GetProperty("confidence").GetDouble(),
+                (IReadOnlyList<string>)(a.TryGetProperty("result", out var result) && result.ValueKind == JsonValueKind.Array
+                    ? result.EnumerateArray().Select(w => w.GetProperty("word").GetString() ?? string.Empty).ToArray()
+                    : [])))
+            .ToArray();
+    }
+
     public void Unload()
     {
         lock (_lock)

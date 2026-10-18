@@ -28,6 +28,11 @@ public sealed class LanguagePackDto
     public List<string?>? RejectWords { get; set; }
 
     /// <summary>
+    /// Word → forms read as the same word (design D13): <c>передние: [переднее]</c>. The recognizer swaps such forms freely.
+    /// </summary>
+    public Dictionary<string, List<string?>?>? WordForms { get; set; }
+
+    /// <summary>
     /// Word classes: group → role → words, and for <c>tires.targets</c> target → words. Kept untyped so that an
     /// unknown group, role or target gets an error with its name and line instead of a generic YAML error.
     /// </summary>

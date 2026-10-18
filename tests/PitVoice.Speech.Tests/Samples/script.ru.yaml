@@ -56,7 +56,7 @@ samples:
     expect: [{ intent: tires.rr }]
   # several targets, verb said once
   - say: "меняй левые передние"
-    expect: [{ intent: tires.left }, { intent: tires.front }]
+    expect: reject
   - say: "меняй переднее левое заднее правое"
     expect: [{ intent: tires.lf }, { intent: tires.rr }]
   - say: "меняй левые и передние"

@@ -20,7 +20,7 @@ fillers: [please, just, hey, um, uh, okay, ok, now, the]
 # "keep" and "leave" mean "do not change": "keep tires", "leave the rears".
 negations: [no, not, don't, without, never, skip, keep, leave]
 # Words that reject the whole phrase: the driver asks for something PitVoice cannot do, e.g. a tire compound.
-reject_words: [wet, wets, dry, slicks, slick, rain, rains, intermediates]
+reject_words: [wet, wets, dry, slicks, slick, rain, rains, intermediates, point, comma, who, ahead, behind]
 
 lexicon:
   fuel:
@@ -300,4 +300,10 @@ tests:
   - say: "change to wet tires"
     expect: reject
   - say: "swap tires for slicks"
+    expect: reject
+  - say: "add thirty point five liters"
+    expect: reject
+  - say: "who is ahead"
+    expect: reject
+  - say: "change tires change tires"
     expect: reject

@@ -68,7 +68,7 @@ Commands are built from words, not fixed phrases, and the word order is free. A 
 
 - "залей тридцать литров", "долей двадцать", "тридцать литров топлива"; "add thirty liters", "give me twenty"
 - "меняй шины", "шины меняй", "замени левое переднее", "задние шины"; "change tires", "left front", "swap rears"
-- several targets and the verb said once: "меняй левые передние", "меняй левые и передние", "не меняй левые и переднее правое"; "change front left and rear right"
+- several targets and the verb said once: "меняй переднее левое заднее правое", "меняй левые и передние", "не меняй левые и переднее правое"; "change front left and rear right" (a side and an axle need "и": "меняй левые передние" is rejected, it could be the front left wheel)
 - removal: "не меняй шины", "без шин", "стекло не трогай", "без ремонта"; "no tires", "keep fronts", "leave the rears"
 - compound commands, also when the recognizer lost the "и": "меняй шины залей двадцать пять литров"
 

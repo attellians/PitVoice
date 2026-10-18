@@ -18,10 +18,19 @@ units:
 conjunctions: [и, а также, плюс, потом, затем, ещё]
 fillers: [пожалуйста, давай, так, ну, слушай, эй, короче, значит, надо]
 negations: [не, без]
-# Words that reject the whole phrase: the driver asks for something PitVoice cannot do, e.g. a tire compound.
+# Words that reject the whole phrase: the driver asks for something PitVoice cannot do (a tire compound, a fraction
+# with "точка") or talks to someone else ("кто впереди меня").
 # Without them the recognizer drops "на слики" and "меняем резину на слики" would change all tires; "слики" itself is
 # not in the model, "на" catches it.
-reject_words: [на, дождевую, дождевые, дождевая, мокрую, мокрые, сухую, сухие]
+reject_words: [на, дождевую, дождевые, дождевая, мокрую, мокрые, сухую, сухие, точка, запятая, кто, впереди, сзади, позади, меня]
+# The recognizer swaps these forms freely ("меняй переднее" for "меняй передние"): a form said alone is its word.
+# A wheel matches only as written ("переднее левое"), and a side and an axle in a row are rejected: say
+# "меняй левые и передние" for both, "меняй переднее левое" for the wheel.
+word_forms:
+  передние: [переднее]
+  задние: [заднее]
+  левые: [левое, левая]
+  правые: [правое, правая]
 
 lexicon:
   fuel:
@@ -176,8 +185,12 @@ tests:
     expect: [{ intent: tires.rr }]
 
   # several targets per action
-  - say: "меняй левые передние"
+  - say: "меняй переднее правое и задние"
+    expect: [{ intent: tires.rf }, { intent: tires.rear }]
+  - say: "меняй левые и передние шины"
     expect: [{ intent: tires.left }, { intent: tires.front }]
+  - say: "меняй левые передние"
+    expect: reject                                       # a side and an axle in a row: say «и» or name the wheel
   - say: "меняй переднее левое заднее правое"
     expect: [{ intent: tires.lf }, { intent: tires.rr }]
 
@@ -219,7 +232,9 @@ tests:
   - say: "правое заднее не меняем"
     expect: [{ intent: tires.none.rr }]
   - say: "не меняй задние левые"
-    expect: [{ intent: tires.none.rear }, { intent: tires.none.left }]
+    expect: reject
+  - say: "не меняй переднее левое заднее правое"
+    expect: [{ intent: tires.none.lf }, { intent: tires.none.rr }]
 
   # action said once after a conjunction
   - say: "меняй левые и передние"
@@ -330,7 +345,7 @@ tests:
     expect: reject
   - say: "топливо шины"
     expect: reject
-  - say: "меняй левые переднее"
+  - say: "меняй правую"
     expect: reject
 
   # unrelated speech
@@ -354,3 +369,19 @@ tests:
     expect: reject
   - say: "меняем резину на"
     expect: reject
+
+  # a form alone is its word; a side and an axle in a row are rejected, a wheel is named as written
+  - say: "меняй переднее"
+    expect: [{ intent: tires.front }]
+  - say: "смени переднее правая"
+    expect: reject
+  - say: "меняй передние левое заднее правое"
+    expect: reject
+
+  # the same action twice without a conjunction: "и не" was lost
+  - say: "меняй шины меняй шины"
+    expect: reject
+  - say: "меняй правые меняй левое"
+    expect: reject
+  - say: "не трогай заднее"
+    expect: [{ intent: tires.none.rear }]

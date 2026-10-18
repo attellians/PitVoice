@@ -36,6 +36,22 @@ public sealed class CommandParser
 
     public LanguagePack Pack => _pack;
 
+    /// <summary>The word a recognized word is read as when it stands alone ("левое" → "левые", design D13).</summary>
+    public string ReadAs(string word)
+    {
+        ArgumentNullException.ThrowIfNull(word);
+        var normalized = Normalizer.NormalizeWord(word);
+        return _pack.Normalizer.Rules.WordForms is { } forms && forms.TryGetValue(normalized, out var form) ? form : normalized;
+    }
+
+    /// <summary>True for a word that has another form the recognizer may hear instead ("левые", "левое").</summary>
+    public bool HasForms(string word)
+    {
+        ArgumentNullException.ThrowIfNull(word);
+        var normalized = Normalizer.NormalizeWord(word);
+        return _pack.Normalizer.Rules.WordForms is { } forms && (forms.ContainsKey(normalized) || forms.Values.Contains(normalized));
+    }
+
     public ParseResult Parse(string text, ParseOptions? options = null) => Parse(RecognizedPhrase.FromText(text), options);
 
     public ParseResult Parse(RecognizedPhrase phrase, ParseOptions? options = null)
@@ -81,6 +97,21 @@ public sealed class CommandParser
             if (unknown > 1 || (unknown == 1 && piece.Count < MinFuzzyPieceLength))
             {
                 return new ParseResult.Rejected(RejectReason.NotUnderstood, $"'{text}' matches no command");
+            }
+
+            // "меняй правые меняй левые" without a conjunction is what is left when the recognizer lost "и не": the same
+            // command twice in a row would turn a removal into a change, so it is rejected (design D13).
+            if (RepeatedAction(spans) is { } repeated)
+            {
+                return new ParseResult.Rejected(RejectReason.NotUnderstood, $"'{text}' has the action '{repeated.Text}' twice without a conjunction");
+            }
+
+            // "левые передние" is the left side and the front axle, or the front left wheel heard in the wrong forms: the
+            // recognizer swaps "передние" and "переднее", so it is never guessed (design D13). A wheel is named by its
+            // entry ("переднее левое"); a side and an axle need "и" between them.
+            if (SideNextToAxle(spans) is { } pair)
+            {
+                return new ParseResult.Rejected(RejectReason.NotUnderstood, $"'{pair}' in '{text}' is a side and an axle in a row: say «и» between them or name the wheel");
             }
 
             // A word the parser does not know next to a number may be a part of it ("one thousand" is not 1).
@@ -247,6 +278,16 @@ public sealed class CommandParser
                 }
             }
 
+            // A word alone may be a form the recognizer swaps ("переднее" for "передние", design D13); inside a wheel name
+            // the words must be as written, so "передние левое" is not the front left wheel.
+            if (!options.Any(o => o.Tokens.Count == 1)
+                && _pack.Normalizer.Rules.WordForms is { } forms
+                && forms.TryGetValue(keys[start], out var form)
+                && _entriesByKeys.TryGetValue(form, out var formEntries))
+            {
+                options.Add(new Span(SpanKind.Entry, [piece[start]], formEntries));
+            }
+
             if (!options.Any(o => o.Tokens.Count == 1))
             {
                 options.Add(Single(piece[start]));
@@ -297,6 +338,45 @@ public sealed class CommandParser
             _ => SpanKind.Unknown,
         };
         return new Span(kind, [token], []);
+    }
+
+    /// <summary>A side target right next to an axle target, each of one word ("левые передние"), or null.</summary>
+    private static string? SideNextToAxle(IReadOnlyList<Span> spans)
+    {
+        static bool Is(Span span, params TireTarget[] targets) =>
+            span.Kind == SpanKind.Entry && span.Tokens.Count == 1
+            && span.Classes.Any(c => c is { Role: WordRole.Target, Target: { } t } && targets.Contains(t));
+
+        for (var i = 0; i + 1 < spans.Count; i++)
+        {
+            var (a, b) = (spans[i], spans[i + 1]);
+            var side = new[] { TireTarget.Left, TireTarget.Right };
+            var axle = new[] { TireTarget.Front, TireTarget.Rear };
+            if ((Is(a, side) && Is(b, axle)) || (Is(a, axle) && Is(b, side)))
+            {
+                return $"{a.Text} {b.Text}";
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>The second of two actions that can belong to the same group, or null.</summary>
+    private static Span? RepeatedAction(IReadOnlyList<Span> spans)
+    {
+        var seen = new HashSet<LexiconGroup>();
+        foreach (var span in spans.Where(s => s.Kind == SpanKind.Entry))
+        {
+            var groups = span.Classes.Where(c => c.Role == WordRole.Action).Select(c => c.Group).ToArray();
+            if (groups.Any(seen.Contains))
+            {
+                return span;
+            }
+
+            seen.UnionWith(groups);
+        }
+
+        return null;
     }
 
     /// <summary>An unknown word right before or after a number, or null.</summary>

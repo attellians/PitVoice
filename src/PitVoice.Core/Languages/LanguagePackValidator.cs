@@ -183,11 +183,48 @@ public static class LanguagePackValidator
             return byLength != 0 ? byLength : string.CompareOrdinal(string.Join(' ', a), string.Join(' ', b));
         });
 
+        // --- word forms: variant → the word it is read as (design D13)
+        var wordForms = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var (rawWord, rawForms) in dto.WordForms ?? [])
+        {
+            var word = Normalizer.NormalizeWord(rawWord);
+            if (word.Length == 0 || word.Contains(' '))
+            {
+                Error($"'{rawWord}' in 'word_forms' must be a single word", "word_forms", rawWord);
+                continue;
+            }
+
+            foreach (var rawForm in rawForms ?? [])
+            {
+                var form = Normalizer.NormalizeWord(rawForm ?? string.Empty);
+                if (form.Length == 0 || form.Contains(' '))
+                {
+                    Error($"a form of '{word}' in 'word_forms' must be a single word", "word_forms", rawWord);
+                }
+                else if (form == word)
+                {
+                    Error($"'{form}' is listed as a form of itself", "word_forms", rawWord);
+                }
+                else if (!wordForms.TryAdd(form, word))
+                {
+                    Error($"'{form}' is a form of both '{wordForms[form]}' and '{word}'", "word_forms", rawWord);
+                }
+            }
+        }
+
+        foreach (var word in wordForms.Values.Distinct().Order(StringComparer.Ordinal))
+        {
+            if (wordForms.ContainsKey(word))
+            {
+                Error($"'{word}' is a form of another word and cannot have forms itself", "word_forms", word);
+            }
+        }
+
         // --- lexicon (needs the normalizer, which needs the number parser)
         Normalizer? normalizer = null;
         if (numberParser is not null)
         {
-            normalizer = new Normalizer(new NormalizationRules(numberParser, fillers, unitSynonyms));
+            normalizer = new Normalizer(new NormalizationRules(numberParser, fillers, unitSynonyms, wordForms));
         }
 
         var entries = new List<LexiconEntry>();

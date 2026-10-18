@@ -417,7 +417,16 @@ internal static class SpeechRunner
             var words = result.Phrase.Words.Select(w =>
                 w.Confidence is { } c ? $"{w.Text}:{c.ToString("0.00", CultureInfo.InvariantCulture)}" : w.Text);
             Console.WriteLine($"words:    {string.Join(' ', words)}");
-            ParseOutput.Print(_parser, _responses, result.Phrase, options);
+            // A word unsure only of its form gets a second look with the alternatives (design D13).
+            var speech = SpeechParsing.Parse(_parser, _recognizer, buffer, result.Phrase, options);
+            if (speech.FormsJoined)
+            {
+                var joined = speech.Phrase.Words.Select(w =>
+                    w.Confidence is { } c ? $"{w.Text}:{c.ToString("0.00", CultureInfo.InvariantCulture)}" : w.Text);
+                Console.WriteLine($"forms:    {string.Join(' ', joined)}");
+            }
+
+            ParseOutput.Print(_parser, _responses, speech.Phrase, options);
             return true;
         }
 

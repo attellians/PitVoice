@@ -32,6 +32,12 @@ public static class VocabularyBuilder
         words.UnionWith(pack.Fillers);
         words.UnionWith(pack.Negations);
         words.UnionWith(pack.RejectWords);
+        if (pack.Normalizer.Rules.WordForms is { } forms)
+        {
+            words.UnionWith(forms.Keys);
+            words.UnionWith(forms.Values);
+        }
+
         words.UnionWith(pack.NumberParser.Words);
 
         words.RemoveWhere(string.IsNullOrWhiteSpace);

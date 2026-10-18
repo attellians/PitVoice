@@ -111,13 +111,13 @@ public class WordClassParsingTests
     // --- Several targets per action
 
     [Theory]
-    [InlineData("меняй левые передние", new[] { "tires.left", "tires.front" })]
+    [InlineData("меняй левые и передние шины", new[] { "tires.left", "tires.front" })]
     [InlineData("меняй переднее левое заднее правое", new[] { "tires.lf", "tires.rr" })]
-    [InlineData("не меняй задние левые", new[] { "tires.none.rear", "tires.none.left" })]
+    [InlineData("не меняй переднее левое заднее правое", new[] { "tires.none.lf", "tires.none.rr" })]
     public void Several_targets_per_action(string phrase, string[] intents) => Assert.Equal(intents, Intents("ru", phrase));
 
     [Fact]
-    public void Leftover_part_of_a_target_is_rejected() => Rejected("ru", "меняй левые переднее");
+    public void Leftover_part_of_a_target_is_rejected() => Rejected("ru", "меняй правую");
 
     // --- Compound commands
 
@@ -162,6 +162,46 @@ public class WordClassParsingTests
     [Fact]
     public void Same_command_without_the_reject_word_still_works() =>
         Assert.Equal(["tires.all"], Intents("ru", "меняем резину"));
+
+    // --- Word forms and repeated actions (design D13)
+
+    [Theory]
+    [InlineData("меняй переднее", new[] { "tires.front" })]                       // "передние" heard as "переднее"
+    [InlineData("не трогай заднее", new[] { "tires.none.rear" })]
+    [InlineData("правая сторона", new[] { "tires.right" })]
+    public void Swapped_forms_are_one_word(string phrase, string[] intents) => Assert.Equal(intents, Intents("ru", phrase));
+
+    [Theory]
+    [InlineData("ru", "меняй левые передние")]               // the side and the axle, or the wheel in the wrong forms
+    [InlineData("ru", "смени переднее правая")]              // "сменим переднее правое" heard in the wrong forms
+    [InlineData("ru", "меняй передние левое заднее правое")]
+    [InlineData("ru", "не меняй задние левые")]
+    [InlineData("en", "change left fronts")]
+    public void Side_and_axle_in_a_row_are_rejected(string language, string phrase) => Rejected(language, phrase);
+
+    [Fact]
+    public void Wheel_named_as_written_still_works()
+    {
+        Assert.Equal(["tires.lf", "tires.rr"], Intents("ru", "меняй переднее левое заднее правое"));
+        Assert.Equal(["tires.lf"], Intents("en", "change left front"));
+    }
+
+    [Theory]
+    [InlineData("ru", "меняй шины меняй шины")]               // "меняй шины и не меняй шины" with "и не" lost
+    [InlineData("ru", "меняй правые меняй левое")]
+    [InlineData("en", "change tires change tires")]
+    public void Same_action_twice_without_a_conjunction_is_rejected(string language, string phrase) => Rejected(language, phrase);
+
+    [Fact]
+    public void Same_action_twice_with_a_conjunction_still_works() =>
+        Assert.Equal(["tires.left", "tires.right"], Intents("ru", "меняй левые и меняй правые"));
+
+    [Theory]
+    [InlineData("ru", "залей тридцать точка два")]
+    [InlineData("ru", "кто впереди меня")]
+    [InlineData("en", "add thirty point five liters")]
+    [InlineData("en", "who is ahead")]
+    public void Words_the_recognizer_would_drop_reject_the_phrase(string language, string phrase) => Rejected(language, phrase);
 
     // --- Conflicts
 
@@ -266,6 +306,7 @@ public class WordClassParsingTests
         string[] phrases =
         [
             "меняй левые передние",
+            "меняй правые меняй левое",
             "меняй левые и передние",
             "залей десять литров меняй правую сторону и сорви плёнку",
             "сбрось все шины",

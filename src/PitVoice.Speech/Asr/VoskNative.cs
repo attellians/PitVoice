@@ -30,6 +30,12 @@ internal static partial class VoskNative
     [LibraryImport(Library, EntryPoint = "vosk_recognizer_set_words")]
     internal static partial void RecognizerSetWords(VoskRecognizerHandle recognizer, int words);
 
+    /// <summary>
+    /// With a value above 0 the final result is a list of alternatives with a score each, without per-word confidence.
+    /// </summary>
+    [LibraryImport(Library, EntryPoint = "vosk_recognizer_set_max_alternatives")]
+    internal static partial void RecognizerSetMaxAlternatives(VoskRecognizerHandle recognizer, int maxAlternatives);
+
     [LibraryImport(Library, EntryPoint = "vosk_recognizer_accept_waveform_s")]
     internal static partial int RecognizerAcceptWaveform(VoskRecognizerHandle recognizer, short[] data, int length);
 

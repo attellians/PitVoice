@@ -41,11 +41,12 @@ public sealed class SampleSetTests(ITestOutputHelper output)
         var times = new List<double>();
         foreach (var sample in samples)
         {
-            var result = recognizer.Recognize(WavFile.Load(Path.Combine(SampleSet.Directory(language), sample.File!)));
+            var audio = WavFile.Load(Path.Combine(SampleSet.Directory(language), sample.File!));
+            var result = recognizer.Recognize(audio);
             Assert.True(result.IsSuccess, $"{sample.File}: {result.Error}");
             times.Add(result.RecognitionTime.TotalMilliseconds);
 
-            var parsed = parser.Parse(result.Phrase);
+            var parsed = SpeechParsing.Parse(parser, recognizer, audio, result.Phrase).Result;
             var line = $"{sample.File}: said \"{sample.Say}\", heard \"{result.Phrase.Text}\", got {parsed}";
             switch (parsed, sample.Expect)
             {

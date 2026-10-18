@@ -75,7 +75,8 @@ internal sealed class LexiconWords
             valid = false;
         }
 
-        var words = tokens.SelectMany(t => t.Text.Split(' ')).ToArray();
+        // The entry keeps the words as written: the recognizer must hear them, and a wheel name matches only as written.
+        var words = Normalizer.SplitWords(text).ToArray();
         foreach (var conjunction in _conjunctions)
         {
             if (ContainsSequence(words, conjunction))

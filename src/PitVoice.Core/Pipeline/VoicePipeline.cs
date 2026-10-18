@@ -285,7 +285,8 @@ public sealed class VoicePipeline : IAsyncDisposable
         ParseResult parse;
         try
         {
-            parse = _services.Parser.Parse(recognition.Phrase, _services.ParseOptions);
+            // A word unsure only of its form gets a second look with the alternatives (design D13).
+            parse = SpeechParsing.Parse(_services.Parser, _services.Recognizer, phrase.Audio, recognition.Phrase, _services.ParseOptions).Result;
         }
         catch (Exception e)
         {

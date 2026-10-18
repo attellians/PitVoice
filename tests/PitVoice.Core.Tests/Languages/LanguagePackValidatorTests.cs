@@ -241,6 +241,33 @@ public class LanguagePackValidatorTests
         Assert.Contains("на", PitVoice.Core.Asr.VocabularyBuilder.Build(result.Pack));
     }
 
+    [Theory]
+    [InlineData("word_forms:\n  шины: [шина, шина]\n", "is a form of both")]
+    [InlineData("word_forms:\n  шины: [шины]\n", "a form of itself")]
+    [InlineData("word_forms:\n  шины: [шина]\n  шина: [шинка]\n", "cannot have forms itself")]
+    [InlineData("word_forms:\n  меняй шины: [шина]\n", "single word")]
+    public void Bad_word_forms_are_errors(string forms, string message)
+    {
+        var yaml = FixtureText("valid-minimal.yaml").Replace("fillers: [пожалуйста]", "fillers: [пожалуйста]\n" + forms.TrimEnd('\n'), StringComparison.Ordinal);
+
+        var result = LanguagePackLoader.LoadText(yaml, "inline.yaml");
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains(result.Errors, e => e.Message.Contains(message, StringComparison.Ordinal) && e.Path.StartsWith("word_forms", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Word_forms_join_input_and_entries_and_keep_the_written_words()
+    {
+        var yaml = FixtureText("valid-minimal.yaml").Replace("fillers: [пожалуйста]", "fillers: [пожалуйста]\nword_forms:\n  шины: [шина]", StringComparison.Ordinal);
+
+        var pack = LanguagePackLoader.LoadText(yaml, "inline.yaml").Pack!;
+
+        Assert.Equal(IntentCatalog.TiresAll, Assert.Single(((ParseResult.Accepted)new CommandParser(pack).Parse("меняй шина")).Commands).Intent);
+        Assert.Contains("шина", PitVoice.Core.Asr.VocabularyBuilder.Build(pack));
+        Assert.Contains(pack.Lexicon.Entries, e => e.Text == "шины");
+    }
+
     [Fact]
     public void Words_shared_by_groups_are_allowed()
     {

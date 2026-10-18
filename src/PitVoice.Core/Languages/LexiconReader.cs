@@ -68,6 +68,29 @@ internal static class LexiconReader
             return;
         }
 
+        if (roleName == LexiconSchema.CompoundsKey && LexiconSchema.HasRole(group, WordRole.Compound))
+        {
+            if (value is not IDictionary<object, object> compounds)
+            {
+                error($"'{groupName}.compounds' must map compounds ({string.Join(", ", LexiconSchema.CompoundNames)}) to words", [groupName, roleName]);
+                return;
+            }
+
+            foreach (var (key, words) in compounds)
+            {
+                var compoundName = key?.ToString() ?? string.Empty;
+                if (!LexiconSchema.TryGetCompound(compoundName, out var compound))
+                {
+                    error($"unknown tire compound '{compoundName}'; compounds: {string.Join(", ", LexiconSchema.CompoundNames)}", [groupName, roleName, compoundName]);
+                    continue;
+                }
+
+                ReadWords(new WordClass(group, WordRole.Compound, Compound: compound), words, [groupName, roleName, compoundName], result, error);
+            }
+
+            return;
+        }
+
         if (!LexiconSchema.TryGetRole(group, roleName, out var role))
         {
             error($"unknown word class '{groupName}.{roleName}'; group '{groupName}' has: {string.Join(", ", LexiconSchema.RoleNames(group))}", [groupName, roleName]);

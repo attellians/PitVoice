@@ -1,0 +1,36 @@
+name: Неизвестный состав
+language: ru
+plural_rules: ru
+units:
+  liters:
+    synonyms: [литр, литра, литров]
+    forms: { one: литр, few: литра, many: литров }
+conjunctions: [и]
+fillers: [пожалуйста]
+lexicon:
+  fuel: { action: [залей] }
+  tires:
+    action: [меняй]
+    object: [шины]
+    into: [на]
+    compounds:
+      wet: [дождевые]
+      intermediate: [промежуточные]
+responses:
+  fuel.add: "заливаем {amount} {unit}"
+  tires.all: "меняем шины"
+  tires.wet: "ставим дождевые"
+  not_understood: "не понял"
+  not_connected: "no connection"
+  not_in_car: "not in car"
+  apply_failed: "failed"
+  no_dry_tires: "нет сухих"
+  no_wet_tires: "нет дождевых"
+  several_dry_tires: "несколько сухих"
+tests:
+  - say: "залей десять литров"
+    expect: [{ intent: fuel.add, amount: 10, unit: liters }]
+  - say: "меняй шины"
+    expect: [{ intent: tires.all }]
+  - say: "меняй на дождевые"
+    expect: [{ intent: tires.wet }]

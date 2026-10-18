@@ -14,7 +14,9 @@ internal sealed class MemoryImage
     private const int SessionInfoLength = 1024;
 
     // name, type, offset inside a data buffer
-    private static readonly (string Name, int Type, int Offset)[] Variables =
+    private static readonly (string Name, int Type, int Offset) TireCompoundVariable = ("PitSvTireCompound", 2, 24);
+
+    private static readonly (string Name, int Type, int Offset)[] BaseVariables =
     [
         ("SessionTime", 5, 0),   // decoy: a double the reader must skip
         ("IsOnTrack", 1, 8),
@@ -25,8 +27,12 @@ internal sealed class MemoryImage
 
     public byte[] Bytes { get; } = new byte[SessionInfoAt + SessionInfoLength];
 
-    public MemoryImage(int status = IRacingMemoryLayout.StatusConnected, int numBuf = 3)
+    private readonly (string Name, int Type, int Offset)[] Variables;
+
+    // withTireCompound adds PitSvTireCompound, which older game versions do not have.
+    public MemoryImage(int status = IRacingMemoryLayout.StatusConnected, int numBuf = 3, bool withTireCompound = false)
     {
+        Variables = withTireCompound ? [.. BaseVariables, TireCompoundVariable] : BaseVariables;
         WriteInt(IRacingMemoryLayout.StatusOffset, status);
         WriteInt(IRacingMemoryLayout.NumVarsOffset, Variables.Length);
         WriteInt(IRacingMemoryLayout.VarHeaderOffsetOffset, VarHeadersAt);
@@ -47,7 +53,7 @@ internal sealed class MemoryImage
     }
 
     /// <summary>Writes values into buffer <paramref name="buffer"/> and gives it tick <paramref name="tick"/>.</summary>
-    public MemoryImage Buffer(int buffer, int tick, bool isOnTrack, int pitSvFlags, float pitSvFuel, float fuelLevel)
+    public MemoryImage Buffer(int buffer, int tick, bool isOnTrack, int pitSvFlags, float pitSvFuel, float fuelLevel, int pitSvTireCompound = 0)
     {
         WriteInt(IRacingMemoryLayout.VarBufOffset + (buffer * IRacingMemoryLayout.VarBufSize), tick);
         var data = BuffersAt + (buffer * BufferLength);
@@ -56,6 +62,7 @@ internal sealed class MemoryImage
         WriteInt(data + 12, pitSvFlags);
         BinaryPrimitives.WriteSingleLittleEndian(Bytes.AsSpan(data + 16), pitSvFuel);
         BinaryPrimitives.WriteSingleLittleEndian(Bytes.AsSpan(data + 20), fuelLevel);
+        WriteInt(data + 24, pitSvTireCompound);
         return this;
     }
 

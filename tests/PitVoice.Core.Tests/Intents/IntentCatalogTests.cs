@@ -11,6 +11,7 @@ public class IntentCatalogTests
         "fuel.add", "fuel.none",
         "tires.all", "tires.left", "tires.right", "tires.front", "tires.rear",
         "tires.lf", "tires.rf", "tires.lr", "tires.rr",
+        "tires.dry", "tires.wet",
         "tires.none", "tires.none.left", "tires.none.right", "tires.none.front", "tires.none.rear",
         "tires.none.lf", "tires.none.rf", "tires.none.lr", "tires.none.rr",
         "windshield.tearoff", "windshield.none",
@@ -113,6 +114,8 @@ public class IntentCatalogTests
     [InlineData("tires.rf", Wheels.RF, Wheels.None)]
     [InlineData("tires.lr", Wheels.LR, Wheels.None)]
     [InlineData("tires.rr", Wheels.RR, Wheels.None)]
+    [InlineData("tires.dry", Wheels.All, Wheels.None)]
+    [InlineData("tires.wet", Wheels.All, Wheels.None)]
     [InlineData("tires.none", Wheels.None, Wheels.All)]
     [InlineData("tires.none.left", Wheels.None, Wheels.LF | Wheels.LR)]
     [InlineData("tires.none.right", Wheels.None, Wheels.RF | Wheels.RR)]
@@ -135,5 +138,29 @@ public class IntentCatalogTests
     {
         Assert.False(IntentCatalog.Contains(new IntentId("tires.flip")));
         Assert.Throws<KeyNotFoundException>(() => IntentCatalog.Get(new IntentId("tires.flip")));
+    }
+
+    [Theory]
+    [InlineData("tires.dry", TireCompoundKind.Dry)]
+    [InlineData("tires.wet", TireCompoundKind.Wet)]
+    public void Compound_intents_add_all_four_wheels_and_carry_the_compound(string id, TireCompoundKind compound)
+    {
+        var definition = IntentCatalog.Get(new IntentId(id));
+        Assert.Equal(compound, definition.Compound);
+        Assert.Equal(Wheels.All, definition.AddsWheels);
+        Assert.False(definition.IsNegation);
+    }
+
+    [Fact]
+    public void Only_compound_intents_carry_a_compound()
+    {
+        var withCompound = IntentCatalog.All.Where(d => d.Compound is not null).Select(d => d.Id).ToArray();
+        Assert.Equal([IntentCatalog.TiresDry, IntentCatalog.TiresWet], withCompound);
+    }
+
+    [Fact]
+    public void Compound_command_code_is_12()
+    {
+        Assert.Equal(12, (int)PitCommand.TC);
     }
 }

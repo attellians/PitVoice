@@ -35,7 +35,7 @@ public sealed class ConnectionStateTracker
         }
 
         var state = value.IsOnTrack ? ConnectionState.InCar : ConnectionState.Connected;
-        var pit = new PitServiceState((PitServiceFlags)value.PitSvFlags, value.PitSvFuel, value.FuelLevel);
-        return new TelemetrySnapshot(state, pit, value.Tick) { FuelCapacity = value.FuelCapacity };
+        var pit = new PitServiceState((PitServiceFlags)value.PitSvFlags, value.PitSvFuel, value.FuelLevel) { TireCompound = value.PitSvTireCompound };
+        return new TelemetrySnapshot(state, pit, value.Tick) { FuelCapacity = value.FuelCapacity, TireCompounds = value.TireCompounds };
     }
 }

@@ -20,6 +20,9 @@ public enum PhraseOutcome
 
     NotInCar,
 
+    /// <summary>The car has no such tire compound; nothing was sent.</summary>
+    CompoundUnavailable,
+
     /// <summary>The parser rejected the phrase (not understood, conflict, low confidence, silence).</summary>
     NotUnderstood,
 
@@ -169,6 +172,7 @@ public sealed class PhraseJournal
         ExecutionOutcome.PartiallyApplied => PhraseOutcome.PartiallyApplied,
         ExecutionOutcome.NotConnected => PhraseOutcome.NotConnected,
         ExecutionOutcome.NotInCar => PhraseOutcome.NotInCar,
+        ExecutionOutcome.CompoundUnavailable => PhraseOutcome.CompoundUnavailable,
         _ => PhraseOutcome.NotApplied,
     };
 }

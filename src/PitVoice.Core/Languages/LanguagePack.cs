@@ -115,6 +115,12 @@ public sealed class LanguagePack
     /// </summary>
     public IReadOnlySet<string> RejectWords { get; internal init; } = new HashSet<string>(StringComparer.Ordinal);
 
+    /// <summary>
+    /// Words that sound like the transition word to a compound ("two" for "to"): in a piece with a compound such a number
+    /// right before the compound word is read as the transition word (design D10 of add-tire-compound).
+    /// </summary>
+    public IReadOnlySet<string> IntoHomophones { get; internal init; } = new HashSet<string>(StringComparer.Ordinal);
+
     /// <summary>Word classes of the language, built-in and the user's own.</summary>
     public Lexicon Lexicon { get; }
 
@@ -150,5 +156,6 @@ public sealed class LanguagePack
         {
             AdditionsFile = additionsFile,
             RejectWords = RejectWords,
+            IntoHomophones = IntoHomophones,
         };
 }

@@ -26,6 +26,11 @@ public sealed record TelemetrySnapshot(ConnectionState State, PitServiceState? P
     /// to this amount.
     /// </summary>
     public double? FuelCapacity { get; init; }
+
+    /// <summary>
+    /// The car's tire compounds (session info), or <c>null</c> when the game gave no list: unknown, not empty (design D6).
+    /// </summary>
+    public IReadOnlyList<TireCompound>? TireCompounds { get; init; }
 }
 
 /// <summary>Source of telemetry snapshots: the game, a fake or a replayed recording. Polled by the caller.</summary>

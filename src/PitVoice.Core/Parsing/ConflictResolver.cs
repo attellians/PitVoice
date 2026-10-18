@@ -41,6 +41,19 @@ public static class ConflictResolver
             {
                 if (group.Key == IntentCatalog.TiresGroup)
                 {
+                    // A compound changes all four tires, so it conflicts with the other compound and with any removal
+                    // (design D5); with a tire addition the wheels simply merge.
+                    var compounds = group.Where(d => d.Compound is not null).ToList();
+                    if (compounds.Select(d => d.Compound).Distinct().Count() > 1)
+                    {
+                        return new ConflictResolution(null, $"'{compounds[0].Id}' conflicts with '{compounds.First(d => d.Compound != compounds[0].Compound).Id}'");
+                    }
+
+                    if (compounds.Count > 0 && group.FirstOrDefault(d => d.RemovesWheels != Wheels.None) is { } removal)
+                    {
+                        return new ConflictResolution(null, $"'{compounds[0].Id}' conflicts with '{removal.Id}': a compound changes all four tires");
+                    }
+
                     // Tires conflict only when the same wheel is both added and removed.
                     var adds = group.Where(d => d.AddsWheels != Wheels.None).ToList();
                     var removes = group.Where(d => d.RemovesWheels != Wheels.None).ToList();

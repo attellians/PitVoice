@@ -70,6 +70,7 @@ Commands are built from words, not fixed phrases, and the word order is free. A 
 - "меняй шины", "шины меняй", "замени левое переднее", "задние шины"; "change tires", "left front", "swap rears"
 - several targets and the verb said once: "меняй переднее левое заднее правое", "меняй левые и передние", "не меняй левые и переднее правое"; "change front left and rear right" (a side and an axle need "и": "меняй левые передние" is rejected, it could be the front left wheel)
 - removal: "не меняй шины", "без шин", "стекло не трогай", "без ремонта"; "no tires", "keep fronts", "leave the rears"
+- tire compound, always on all four tires: "меняем резину на дождевые", "на сухие", "дождевые шины"; "change tires to wets", "change to slicks" (a car with no such compound, or with several dry ones, gets an error cue and nothing is sent; "меняй левые на дождевые" is rejected)
 - compound commands, also when the recognizer lost the "и": "меняй шины залей двадцать пять литров"
 
 One word never changes the pit stop, fuel amounts are whole numbers only ("тридцать точка два" is rejected, nothing is rounded), and a phrase that can be read two ways is rejected. The full word lists are in `languages/*.yaml` and on the "Commands" page.

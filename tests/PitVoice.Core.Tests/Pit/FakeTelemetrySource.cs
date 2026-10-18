@@ -44,6 +44,9 @@ internal sealed class FakeTelemetrySource : ITelemetrySource
     /// </summary>
     public double? TankCapacity { get; set; }
 
+    /// <summary>The car's tire list as session info gives it; null when the game gave none.</summary>
+    public IReadOnlyList<TireCompound>? TireCompounds { get; set; }
+
     /// <summary>When set, the game closes at this point of virtual time.</summary>
     public TimeSpan? CloseAt { get; set; }
 
@@ -93,7 +96,7 @@ internal sealed class FakeTelemetrySource : ITelemetrySource
                     Pit = Apply(Pit, command, parameter);
                 }
 
-                return new TelemetrySnapshot(State, Pit, ++_tick) { FuelCapacity = TankCapacity };
+                return new TelemetrySnapshot(State, Pit, ++_tick) { FuelCapacity = TankCapacity, TireCompounds = TireCompounds };
             }
         }
     }
@@ -123,6 +126,7 @@ internal sealed class FakeTelemetrySource : ITelemetrySource
         PitCommand.LR => pit.WithWheels(pit.Wheels | Wheels.LR),
         PitCommand.RR => pit.WithWheels(pit.Wheels | Wheels.RR),
         PitCommand.ClearTires => pit.WithWheels(Wheels.None),
+        PitCommand.TC => pit with { TireCompound = parameter },
         _ => pit,
     };
 }

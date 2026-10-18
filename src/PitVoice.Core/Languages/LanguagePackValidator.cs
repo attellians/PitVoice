@@ -161,6 +161,7 @@ public static class LanguagePackValidator
         var fillers = NormalizeWordSet(dto.Fillers, "fillers", Error);
         var negations = NormalizeWordSet(dto.Negations, "negations", Error);
         var rejectWords = NormalizeWordSet(dto.RejectWords, "reject_words", Error);
+        var intoHomophones = NormalizeWordSet(dto.IntoHomophones, "into_homophones", Error);
         var conjunctions = new List<IReadOnlyList<string>>();
         if (dto.Conjunctions is not null)
         {
@@ -293,6 +294,26 @@ public static class LanguagePackValidator
             }
         }
 
+        // A homophone of the transition word is a number word ("two"), so only other command words and reject words clash.
+        if (intoHomophones.Count > 0 && !entries.Any(e => e.Class.Role == WordRole.Into))
+        {
+            Error("'into_homophones' needs words in 'tires.into': they sound like the word leading to a compound", "into_homophones");
+        }
+
+        foreach (var word in intoHomophones.Order(StringComparer.Ordinal))
+        {
+            var where = entries.FirstOrDefault(e => e.Words.Contains(word))?.Class.Name is { } className ? $"'{className}'"
+                : fillers.Contains(word) ? "'fillers'"
+                : negations.Contains(word) ? "'negations'"
+                : conjunctions.Any(c => c.Contains(word)) ? "'conjunctions'"
+                : rejectWords.Contains(word) ? "'reject_words'"
+                : null;
+            if (where is not null)
+            {
+                Error($"homophone '{word}' is also in {where}", "into_homophones");
+            }
+        }
+
         var lexicon = new Lexicon(entries);
         var available = IntentCatalog.All
             .Select(d => d.Id)
@@ -317,9 +338,10 @@ public static class LanguagePackValidator
                 }
 
                 var isIntent = IntentCatalog.TryGet(new IntentId(key), out var definition);
-                if (!isIntent && !Responses.ResponseBuilder.RequiredKeys.Contains(key))
+                var isOutcome = Responses.ResponseBuilder.RequiredKeys.Contains(key) || Responses.ResponseBuilder.CompoundKeys.Contains(key);
+                if (!isIntent && !isOutcome)
                 {
-                    Error($"unknown response '{key}': it is neither a catalog intent nor one of {string.Join(", ", Responses.ResponseBuilder.RequiredKeys)}", "responses", key);
+                    Error($"unknown response '{key}': it is neither a catalog intent nor one of {string.Join(", ", Responses.ResponseBuilder.RequiredKeys.Concat(Responses.ResponseBuilder.CompoundKeys))}", "responses", key);
                     continue;
                 }
 
@@ -357,6 +379,18 @@ public static class LanguagePackValidator
             if (!responses.ContainsKey(required))
             {
                 Error($"'responses.{required}' is required", "responses");
+            }
+        }
+
+        // A pack with compound words answers "the car has no such compound" (design D7).
+        if (entries.Any(e => e.Class.Role == WordRole.Compound))
+        {
+            foreach (var required in Responses.ResponseBuilder.CompoundKeys)
+            {
+                if (!responses.ContainsKey(required))
+                {
+                    Error($"'responses.{required}' is required: the pack has tire compound words", "responses");
+                }
             }
         }
 
@@ -437,6 +471,7 @@ public static class LanguagePackValidator
             normalizer!)
         {
             RejectWords = rejectWords,
+            IntoHomophones = intoHomophones,
         };
 
         return new ValidationResult(pack, issues);

@@ -102,7 +102,7 @@ the windshield are rejected in this language. The shipped `ru` and `en` packs ha
 | Group | Classes | Example words (ru / en) |
 |---|---|---|
 | `fuel` | `action`, `object` | залей, долей / add, give me; топливо / fuel |
-| `tires` | `action`, `object`, `keep`, `targets` | меняй, замени / change, swap; шины / tires; трогай |
+| `tires` | `action`, `object`, `keep`, `targets`, `compounds`, `into` | меняй, замени / change, swap; шины / tires; трогай; дождевые / wets; на / to |
 | `windshield` | `action`, `object`, `keep` | сорви, протри / tear off, clean; плёнку / windshield |
 | `repair` | `action`, `object`, `fast` | почини / fix; машину, ремонт / car, repair; быстрый / fast |
 | `clear` | `action`, `object` | сбрось / clear, reset; всё, все команды / all, everything |
@@ -110,6 +110,25 @@ the windshield are rejected in this language. The shipped `ru` and `en` packs ha
 Tire `targets` are `all`, `left`, `right`, `front`, `rear` (sides and axles) and `lf`, `rf`, `lr`, `rr` (front left,
 front right, rear left, rear right). A pack may leave a group, a class or a target out; the commands that need it
 are then not available in this language, and validation says which.
+
+Tire `compounds` are `dry` and `wet`; another name (`intermediate`) is an error with the file and the line. `into` is
+the word that leads to a compound ("на" of "меняем резину на дождевые", "to" of "change tires to wets"). Without
+compound words the pack has no `tires.dry` and `tires.wet`, and validation warns that it is incomplete.
+
+```yaml
+  tires:
+    compounds:
+      dry: [сухие]
+      wet: [дождевые, мокрые]
+    into: [на]
+```
+
+`into_homophones` (optional, top level) lists words that sound like the `into` word: the English pack has
+`into_homophones: [two]`, because the recognizer cannot tell "to" from "two" and hears "change to slicks" as "change two
+slicks". In a piece with a compound such a one-word number right before the compound word is read as `into`, and its
+recognition confidence does not count; anywhere else it stays a number ("add two liters"). A homophone must be one
+word, the pack must have `tires.into`, and a homophone cannot be a lexicon word, a conjunction, a filler, a negation or
+a reject word.
 
 An entry is one word or a fixed sequence of words: "переднее левое", "give me", "tear off". List every form drivers
 use as its own entry ("меняй", "меняем", "поменяй"): there are no stems or patterns, so "мен" never matches "меньше".
@@ -141,6 +160,7 @@ The rules are in code (`WordRules`) and the same for every language. Word order 
 | `fuel.none` | a negation and a fuel `action` or `object`, no number |
 | `tires.<target>` | targets with a tire `action` or `object` ("меняй передние", "задние шины"), or one target of two or more words alone ("переднее левое"); `action` + `object` without a target is `tires.all` |
 | `tires.none.<target>` | a negation and targets ("не меняй левые", "leave the rears"); a negation and the tire `object` without a target is `tires.none` |
+| `tires.dry`, `tires.wet` | a compound with a tire `action`, `object`, `into` or the target `all` ("меняем резину на дождевые", "дождевые шины", "на сухие"); selects the compound and all four tires |
 | `windshield.tearoff` | a windshield `action` and `object`, or an `action` of two or more words ("tear off") |
 | `windshield.none` | a negation and a windshield `action`, `keep` or `object` |
 | `repair.fast` | a repair `object` with an `action` or `fast` ("почини машину", "быстрый ремонт") |
@@ -171,25 +191,33 @@ More rules worth knowing:
 - **One unknown word.** A part of three or more words may contain one word that is in no entry ("меняй все эти шины"),
   with match quality 0.75; a word that is only a piece of a longer entry does not count as unknown, and an unknown word
   next to a number rejects the part ("add one thousand liters" is not 1 liter).
-- Conflicts are the same as before: adding and removing the same wheel, a command and its removal, `pit.clear` with
-  anything else. Repeated commands collapse; of several `fuel.add` the last one wins.
+- **A compound is for all four tires.** The game sets a compound for the whole car, so a compound with another target
+  ("меняй левые на дождевые"), with a negation or `keep` ("не меняй на дождевые"), with a second compound or with a
+  number is rejected. One compound word alone ("дождевые") is not a command.
+- **`into` needs a compound.** A piece with `into` and no compound ("меняем резину на") rejects the whole phrase: the
+  recognizer drops a compound it cannot write ("слики" is not in the model), and the phrase would change all tires on
+  the old compound.
+- Conflicts: adding and removing the same wheel, a command and its removal, `pit.clear` with anything else, the two
+  compounds, a compound with any tire removal ("меняй на дождевые и не меняй левые"). A compound with a tire addition
+  is no conflict: the wheels merge. Repeated commands collapse; of several `fuel.add` the last one wins.
 
 ## Reject words
 
 `reject_words` lists words that reject the whole phrase: what drivers say when they ask for something PitVoice cannot
-do, such as a tire compound, and words the recognizer would otherwise drop without a trace: "тридцать точка два"
+do, such as intermediate tires, and words the recognizer would otherwise drop without a trace: "тридцать точка два"
 would be heard as "тридцать два", "кто впереди меня" as "передние меняй".
 
 ```yaml
-reject_words: [на, дождевую, дождевые, мокрую, сухие]
+reject_words: [точка, кто, впереди]
 ```
 
 The recognizer only writes words of the pack, and a phrase tail without such words is dropped without a trace:
-"меняем резину на слики" is heard as "меняем резину" with full confidence, which is a valid command. With "на" in
-`reject_words` the recognizer hears "меняем резину на", and the phrase is rejected. Reject words go into the recognizer
-grammar, so list words the model knows (`validate` warns about the others) and that do not sound like command words:
-the English pack does not use "on" or "to", which are heard as "one" and "two". A reject word must not be a word of
-any command (a lexicon entry, a conjunction, a negation, a filler, a unit or a number word); validation reports it.
+"кто впереди меня" would be heard as some command words with full confidence. With the words in `reject_words` the
+recognizer hears them, and the phrase is rejected. ("меняем резину на слики" is caught by `into`: "на" without a
+compound rejects the phrase.) Reject words go into the recognizer grammar, so list words the model knows (`validate`
+warns about the others) and that do not sound like command words: short words such as "on" are heard as "one". A
+reject word must not be a word of any command (a lexicon entry, a compound, `into`, a conjunction, a negation, a
+filler, a unit or a number word); validation reports it with the class.
 
 ## Responses
 
@@ -205,6 +233,7 @@ intent nor an outcome is an error too.
 | `not_connected` | the game is not running, nothing was sent |
 | `not_in_car` | the game runs but the driver is not in the car, nothing was sent |
 | `apply_failed` | the game did not confirm all commands within 1.5 s (not applied or partially applied) |
+| `no_dry_tires`, `no_wet_tires`, `several_dry_tires` | the car has no compound of that kind, or several dry ones; nothing was sent. Required when the pack has compound words |
 
 `not_supported` and `cancelled` of format 1 are not used any more and give a warning.
 

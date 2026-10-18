@@ -19,8 +19,10 @@ conjunctions: [and, and then, then, plus, also, as well as]
 fillers: [please, just, hey, um, uh, okay, ok, now, the]
 # "keep" and "leave" mean "do not change": "keep tires", "leave the rears".
 negations: [no, not, don't, without, never, skip, keep, leave]
-# Words that reject the whole phrase: the driver asks for something PitVoice cannot do, e.g. a tire compound.
-reject_words: [wet, wets, dry, slicks, slick, rain, rains, intermediates, point, comma, who, ahead, behind]
+# Words that reject the whole phrase: the driver asks for something PitVoice cannot do, e.g. intermediate tires.
+reject_words: [intermediates, point, comma, who, ahead, behind]
+# "to" and "two" sound the same: before a compound "two" is read as "to" ("change two slicks").
+into_homophones: [two]
 
 lexicon:
   fuel:
@@ -39,6 +41,11 @@ lexicon:
       rf: [front right, right front]
       lr: [rear left, left rear]
       rr: [rear right, right rear]
+    # A compound changes all four tires; "to" leads to it: "change tires to wets".
+    compounds:
+      dry: [dry, slicks, slick]
+      wet: [wet, wets, rain, rains]
+    into: [to]
   windshield:
     action: [tear off, clean, wipe]
     object: [windshield]
@@ -62,6 +69,8 @@ responses:
   tires.rf: "changing front right"
   tires.lr: "changing rear left"
   tires.rr: "changing rear right"
+  tires.dry: "switching to dry tires"
+  tires.wet: "switching to wet tires"
   tires.none: "no tire change"
   tires.none.left: "keeping left side"
   tires.none.right: "keeping right side"
@@ -80,6 +89,9 @@ responses:
   not_connected: "no connection to the game"
   not_in_car: "you are not in the car"
   apply_failed: "the command was not applied"
+  no_dry_tires: "this car has no dry tires"
+  no_wet_tires: "this car has no wet tires"
+  several_dry_tires: "this car has several dry compounds"
 
 tests:
   # fuel.add: every verb
@@ -296,11 +308,45 @@ tests:
   - say: "change tires and sing a song"
     expect: reject
 
-  # reject words: tire compounds are not commands
+  # tire compounds: with an action, the object, "to" or "all"; all four tires
+  - say: "change tires to wets"
+    expect: [{ intent: tires.wet }]
   - say: "change to wet tires"
+    expect: [{ intent: tires.wet }]
+  - say: "rain tires"
+    expect: [{ intent: tires.wet }]
+  - say: "change all to rains"
+    expect: [{ intent: tires.wet }]
+  - say: "change to slicks"
+    expect: [{ intent: tires.dry }]
+  - say: "to dry"
+    expect: [{ intent: tires.dry }]
+  - say: "swap tires to slick"
+    expect: [{ intent: tires.dry }]
+  - say: "change to wets and add twenty liters"
+    expect: [{ intent: tires.wet }, { intent: fuel.add, amount: 20, unit: liters }]
+  - say: "wets"
+    expect: reject                                       # one word never changes the pit stop
+  - say: "change left to wets"
+    expect: reject                                       # a compound only on all four tires
+  - say: "no wet tires"
     expect: reject
-  - say: "swap tires for slicks"
+  - say: "change to wets and to slicks"
     expect: reject
+  - say: "change to intermediates"
+    expect: reject                                       # a reject word
+  # "to" without a compound: the recognizer lost a word it cannot write
+  - say: "change tires to"
+    expect: reject
+  # "to" heard as "two": the recognizer cannot tell them apart
+  - say: "change two slicks"
+    expect: [{ intent: tires.dry }]
+  - say: "change left two wets"
+    expect: reject
+  - say: "change twenty two slicks"
+    expect: reject
+  - say: "add two liters"
+    expect: [{ intent: fuel.add, amount: 2, unit: liters }]
   - say: "add thirty point five liters"
     expect: reject
   - say: "who is ahead"

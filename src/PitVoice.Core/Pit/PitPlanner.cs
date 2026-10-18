@@ -41,7 +41,11 @@ public static class PitPlanner
     /// Usable tank of the car in liters, if known. The game caps a fuel request to it, so the expected amount is exactly
     /// <c>min(sent, capacity)</c>. Without it any amount <c>0 &lt; amount &lt;= sent</c> confirms.
     /// </param>
-    public static PitPlan Plan(IReadOnlyList<ParsedCommand> commands, PitServiceState current, double? fuelCapacity = null)
+    /// <param name="compoundIndex">
+    /// Index of the car's compound for a <c>tires.dry</c> or <c>tires.wet</c> command, chosen by the executor from the tire
+    /// list (design D6); required when the phrase has such a command.
+    /// </param>
+    public static PitPlan Plan(IReadOnlyList<ParsedCommand> commands, PitServiceState current, double? fuelCapacity = null, int? compoundIndex = null)
     {
         ArgumentNullException.ThrowIfNull(commands);
         ArgumentNullException.ThrowIfNull(current);
@@ -57,7 +61,7 @@ public static class PitPlanner
             {
                 if (!tiresPlanned)
                 {
-                    steps.Add(PlanTires(tires, current));
+                    steps.Add(PlanTires(tires, current, compoundIndex));
                     tiresPlanned = true;
                 }
 
@@ -76,15 +80,35 @@ public static class PitPlanner
             ? (int)Math.Round(amount * LitersPerGallon, MidpointRounding.AwayFromZero)
             : amount;
 
-    private static PlannedStep PlanTires(IReadOnlyList<ParsedCommand> tires, PitServiceState current)
+    private static PlannedStep PlanTires(IReadOnlyList<ParsedCommand> tires, PitServiceState current, int? compoundIndex)
     {
         var adds = Wheels.None;
         var removes = Wheels.None;
+        var hasCompound = false;
         foreach (var command in tires)
         {
             var definition = IntentCatalog.Get(command.Intent);
             adds |= definition.AddsWheels;
             removes |= definition.RemovesWheels;
+            hasCompound |= definition.Compound is not null;
+        }
+
+        if (hasCompound)
+        {
+            // Parsing rejects a compound with a removal (design D5); the compound comes with all four tires.
+            if (removes != Wheels.None || compoundIndex is not { } index)
+            {
+                throw new InvalidOperationException("A compound command needs the compound index and no tire removal.");
+            }
+
+            // TC first, then the wheels: tires accumulate, so nothing is cleared (design D8).
+            var withCompound = new List<SentCommand> { new(PitCommand.TC, index) };
+            withCompound.AddRange(adds.Split().Select(w => new SentCommand(w.ToPitCommand(), 0)));
+            return new PlannedStep(
+                tires,
+                withCompound,
+                $"compound {index}, wheels include {adds.Describe()}",
+                s => s.TireCompound == index && (s.Wheels & adds) == adds);
         }
 
         if (removes == Wheels.None)

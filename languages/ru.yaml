@@ -18,11 +18,11 @@ units:
 conjunctions: [и, а также, плюс, потом, затем, ещё]
 fillers: [пожалуйста, давай, так, ну, слушай, эй, короче, значит, надо]
 negations: [не, без]
-# Words that reject the whole phrase: the driver asks for something PitVoice cannot do (a tire compound, a fraction
-# with "точка") or talks to someone else ("кто впереди меня").
-# Without them the recognizer drops "на слики" and "меняем резину на слики" would change all tires; "слики" itself is
-# not in the model, "на" catches it.
-reject_words: [на, дождевую, дождевые, дождевая, мокрую, мокрые, сухую, сухие, точка, запятая, кто, впереди, сзади, позади, меня]
+# Words that reject the whole phrase: the driver asks for something PitVoice cannot do (a fraction with "точка") or
+# talks to someone else ("кто впереди меня"). Without them the recognizer drops the tail it cannot write.
+# "слики" is not in the model: "меняем резину на слики" is heard as "меняем резину на", and "на" without a compound
+# rejects the phrase.
+reject_words: [точка, запятая, кто, впереди, сзади, позади, меня]
 # The recognizer swaps these forms freely ("меняй переднее" for "меняй передние"): a form said alone is its word.
 # A wheel matches only as written ("переднее левое"), and a side and an axle in a row are rejected: say
 # "меняй левые и передние" for both, "меняй переднее левое" for the wheel.
@@ -31,6 +31,9 @@ word_forms:
   задние: [заднее]
   левые: [левое, левая]
   правые: [правое, правая]
+  сухие: [сухую]
+  дождевые: [дождевую, дождевая]
+  мокрые: [мокрую]
 
 lexicon:
   fuel:
@@ -50,6 +53,11 @@ lexicon:
       rf: [переднее правое, правое переднее]
       lr: [заднее левое, левое заднее]
       rr: [заднее правое, правое заднее]
+    # A compound changes all four tires; "на" leads to it: "меняем резину на дождевые".
+    compounds:
+      dry: [сухие]
+      wet: [дождевые, мокрые]
+    into: [на]
   windshield:
     action: [сорви, сними, снимай, протри, почисти, смени]
     object: [стекло, плёнку]
@@ -74,6 +82,8 @@ responses:
   tires.rf: "меняем переднее правое"
   tires.lr: "меняем заднее левое"
   tires.rr: "меняем заднее правое"
+  tires.dry: "ставим сухие"
+  tires.wet: "ставим дождевые"
   tires.none: "шины не меняем"
   tires.none.left: "левые не меняем"
   tires.none.right: "правые не меняем"
@@ -92,6 +102,9 @@ responses:
   not_connected: "нет связи с игрой"
   not_in_car: "ты не в машине"
   apply_failed: "команда не применилась"
+  no_dry_tires: "у машины нет сухих шин"
+  no_wet_tires: "у машины нет дождевых шин"
+  several_dry_tires: "у машины несколько сухих составов"
 
 tests:
   # fuel.add: every verb
@@ -362,12 +375,43 @@ tests:
   - say: "залей тысячу литров"
     expect: reject
 
-  # reject words: tire compounds and anything after "на" are not commands
+  # tire compounds: with an action, the object, "на" or "все"; all four tires
+  - say: "меняем резину на дождевые"
+    expect: [{ intent: tires.wet }]
+  - say: "дождевые шины"
+    expect: [{ intent: tires.wet }]
+  - say: "на дождевые"
+    expect: [{ intent: tires.wet }]
+  - say: "меняй все на мокрые"
+    expect: [{ intent: tires.wet }]
   - say: "меняем резину на дождевую"
-    expect: reject
+    expect: [{ intent: tires.wet }]
   - say: "меняй шины на сухие"
+    expect: [{ intent: tires.dry }]
+  - say: "на сухие"
+    expect: [{ intent: tires.dry }]
+  - say: "поменяй на сухую резину"
+    expect: [{ intent: tires.dry }]
+  - say: "меняй на дождевые и залей двадцать литров"
+    expect: [{ intent: tires.wet }, { intent: fuel.add, amount: 20, unit: liters }]
+  - say: "меняй на дождевые и меняй левые"
+    expect: [{ intent: tires.wet }, { intent: tires.left }]
+  - say: "меняй левые и на дождевые"
+    expect: [{ intent: tires.left }, { intent: tires.wet }]
+  - say: "дождевые"
+    expect: reject                                       # one word never changes the pit stop
+  - say: "меняй левые на дождевые"
+    expect: reject                                       # a compound only on all four tires
+  - say: "не меняй на дождевые"
     expect: reject
+  - say: "меняй на дождевые и на сухие"
+    expect: reject
+  - say: "меняй резину на дождевые и не меняй левые"
+    expect: reject
+  # "на" without a compound: the recognizer lost a word it cannot write ("слики")
   - say: "меняем резину на"
+    expect: reject
+  - say: "залей двадцать на и меняй шины"
     expect: reject
 
   # a form alone is its word; a side and an axle in a row are rejected, a wheel is named as written

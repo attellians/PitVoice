@@ -93,6 +93,93 @@ public class MemoryLayoutTests
 
         Assert.False(IRacingMemoryLayout.TryRead(image.Bytes, out _));
     }
+
+    [Fact]
+    public void Selected_compound_is_read()
+    {
+        var image = new MemoryImage(withTireCompound: true).Buffer(0, 10, true, 0x0F, 0, 30, pitSvTireCompound: 1);
+
+        Assert.True(IRacingMemoryLayout.TryRead(image.Bytes, out var raw));
+        Assert.Equal(1, raw.PitSvTireCompound);
+    }
+
+    [Fact]
+    public void Without_the_variable_the_selected_compound_is_unknown()
+    {
+        var image = new MemoryImage().Buffer(0, 10, true, 0x0F, 0, 30);
+
+        Assert.True(IRacingMemoryLayout.TryRead(image.Bytes, out var raw));
+        Assert.Null(raw.PitSvTireCompound);
+    }
+
+    // The tire block as the game writes it under DriverInfo, list items at the indent of the key.
+    private const string TwoCompounds = """
+        ---
+        DriverInfo:
+         DriverCarIdx: 0
+         DriverCarFuelMaxLtr: 96.000
+         DriverTires:
+         - TireIndex: 0
+           TireCompoundType: "Dry"
+         - TireIndex: 1
+           TireCompoundType: "Wet"
+         Drivers:
+         - CarIdx: 0
+           UserName: Jörg Müller
+        ...
+        """;
+
+    [Fact]
+    public void Two_compounds()
+    {
+        var image = new MemoryImage().SessionInfo(TwoCompounds);
+
+        Assert.Equal([new TireCompound(0, "Dry"), new TireCompound(1, "Wet")], IRacingMemoryLayout.ReadTireCompounds(image.Bytes)!);
+    }
+
+    [Fact]
+    public void Three_compounds_unquoted()
+    {
+        const string yaml = """
+            DriverInfo:
+             DriverTires:
+             - TireIndex: 0
+               TireCompoundType: Hard
+             - TireIndex: 1
+               TireCompoundType: Soft
+             - TireIndex: 2
+               TireCompoundType: Wet
+             DriverCarIdx: 0
+            """;
+
+        var compounds = IRacingMemoryLayout.ParseTireCompounds(yaml);
+
+        Assert.Equal(["Hard", "Soft", "Wet"], compounds!.Select(c => c.Type));
+        Assert.Equal([0, 1, 2], compounds!.Select(c => c.Index));
+    }
+
+    [Fact]
+    public void Without_the_block_the_list_is_unknown()
+    {
+        var image = new MemoryImage().SessionInfo(SessionYaml);
+
+        Assert.Null(IRacingMemoryLayout.ReadTireCompounds(image.Bytes));
+        Assert.Null(IRacingMemoryLayout.ReadTireCompounds(new MemoryImage().Bytes));
+        Assert.True(IRacingMemoryLayout.TryReadFuelCapacity(image.Bytes, out _));
+    }
+
+    [Theory]
+    [InlineData("TireCompoundType: \"Wet\"\n", "")]                          // last item without its type
+    [InlineData("TireCompoundType: \"Wet\"\n", "TireCompoundType: \"W")]  // cut inside the value
+    [InlineData("- TireIndex: 1\n", "- TireIndex: \n")]                           // cut after the key
+    public void Truncated_block_gives_an_unknown_list(string line, string replacement)
+    {
+        var yaml = TwoCompounds.Replace("\r\n", "\n", StringComparison.Ordinal);
+        Assert.Contains(line, yaml, StringComparison.Ordinal);
+        var cut = yaml[..(yaml.IndexOf(line, StringComparison.Ordinal) + line.Length)].Replace(line, replacement, StringComparison.Ordinal);
+
+        Assert.Null(IRacingMemoryLayout.ParseTireCompounds(cut));
+    }
 }
 
 public class ConnectionStateTrackerTests
@@ -172,5 +259,17 @@ public class ConnectionStateTrackerTests
         Assert.Equal(ConnectionState.NotRunning, tracker.Evaluate(Raw(7), 1500 * Ms).State);
 
         Assert.Equal(ConnectionState.Connected, tracker.Evaluate(Raw(8, onTrack: false), 1516 * Ms).State);
+    }
+
+    [Fact]
+    public void Compounds_reach_the_snapshot()
+    {
+        var raw = Raw(1) with { PitSvTireCompound = 1, TireCompounds = [new TireCompound(0, "Dry"), new TireCompound(1, "Wet")] };
+
+        var snapshot = new ConnectionStateTracker().Evaluate(raw, TimeSpan.Zero);
+
+        Assert.Equal(1, snapshot.Pit!.TireCompound);
+        Assert.Equal(2, snapshot.TireCompounds!.Count);
+        Assert.Null(new ConnectionStateTracker().Evaluate(Raw(1), TimeSpan.Zero).TireCompounds);
     }
 }

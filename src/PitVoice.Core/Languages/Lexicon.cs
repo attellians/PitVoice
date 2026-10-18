@@ -1,5 +1,6 @@
 using System.Collections.Frozen;
 using PitVoice.Core.Parsing;
+using PitVoice.Core.Pit;
 
 namespace PitVoice.Core.Languages;
 
@@ -30,6 +31,12 @@ public enum WordRole
 
     /// <summary>A tire target: a wheel, a side, an axle or all tires (only in <see cref="LexiconGroup.Tires"/>).</summary>
     Target,
+
+    /// <summary>A tire compound: "дождевые", "slicks" (only in <see cref="LexiconGroup.Tires"/>, design D2).</summary>
+    Compound,
+
+    /// <summary>The word that leads to a compound: "на" of "меняй на дождевые", "to" (only in <see cref="LexiconGroup.Tires"/>).</summary>
+    Into,
 }
 
 /// <summary>Tire targets of the lexicon: every wheel, side, axle and all four.</summary>
@@ -46,13 +53,16 @@ public enum TireTarget
     RR,
 }
 
-/// <summary>A class of words: group, role and, for tire targets, the target.</summary>
-public readonly record struct WordClass(LexiconGroup Group, WordRole Role, TireTarget? Target = null) : IComparable<WordClass>
+/// <summary>A class of words: group, role and, for tire targets and compounds, the target or the compound.</summary>
+public readonly record struct WordClass(
+    LexiconGroup Group, WordRole Role, TireTarget? Target = null, TireCompoundKind? Compound = null) : IComparable<WordClass>
 {
-    /// <summary>Name as written in the pack: <c>fuel.action</c>, <c>tires.targets.lf</c>.</summary>
+    /// <summary>Name as written in the pack: <c>fuel.action</c>, <c>tires.targets.lf</c>, <c>tires.compounds.wet</c>.</summary>
     public string Name => Target is { } target
-        ? $"{LexiconSchema.Name(Group)}.targets.{LexiconSchema.Name(target)}"
-        : $"{LexiconSchema.Name(Group)}.{LexiconSchema.Name(Role)}";
+        ? $"{LexiconSchema.Name(Group)}.{LexiconSchema.TargetsKey}.{LexiconSchema.Name(target)}"
+        : Compound is { } compound
+            ? $"{LexiconSchema.Name(Group)}.{LexiconSchema.CompoundsKey}.{LexiconSchema.Name(compound)}"
+            : $"{LexiconSchema.Name(Group)}.{LexiconSchema.Name(Role)}";
 
     public int CompareTo(WordClass other)
     {
@@ -63,7 +73,13 @@ public readonly record struct WordClass(LexiconGroup Group, WordRole Role, TireT
         }
 
         var byRole = Role.CompareTo(other.Role);
-        return byRole != 0 ? byRole : Nullable.Compare(Target, other.Target);
+        if (byRole != 0)
+        {
+            return byRole;
+        }
+
+        var byTarget = Nullable.Compare(Target, other.Target);
+        return byTarget != 0 ? byTarget : Nullable.Compare(Compound, other.Compound);
     }
 
     public override string ToString() => Name;
@@ -73,6 +89,8 @@ public readonly record struct WordClass(LexiconGroup Group, WordRole Role, TireT
 public static class LexiconSchema
 {
     public const string TargetsKey = "targets";
+
+    public const string CompoundsKey = "compounds";
 
     private static readonly FrozenDictionary<string, LexiconGroup> Groups = new Dictionary<string, LexiconGroup>(StringComparer.Ordinal)
     {
@@ -89,6 +107,13 @@ public static class LexiconSchema
         ["object"] = WordRole.Object,
         ["keep"] = WordRole.Keep,
         ["fast"] = WordRole.Fast,
+        ["into"] = WordRole.Into,
+    }.ToFrozenDictionary();
+
+    private static readonly FrozenDictionary<string, TireCompoundKind> Compounds = new Dictionary<string, TireCompoundKind>(StringComparer.Ordinal)
+    {
+        ["dry"] = TireCompoundKind.Dry,
+        ["wet"] = TireCompoundKind.Wet,
     }.ToFrozenDictionary();
 
     private static readonly FrozenDictionary<string, TireTarget> Targets = new Dictionary<string, TireTarget>(StringComparer.Ordinal)
@@ -107,7 +132,7 @@ public static class LexiconSchema
     private static readonly FrozenDictionary<LexiconGroup, WordRole[]> GroupRoles = new Dictionary<LexiconGroup, WordRole[]>
     {
         [LexiconGroup.Fuel] = [WordRole.Action, WordRole.Object],
-        [LexiconGroup.Tires] = [WordRole.Action, WordRole.Object, WordRole.Keep, WordRole.Target],
+        [LexiconGroup.Tires] = [WordRole.Action, WordRole.Object, WordRole.Keep, WordRole.Target, WordRole.Compound, WordRole.Into],
         [LexiconGroup.Windshield] = [WordRole.Action, WordRole.Object, WordRole.Keep],
         [LexiconGroup.Repair] = [WordRole.Action, WordRole.Object, WordRole.Fast],
         [LexiconGroup.Clear] = [WordRole.Action, WordRole.Object],
@@ -120,30 +145,46 @@ public static class LexiconSchema
 
     public static bool TryGetGroup(string name, out LexiconGroup group) => Groups.TryGetValue(name, out group);
 
+    public static IReadOnlyList<string> CompoundNames { get; } = ["dry", "wet"];
+
     public static bool TryGetTarget(string name, out TireTarget target) => Targets.TryGetValue(name, out target);
 
-    /// <summary>The role named <paramref name="name"/> if <paramref name="group"/> has it; <c>targets</c> is not a role name.</summary>
+    public static bool TryGetCompound(string name, out TireCompoundKind compound) => Compounds.TryGetValue(name, out compound);
+
+    /// <summary>
+    /// The role named <paramref name="name"/> if <paramref name="group"/> has it; <c>targets</c> and <c>compounds</c> are
+    /// not role names.
+    /// </summary>
     public static bool TryGetRole(LexiconGroup group, string name, out WordRole role) =>
         Roles.TryGetValue(name, out role) && HasRole(group, role);
 
     public static bool HasRole(LexiconGroup group, WordRole role) => GroupRoles[group].Contains(role);
 
     /// <summary>Role names of a group as written in YAML, for error messages.</summary>
-    public static IReadOnlyList<string> RoleNames(LexiconGroup group) =>
-        GroupRoles[group].Select(r => r == WordRole.Target ? TargetsKey : Name(r)).ToArray();
+    public static IReadOnlyList<string> RoleNames(LexiconGroup group) => GroupRoles[group].Select(Name).ToArray();
 
     public static string Name(LexiconGroup group) => Groups.First(p => p.Value == group).Key;
 
-    public static string Name(WordRole role) => role == WordRole.Target ? TargetsKey : Roles.First(p => p.Value == role).Key;
+    public static string Name(WordRole role) => role switch
+    {
+        WordRole.Target => TargetsKey,
+        WordRole.Compound => CompoundsKey,
+        _ => Roles.First(p => p.Value == role).Key,
+    };
 
     public static string Name(TireTarget target) => Targets.First(p => p.Value == target).Key;
+
+    public static string Name(TireCompoundKind compound) => Compounds.First(p => p.Value == compound).Key;
 
     /// <summary>Every class of the format, in format order.</summary>
     public static IReadOnlyList<WordClass> AllClasses { get; } =
         Enum.GetValues<LexiconGroup>()
-            .SelectMany(g => GroupRoles[g].SelectMany(r => r == WordRole.Target
-                ? Enum.GetValues<TireTarget>().Select(t => new WordClass(g, r, t))
-                : [new WordClass(g, r)]))
+            .SelectMany(g => GroupRoles[g].SelectMany(r => r switch
+            {
+                WordRole.Target => Enum.GetValues<TireTarget>().Select(t => new WordClass(g, r, t)),
+                WordRole.Compound => Enum.GetValues<TireCompoundKind>().Select(c => new WordClass(g, r, Compound: c)),
+                _ => [new WordClass(g, r)],
+            }))
             .ToArray();
 }
 

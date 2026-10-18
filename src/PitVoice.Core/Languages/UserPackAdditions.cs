@@ -229,6 +229,29 @@ public static class UserAdditionsLoader
                     continue;
                 }
 
+                if (roleName == LexiconSchema.CompoundsKey && LexiconSchema.HasRole(group, WordRole.Compound))
+                {
+                    if (value is not YamlMappingNode compounds)
+                    {
+                        error(value, rolePath, $"'{groupName}.compounds' must map compounds ({string.Join(", ", LexiconSchema.CompoundNames)}) to words");
+                        continue;
+                    }
+
+                    foreach (var (compoundKey, compoundWords) in compounds.Children)
+                    {
+                        var compoundName = (compoundKey as YamlScalarNode)?.Value?.Trim() ?? string.Empty;
+                        if (!LexiconSchema.TryGetCompound(compoundName, out var compound))
+                        {
+                            error(compoundKey, $"{rolePath}/{compoundName}", $"unknown tire compound '{compoundName}'; compounds: {string.Join(", ", LexiconSchema.CompoundNames)}");
+                            continue;
+                        }
+
+                        ReadWords(new WordClass(group, WordRole.Compound, Compound: compound), compoundWords, $"{rolePath}/{compoundName}", words, error);
+                    }
+
+                    continue;
+                }
+
                 if (!LexiconSchema.TryGetRole(group, roleName, out var role))
                 {
                     error(roleKey, rolePath, $"unknown word class '{groupName}.{roleName}'; group '{groupName}' has: {string.Join(", ", LexiconSchema.RoleNames(group))}");

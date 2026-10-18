@@ -178,6 +178,15 @@ public static class CommandReference
                 yield break;
             }
 
+            if (definition.Compound is { } compound)
+            {
+                var compoundWord = pack.Lexicon.Of(new WordClass(LexiconGroup.Tires, WordRole.Compound, Compound: compound))
+                    .FirstOrDefault(e => !e.IsUserAddition)?.Text;
+                yield return [action, First(LexiconGroup.Tires, WordRole.Into), compoundWord];
+                yield return [compoundWord, obj];
+                yield break;
+            }
+
             if (group == LexiconGroup.Tires)
             {
                 var target = Enum.GetValues<TireTarget>().First(t => WordRules.TireIntent(t, definition.IsNegation) == intent);

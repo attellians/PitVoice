@@ -109,7 +109,7 @@ samples:
     expect: [{ intent: tires.right }, { intent: tires.none.left }]
   # must be rejected: conflict, fraction, noise and unrelated speech
   - say: "change to wet tires"
-    expect: reject
+    expect: [{ intent: tires.wet }]                 # a compound command since add-tire-compound
   - say: "change tires and no tires"
     expect: reject
   - say: "add thirty point two"
@@ -127,4 +127,14 @@ samples:
   - say: "front"
     expect: reject
   - say: "box this lap"
+    expect: reject
+
+  # tire compounds (add-tire-compound): appended so that the take numbers of the phrases above stay the same
+  - say: "change to slicks"
+    expect: [{ intent: tires.dry }]
+  - say: "rain tires"
+    expect: [{ intent: tires.wet }]
+  - say: "change to wets and add twenty liters"
+    expect: [{ intent: tires.wet }, { intent: fuel.add, amount: 20, unit: liters }]
+  - say: "change left to wets"
     expect: reject

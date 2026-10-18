@@ -18,10 +18,16 @@ public sealed class ResponseBuilder
     public const string NotConnectedKey = "not_connected";
     public const string NotInCarKey = "not_in_car";
     public const string ApplyFailedKey = "apply_failed";
+    public const string NoDryTiresKey = "no_dry_tires";
+    public const string NoWetTiresKey = "no_wet_tires";
+    public const string SeveralDryTiresKey = "several_dry_tires";
 
     /// <summary>Responses every pack must have: for a rejected phrase and for every execution outcome.</summary>
     public static IReadOnlyList<string> RequiredKeys { get; } =
         [NotUnderstoodKey, NotConnectedKey, NotInCarKey, ApplyFailedKey];
+
+    /// <summary>Responses of the "compound not available" outcome; required when the pack has compound words (design D7).</summary>
+    public static IReadOnlyList<string> CompoundKeys { get; } = [NoDryTiresKey, NoWetTiresKey, SeveralDryTiresKey];
 
     /// <summary>
     /// Responses of the removed fuel status and cancel intents and of their outcome. A pack that still has them
@@ -65,6 +71,12 @@ public sealed class ResponseBuilder
             ExecutionOutcome.PartiallyApplied or ExecutionOutcome.NotApplied => _pack.Responses[ApplyFailedKey],
             ExecutionOutcome.NotConnected => _pack.Responses[NotConnectedKey],
             ExecutionOutcome.NotInCar => _pack.Responses[NotInCarKey],
+            ExecutionOutcome.CompoundUnavailable => _pack.Responses[execution.CompoundProblem switch
+            {
+                CompoundProblem.NoWet => NoWetTiresKey,
+                CompoundProblem.SeveralDry => SeveralDryTiresKey,
+                _ => NoDryTiresKey,
+            }],
             _ => throw new ArgumentOutOfRangeException(nameof(execution), execution.Outcome, "unknown outcome"),
         };
     }

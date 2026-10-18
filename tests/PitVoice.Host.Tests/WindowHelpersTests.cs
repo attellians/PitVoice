@@ -143,6 +143,33 @@ public sealed class WindowHelpersTests
     }
 
     [Fact]
+    public void Reference_shows_tire_compounds()
+    {
+        var tires = CommandReference.Build(TestPacks.Ru).Single(g => g.Group == CommandGroup.Tires);
+
+        var wet = tires.Classes.Single(c => c.Class is { Compound: Core.Pit.TireCompoundKind.Wet }).Words.Select(w => w.Text);
+        var dry = tires.Classes.Single(c => c.Class is { Compound: Core.Pit.TireCompoundKind.Dry }).Words.Select(w => w.Text);
+        Assert.Contains("дождевые", wet);
+        Assert.Contains("мокрые", wet);
+        Assert.Contains("сухие", dry);
+        Assert.Contains(tires.Classes, c => c.Class is { Role: WordRole.Into } && c.Words.Any(w => w.Text == "на"));
+
+        Assert.Equal("меняем резину на дождевые", tires.Commands.Single(c => c.Intent == IntentCatalog.TiresWet).Examples[0]);
+        Assert.NotEmpty(tires.Commands.Single(c => c.Intent == IntentCatalog.TiresDry).Examples);
+    }
+
+    [Fact]
+    public void Reference_of_a_pack_without_compounds_has_no_compound_commands()
+    {
+        var pack = LanguagePackLoader.LoadFile(Path.Combine(TestPacks.FixturesDirectory, "valid-minimal.yaml")).Pack!;
+
+        var groups = CommandReference.Build(pack);
+
+        Assert.DoesNotContain(groups.SelectMany(g => g.Commands), c => c.Intent == IntentCatalog.TiresDry || c.Intent == IntentCatalog.TiresWet);
+        Assert.DoesNotContain(groups.SelectMany(g => g.Classes), c => c.Class is { Role: WordRole.Compound });
+    }
+
+    [Fact]
     public void Template_file_adds_nothing_and_is_not_overwritten()
     {
         var directory = Path.Combine(Path.GetTempPath(), "pitvoice-template-" + Guid.NewGuid().ToString("N"));

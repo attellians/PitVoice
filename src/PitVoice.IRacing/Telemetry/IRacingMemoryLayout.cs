@@ -1,6 +1,7 @@
 using System.Buffers.Binary;
 using System.Globalization;
 using System.Text;
+using PitVoice.Core.Pit;
 
 namespace PitVoice.IRacing.Telemetry;
 
@@ -12,7 +13,18 @@ namespace PitVoice.IRacing.Telemetry;
 /// <param name="PitSvFuel">Fuel to add, liters.</param>
 /// <param name="FuelLevel">Fuel in the tank, liters.</param>
 /// <param name="FuelCapacity">Usable tank of the car from session info, liters; filled in by the telemetry source.</param>
-public readonly record struct RawTelemetry(int Status, int Tick, bool IsOnTrack, int PitSvFlags, float PitSvFuel, float FuelLevel, double? FuelCapacity = null)
+/// <param name="PitSvTireCompound">Compound selected for the pit stop; null when the game has no such variable.</param>
+/// <param name="TireCompounds">Tire list of the car from session info; filled in by the telemetry source, null when unknown.</param>
+public readonly record struct RawTelemetry(
+    int Status,
+    int Tick,
+    bool IsOnTrack,
+    int PitSvFlags,
+    float PitSvFuel,
+    float FuelLevel,
+    double? FuelCapacity = null,
+    int? PitSvTireCompound = null,
+    IReadOnlyList<TireCompound>? TireCompounds = null)
 {
     public bool IsConnected => (Status & IRacingMemoryLayout.StatusConnected) != 0;
 }
@@ -81,7 +93,7 @@ public static class IRacingMemoryLayout
             return false;
         }
 
-        Variable? isOnTrack = null, pitSvFlags = null, pitSvFuel = null, fuelLevel = null;
+        Variable? isOnTrack = null, pitSvFlags = null, pitSvFuel = null, fuelLevel = null, pitSvTireCompound = null;
         for (var i = 0; i < numVars; i++)
         {
             var header = memory.Slice(varHeaderOffset + (i * VarHeaderSize), VarHeaderSize);
@@ -93,6 +105,7 @@ public static class IRacingMemoryLayout
                 case "PitSvFlags": pitSvFlags = variable; break;
                 case "PitSvFuel": pitSvFuel = variable; break;
                 case "FuelLevel": fuelLevel = variable; break;
+                case "PitSvTireCompound": pitSvTireCompound = variable; break;
             }
         }
 
@@ -119,14 +132,19 @@ public static class IRacingMemoryLayout
             if (!TryValue(data, isOnTrack, out var onTrack)
                 || !TryValue(data, pitSvFlags, out var flags)
                 || !TryValue(data, pitSvFuel, out var fuel)
-                || !TryValue(data, fuelLevel, out var level))
+                || !TryValue(data, fuelLevel, out var level)
+                || !TryValue(data, pitSvTireCompound, out var compound))
             {
                 return false;
             }
 
             if (BufferTick(memory, latest) == tick)
             {
-                telemetry = new RawTelemetry(status, tick, onTrack != 0, (int)flags, (float)fuel, (float)level);
+                telemetry = new RawTelemetry(status, tick, onTrack != 0, (int)flags, (float)fuel, (float)level)
+                {
+                    // A game without the variable has no compound selection: unknown, not compound 0.
+                    PitSvTireCompound = pitSvTireCompound is null ? null : (int)compound,
+                };
                 return true;
             }
         }
@@ -147,23 +165,9 @@ public static class IRacingMemoryLayout
     public static bool TryReadFuelCapacity(ReadOnlySpan<byte> memory, out double liters)
     {
         liters = 0;
-        if (memory.Length < HeaderSize)
+        if (!TrySessionYaml(memory, out var yaml))
         {
             return false;
-        }
-
-        var length = ReadInt(memory, SessionInfoLenOffset);
-        var offset = ReadInt(memory, SessionInfoOffsetOffset);
-        if (length <= 0 || offset < 0 || (long)offset + length > memory.Length)
-        {
-            return false;
-        }
-
-        var yaml = memory.Slice(offset, length);
-        var end = yaml.IndexOf((byte)0);
-        if (end >= 0)
-        {
-            yaml = yaml[..end];
         }
 
         if (!TryReadNumber(yaml, " DriverCarFuelMaxLtr:"u8, out var maxLiters, out _) || maxLiters <= 0)
@@ -183,6 +187,143 @@ public static class IRacingMemoryLayout
         }
 
         liters = maxLiters * fraction;
+        return true;
+    }
+
+    /// <summary>
+    /// The car's tire list: <c>TireIndex</c> and <c>TireCompoundType</c> of every item of <c>DriverInfo.DriverTires</c> in
+    /// the session YAML (design D6). Only that block is read. Null when there is no block or it is cut short: an unknown
+    /// list, not an empty one.
+    /// </summary>
+    public static IReadOnlyList<TireCompound>? ReadTireCompounds(ReadOnlySpan<byte> memory) =>
+        TrySessionYaml(memory, out var yaml) ? ParseTireCompounds(Encoding.Latin1.GetString(yaml)) : null;
+
+    /// <summary>Parses the <c>DriverTires</c> block of a session YAML; see <see cref="ReadTireCompounds"/>.</summary>
+    internal static IReadOnlyList<TireCompound>? ParseTireCompounds(string yaml)
+    {
+        var lines = yaml.Split('\n');
+        var start = Array.FindIndex(lines, l => l.TrimEnd('\r').Trim() == "DriverTires:");
+        if (start < 0)
+        {
+            return null;
+        }
+
+        var indent = Indent(lines[start]);
+        var result = new List<TireCompound>();
+        int? index = null;
+        string? type = null;
+        var items = 0;
+
+        bool Finish()
+        {
+            if (items == 0)
+            {
+                return true;
+            }
+
+            if (index is not { } i || type is null)
+            {
+                return false;
+            }
+
+            result.Add(new TireCompound(i, type));
+            return true;
+        }
+
+        for (var n = start + 1; n < lines.Length; n++)
+        {
+            var line = lines[n].TrimEnd('\r');
+            var text = line.Trim();
+            if (text.Length == 0)
+            {
+                continue;
+            }
+
+            var isItem = text.StartsWith("- ", StringComparison.Ordinal);
+            if (text == "..." || (!isItem && Indent(line) <= indent))
+            {
+                break;
+            }
+
+            if (isItem)
+            {
+                if (!Finish())
+                {
+                    return null;
+                }
+
+                items++;
+                (index, type) = (null, null);
+                text = text[2..].TrimStart();
+            }
+
+            var colon = text.IndexOf(':', StringComparison.Ordinal);
+            if (colon < 0)
+            {
+                return null;
+            }
+
+            var key = text[..colon];
+            var value = text[(colon + 1)..].Trim();
+            if (key == "TireIndex")
+            {
+                if (!int.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out var parsed))
+                {
+                    return null;
+                }
+
+                index = parsed;
+            }
+            else if (key == "TireCompoundType")
+            {
+                if (value.StartsWith('"'))
+                {
+                    // An unclosed quote is a block cut in the middle of a value.
+                    if (value.Length < 2 || !value.EndsWith('"'))
+                    {
+                        return null;
+                    }
+
+                    value = value[1..^1];
+                }
+
+                if (value.Length == 0)
+                {
+                    return null;
+                }
+
+                type = value;
+            }
+        }
+
+        return Finish() && result.Count > 0 ? result : null;
+    }
+
+    private static int Indent(string line) => line.Length - line.TrimStart(' ').Length;
+
+    /// <summary>The session YAML up to its terminating zero.</summary>
+    private static bool TrySessionYaml(ReadOnlySpan<byte> memory, out ReadOnlySpan<byte> yaml)
+    {
+        yaml = default;
+        if (memory.Length < HeaderSize)
+        {
+            return false;
+        }
+
+        var length = ReadInt(memory, SessionInfoLenOffset);
+        var offset = ReadInt(memory, SessionInfoOffsetOffset);
+        if (length <= 0 || offset < 0 || (long)offset + length > memory.Length)
+        {
+            return false;
+        }
+
+        yaml = memory.Slice(offset, length);
+        var end = yaml.IndexOf((byte)0);
+        if (end >= 0)
+        {
+            yaml = yaml[..end];
+        }
+
         return true;
     }
 

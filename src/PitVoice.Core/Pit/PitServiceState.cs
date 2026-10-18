@@ -24,6 +24,11 @@ public sealed record PitServiceState(PitServiceFlags Flags, double FuelToAdd, do
 {
     public static PitServiceState Empty { get; } = new(PitServiceFlags.None, 0, 0);
 
+    /// <summary>
+    /// Index of the compound selected for the pit stop (<c>PitSvTireCompound</c>); null when the game has no such variable.
+    /// </summary>
+    public int? TireCompound { get; init; }
+
     public Wheels Wheels => (Wheels)((int)Flags & (int)Wheels.All);
 
     public bool FuelFill => Flags.HasFlag(PitServiceFlags.FuelFill);
@@ -45,5 +50,5 @@ public sealed record PitServiceState(PitServiceFlags Flags, double FuelToAdd, do
 
     public override string ToString() => string.Create(
         CultureInfo.InvariantCulture,
-        $"wheels={Wheels.Describe()} fuel={(FuelFill ? "on" : "off")} {FuelToAdd:0.#} l, tearoff={(Tearoff ? "on" : "off")}, fast repair={(FastRepair ? "on" : "off")}, tank {FuelLevel:0.#} l");
+        $"wheels={Wheels.Describe()} fuel={(FuelFill ? "on" : "off")} {FuelToAdd:0.#} l, tearoff={(Tearoff ? "on" : "off")}, fast repair={(FastRepair ? "on" : "off")}, tank {FuelLevel:0.#} l{(TireCompound is { } compound ? $", compound {compound}" : string.Empty)}");
 }

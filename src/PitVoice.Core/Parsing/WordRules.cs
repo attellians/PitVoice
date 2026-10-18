@@ -1,5 +1,6 @@
 using PitVoice.Core.Intents;
 using PitVoice.Core.Languages;
+using PitVoice.Core.Pit;
 
 namespace PitVoice.Core.Parsing;
 
@@ -24,6 +25,12 @@ internal sealed class PartRoles
 
     /// <summary>Tire targets in spoken order with the number of words of each entry.</summary>
     public IReadOnlyList<(TireTarget Target, int Words)> Targets { get; init; } = [];
+
+    /// <summary>Tire compounds in spoken order.</summary>
+    public IReadOnlyList<TireCompoundKind> Compounds { get; init; } = [];
+
+    /// <summary>Words that lead to a compound ("на", "to").</summary>
+    public int Intos { get; init; }
 
     public int Negations { get; init; }
 
@@ -85,6 +92,17 @@ public static class WordRules
                     : null;
 
             case LexiconGroup.Tires:
+                if (roles.Compounds.Count > 0)
+                {
+                    return CompoundRule(roles);
+                }
+
+                // "на" without a compound: the recognizer may have lost a compound it cannot write (design D4).
+                if (roles.Intos > 0)
+                {
+                    return null;
+                }
+
                 if (negated)
                 {
                     if (roles.Targets.Count > 0)
@@ -136,6 +154,26 @@ public static class WordRules
         }
     }
 
+    /// <summary>The intent that selects <paramref name="compound"/>.</summary>
+    public static IntentId CompoundIntent(TireCompoundKind compound) =>
+        compound == TireCompoundKind.Wet ? IntentCatalog.TiresWet : IntentCatalog.TiresDry;
+
+    /// <summary>
+    /// A compound with an action, the tire object, "на" or the target "все" selects it on all four wheels (design D3). The
+    /// game sets a compound for the whole car, so a part of the wheels, a negation, "трогай" or a second compound reject
+    /// the part instead of guessing.
+    /// </summary>
+    private static IReadOnlyList<RuleCommand>? CompoundRule(PartRoles roles)
+    {
+        if (roles.Negations > 0 || roles.Keeps > 0 || roles.Compounds.Count > 1 || roles.Targets.Any(t => t.Target != TireTarget.All))
+        {
+            return null;
+        }
+
+        var named = roles.Actions > 0 || roles.Objects > 0 || roles.Intos > 0 || roles.Targets.Count > 0;
+        return named ? [new(CompoundIntent(roles.Compounds[0]), null, null)] : null;
+    }
+
     /// <summary>
     /// True when the lexicon has the classes the rule of <paramref name="intent"/> needs (spec: Pack completeness).
     /// </summary>
@@ -154,8 +192,13 @@ public static class WordRules
             case IntentCatalog.FuelGroup:
                 return Has(LexiconGroup.Fuel, WordRole.Action) || Has(LexiconGroup.Fuel, WordRole.Object);
 
+            case IntentCatalog.TiresGroup when definition.Compound is { } compound:
+                return lexicon.Has(new WordClass(LexiconGroup.Tires, WordRole.Compound, Compound: compound))
+                    && (Has(LexiconGroup.Tires, WordRole.Action) || Has(LexiconGroup.Tires, WordRole.Object)
+                        || Has(LexiconGroup.Tires, WordRole.Into) || lexicon.Has(new WordClass(LexiconGroup.Tires, WordRole.Target, TireTarget.All)));
+
             case IntentCatalog.TiresGroup:
-                var target = TireIntents.Single(p => p.Value.Add == intent || p.Value.Remove == intent).Key;
+                var target =TireIntents.Single(p => p.Value.Add == intent || p.Value.Remove == intent).Key;
                 var targetClass = new WordClass(LexiconGroup.Tires, WordRole.Target, target);
                 var action = Has(LexiconGroup.Tires, WordRole.Action);
                 var obj = Has(LexiconGroup.Tires, WordRole.Object);

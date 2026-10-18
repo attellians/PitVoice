@@ -93,6 +93,8 @@ public sealed class CommandParser
                 return new ParseResult.Rejected(RejectReason.NotUnderstood, $"'{fragment.Text}' in '{text}' is only a part of a longer word class entry");
             }
 
+            ReadHomophones(spans);
+
             var unknown = spans.Count(s => s.Kind == SpanKind.Unknown);
             if (unknown > 1 || (unknown == 1 && piece.Count < MinFuzzyPieceLength))
             {
@@ -112,6 +114,20 @@ public sealed class CommandParser
             if (SideNextToAxle(spans) is { } pair)
             {
                 return new ParseResult.Rejected(RejectReason.NotUnderstood, $"'{pair}' in '{text}' is a side and an axle in a row: say «и» between them or name the wheel");
+            }
+
+            // "меняем резину на ‹lost word›": the recognizer drops a compound it cannot write, and without a compound the
+            // phrase would change all tires on the old one (design D4).
+            if (spans.Any(s => s.Is(WordRole.Into)) && !spans.Any(s => s.Is(WordRole.Compound)))
+            {
+                return new ParseResult.Rejected(RejectReason.NotUnderstood, $"'{text}' leads to a compound but names none");
+            }
+
+            // The game sets a compound for the whole car: "меняй левые на дождевые" or "не ставь дождевые" must not be cut
+            // into a tire command and a compound command (design D3).
+            if (CompoundConflict(spans) is { } compoundConflict)
+            {
+                return new ParseResult.Rejected(RejectReason.NotUnderstood, $"'{compoundConflict}' in '{text}' cannot go with a tire compound");
             }
 
             // A word the parser does not know next to a number may be a part of it ("one thousand" is not 1).
@@ -243,6 +259,58 @@ public sealed class CommandParser
         public string Text => string.Join(' ', Tokens.Select(t => t.Text));
 
         public IEnumerable<WordClass> Classes => Entries.Select(e => e.Class).Distinct();
+
+        /// <summary>True for an entry that can be a word of <paramref name="role"/> in the tire group.</summary>
+        public bool Is(WordRole role) =>
+            Kind == SpanKind.Entry && Classes.Any(c => c.Group == LexiconGroup.Tires && c.Role == role);
+    }
+
+    /// <summary>
+    /// "change two slicks": in a piece with a compound, a one-word number that sounds like the transition word and stands
+    /// right before the compound is that word (design D10). The recognizer splits its confidence between the two words,
+    /// and the reading covers both, so the word counts as certain.
+    /// </summary>
+    private void ReadHomophones(List<Span> spans)
+    {
+        if (_pack.IntoHomophones.Count == 0
+            || _pack.Lexicon.Of(new WordClass(LexiconGroup.Tires, WordRole.Into)).FirstOrDefault() is not { } into)
+        {
+            return;
+        }
+
+        for (var i = 0; i + 1 < spans.Count; i++)
+        {
+            if (spans[i] is { Kind: SpanKind.Number, Tokens: [NumberToken number] }
+                && _pack.IntoHomophones.Contains(number.Text)
+                && spans[i + 1].Is(WordRole.Compound))
+            {
+                spans[i] = new Span(SpanKind.Entry, [new WordToken(number.Text, 1.0)], [into]);
+            }
+        }
+    }
+
+    /// <summary>
+    /// In a piece with a compound: a negation, "трогай", a target other than "все" or a second compound, or null.
+    /// </summary>
+    private static string? CompoundConflict(IReadOnlyList<Span> spans)
+    {
+        var compounds = spans.Where(s => s.Is(WordRole.Compound)).ToArray();
+        if (compounds.Length == 0)
+        {
+            return null;
+        }
+
+        if (compounds.Length > 1)
+        {
+            return compounds[1].Text;
+        }
+
+        var conflict = spans.FirstOrDefault(s =>
+            s.Kind == SpanKind.Negation
+            || (s.Kind == SpanKind.Entry && s.Classes.Any(c => c.Role == WordRole.Keep))
+            || (s.Kind == SpanKind.Entry && s.Classes.Any(c => c is { Role: WordRole.Target, Target: not TireTarget.All })
+                && !s.Classes.Any(c => c is { Role: WordRole.Target, Target: TireTarget.All })));
+        return conflict?.Text;
     }
 
     /// <summary>
@@ -568,6 +636,8 @@ public sealed class CommandParser
                         .Where(p => p.c.Role == WordRole.Target)
                         .Select(p => (p.c.Target!.Value, entrySpans[p.i].Entries.First(e => e.Class == p.c).WordCount))
                         .ToArray(),
+                    Compounds = chosen.Where(c => c.Role == WordRole.Compound).Select(c => c.Compound!.Value).ToArray(),
+                    Intos = chosen.Count(c => c.Role == WordRole.Into),
                     Negations = negations,
                     Amounts = amounts,
                     Units = units,

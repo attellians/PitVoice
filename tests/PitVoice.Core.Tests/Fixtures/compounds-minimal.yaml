@@ -1,0 +1,50 @@
+name: Составы
+language: ru
+plural_rules: ru
+units:
+  liters:
+    synonyms: [литр, литра, литров]
+    forms: { one: литр, few: литра, many: литров }
+conjunctions: [и]
+fillers: [пожалуйста]
+negations: [не]
+word_forms:
+  дождевые: [дождевую]
+lexicon:
+  fuel: { action: [залей] }
+  tires:
+    action: [меняй]
+    object: [шины]
+    into: [на]
+    compounds:
+      dry: [сухие]
+      wet: [дождевые]
+responses:
+  fuel.add: "заливаем {amount} {unit}"
+  fuel.none: "без топлива"
+  tires.all: "меняем шины"
+  tires.none: "шины не меняем"
+  tires.dry: "ставим сухие"
+  tires.wet: "ставим дождевые"
+  not_understood: "не понял"
+  not_connected: "no connection"
+  not_in_car: "not in car"
+  apply_failed: "failed"
+  no_dry_tires: "нет сухих"
+  no_wet_tires: "нет дождевых"
+  several_dry_tires: "несколько сухих"
+tests:
+  - say: "залей десять литров"
+    expect: [{ intent: fuel.add, amount: 10, unit: liters }]
+  - say: "не залей"
+    expect: [{ intent: fuel.none }]
+  - say: "меняй шины"
+    expect: [{ intent: tires.all }]
+  - say: "не меняй шины"
+    expect: [{ intent: tires.none }]
+  - say: "меняй на сухие"
+    expect: [{ intent: tires.dry }]
+  - say: "меняй шины на дождевую"
+    expect: [{ intent: tires.wet }]
+  - say: "меняй шины на"
+    expect: reject

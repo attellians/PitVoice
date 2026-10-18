@@ -29,6 +29,11 @@ public interface IExecutionLog
     void ApplyFailed(ApplyFailureReport report);
 
     void Warning(string message);
+
+    /// <summary>A compound phrase was not sent: the car has no such compound or several dry ones. Without the phrase.</summary>
+    void CompoundUnavailable(CompoundProblem problem, IReadOnlyList<TireCompound>? compounds) => Warning(
+        $"pit commands not sent: {problem switch { CompoundProblem.NoDry => "the car has no dry tire compound", CompoundProblem.NoWet => "the car has no wet tire compound", _ => "the car has several dry tire compounds" }}" +
+        $" (tire list: {(compounds is null ? "unknown" : string.Join(", ", compounds))})");
 }
 
 /// <summary>Log that drops everything.</summary>

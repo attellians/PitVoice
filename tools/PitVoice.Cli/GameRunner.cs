@@ -110,6 +110,8 @@ internal static class GameRunner
                 tearoff:     {(pit.Tearoff ? "on" : "off")}
                 fast repair: {(pit.FastRepair ? "on" : "off")}
                 flags:       0x{(int)pit.Flags:X2}
+                compound:    {(pit.TireCompound is { } compound ? compound.ToString(CultureInfo.InvariantCulture) : "unknown")}
+                car tires:   {(snapshot.TireCompounds is { } list ? string.Join(", ", list.Select(c => $"{c.Index} {c.Type} ({c.Kind.ToString().ToLowerInvariant()})")) : "unknown")}
                 """);
         }
 
@@ -131,6 +133,7 @@ internal static class GameRunner
         ExecutionOutcome.NotApplied => "not applied",
         ExecutionOutcome.NotConnected => "no connection (game not running)",
         ExecutionOutcome.NotInCar => "not in the car",
+        ExecutionOutcome.CompoundUnavailable => "no such tire compound in the car, nothing sent",
         _ => outcome.ToString(),
     };
 

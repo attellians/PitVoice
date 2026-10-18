@@ -1,3 +1,4 @@
+using PitVoice.Core.Intents;
 using PitVoice.Core.Parsing;
 
 namespace PitVoice.Core.Pit;
@@ -52,7 +53,19 @@ public sealed class PitExecutor
                 return ExecutionResult.Of(ExecutionOutcome.NotInCar);
         }
 
-        var plan = PitPlanner.Plan(commands, before.Pit ?? PitServiceState.Empty, before.FuelCapacity);
+        // A compound the car does not have stops the whole phrase before anything is sent: all or nothing (design D7).
+        int? compoundIndex = null;
+        if (commands.Select(c => IntentCatalog.Get(c.Intent).Compound).FirstOrDefault(k => k is not null) is { } kind)
+        {
+            compoundIndex = TireCompoundSelector.Select(before.TireCompounds, kind, out var problem);
+            if (problem is { } reason)
+            {
+                _log.CompoundUnavailable(reason, before.TireCompounds);
+                return ExecutionResult.Of(ExecutionOutcome.CompoundUnavailable) with { CompoundProblem = reason };
+            }
+        }
+
+        var plan = PitPlanner.Plan(commands, before.Pit ?? PitServiceState.Empty, before.FuelCapacity, compoundIndex);
         var sent = new List<SentCommand>();
         foreach (var command in plan.Commands)
         {

@@ -28,6 +28,12 @@ public sealed record IntentDefinition(
     /// </summary>
     public Wheels Wheels { get; init; }
 
+    /// <summary>
+    /// For <c>tires.dry</c> and <c>tires.wet</c>: the compound the command selects together with all four wheels
+    /// (design D1); null for other intents.
+    /// </summary>
+    public TireCompoundKind? Compound { get; init; }
+
     /// <summary>Wheels this intent adds to the selection in the black box.</summary>
     public Wheels AddsWheels => IsNegation ? Wheels.None : Wheels;
 

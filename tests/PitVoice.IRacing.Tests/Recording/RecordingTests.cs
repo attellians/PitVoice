@@ -91,7 +91,7 @@ public class RecordingTests
     {
         var line = TelemetryRecordFormat.ToLine(new RecordedSnapshot(TimeSpan.FromMilliseconds(42), TelemetrySnapshot.NotRunning));
 
-        Assert.Equal("""{"t":42,"state":"NotRunning","tick":0,"pitSvFlags":null,"pitSvFuel":null,"fuelLevel":null,"fuelCapacity":null}""", line);
+        Assert.Equal("""{"t":42,"state":"NotRunning","tick":0,"pitSvFlags":null,"pitSvFuel":null,"fuelLevel":null,"fuelCapacity":null,"pitSvTireCompound":null,"tireCompounds":null}""", line);
         Assert.Equal(TelemetrySnapshot.NotRunning, TelemetryRecordFormat.FromLine(line, "x", 1).Snapshot);
     }
 
@@ -139,5 +139,44 @@ public class RecordingTests
     public void Unexpected_records_are_rejected(string line)
     {
         Assert.Throws<InvalidDataException>(() => TelemetryRecordFormat.FromLine(line, "x", 7));
+    }
+
+    [Fact]
+    public void Compound_in_a_recording()
+    {
+        var pit = new PitServiceState(PitServiceFlags.LFTireChange | PitServiceFlags.RFTireChange | PitServiceFlags.LRTireChange | PitServiceFlags.RRTireChange, 0, 40)
+        {
+            TireCompound = 1,
+        };
+        var snapshot = new TelemetrySnapshot(ConnectionState.InCar, pit, 9) { TireCompounds = [new TireCompound(0, "Dry"), new TireCompound(1, "Wet")] };
+        var line = TelemetryRecordFormat.ToLine(new RecordedSnapshot(TimeSpan.FromMilliseconds(5), snapshot));
+
+        Assert.Contains("\"pitSvTireCompound\":1", line, StringComparison.Ordinal);
+        Assert.Contains("\"tireCompounds\":[{\"index\":0,\"type\":\"Dry\"},{\"index\":1,\"type\":\"Wet\"}]", line, StringComparison.Ordinal);
+
+        var replayed = new ReplayTelemetrySource([new RecordedSnapshot(TimeSpan.Zero, TelemetryRecordFormat.FromLine(line, "x", 1).Snapshot)]).Current;
+        Assert.Equal(1, replayed.Pit!.TireCompound);
+        Assert.Equal(snapshot.TireCompounds, replayed.TireCompounds!);
+    }
+
+    [Fact]
+    public void Old_recording_without_compounds()
+    {
+        var old = TelemetryRecordFormat.FromLine("""{"t":5,"state":"InCar","tick":7,"pitSvFlags":16,"pitSvFuel":96,"fuelLevel":61.5,"fuelCapacity":96}""", "old", 1);
+
+        Assert.Null(old.Snapshot.TireCompounds);
+        Assert.Null(old.Snapshot.Pit!.TireCompound);
+        Assert.Equal(96, old.Snapshot.FuelCapacity);
+    }
+
+    [Fact]
+    public void Recorded_files_without_compounds_still_replay()
+    {
+        foreach (var file in Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Recordings"), "*.jsonl"))
+        {
+            var records = TelemetryRecordFormat.ReadFile(file);
+            Assert.NotEmpty(records);
+            Assert.All(records, r => Assert.Null(r.Snapshot.TireCompounds));
+        }
     }
 }

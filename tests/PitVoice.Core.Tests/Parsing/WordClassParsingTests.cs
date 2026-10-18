@@ -152,11 +152,8 @@ public class WordClassParsingTests
     // --- Reject words (design D12)
 
     [Theory]
-    [InlineData("ru", "меняем резину на")]                 // what the recognizer hears for "меняем резину на слики"
-    [InlineData("ru", "меняем резину на дождевую")]
-    [InlineData("ru", "залей двадцать литров и меняй шины на сухие")]
-    [InlineData("en", "change to wet tires")]
-    [InlineData("en", "swap tires for slicks")]
+    [InlineData("ru", "залей тридцать точка два")]
+    [InlineData("en", "change to intermediates")]
     public void Reject_word_rejects_the_whole_phrase(string language, string phrase) => Rejected(language, phrase);
 
     [Fact]

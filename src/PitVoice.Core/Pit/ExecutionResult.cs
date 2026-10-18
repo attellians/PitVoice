@@ -19,6 +19,12 @@ public enum ExecutionOutcome
 
     /// <summary>The game runs but the driver is not in the car; nothing was sent.</summary>
     NotInCar,
+
+    /// <summary>
+    /// The phrase asks for a tire compound the car does not have (or several dry ones); nothing of the phrase was sent
+    /// (design D7). <see cref="ExecutionResult.CompoundProblem"/> says why.
+    /// </summary>
+    CompoundUnavailable,
 }
 
 /// <summary>Result of executing an accepted phrase. Expected race situations are values here, not exceptions.</summary>
@@ -30,6 +36,9 @@ public sealed record ExecutionResult(
     IReadOnlyList<SentCommand> Sent,
     IReadOnlyList<ParsedCommand> Unconfirmed)
 {
+    /// <summary>Why the compound is not available, for <see cref="ExecutionOutcome.CompoundUnavailable"/>.</summary>
+    public CompoundProblem? CompoundProblem { get; init; }
+
     public static ExecutionResult Of(ExecutionOutcome outcome) => new(outcome, [], []);
 
     public override string ToString() =>

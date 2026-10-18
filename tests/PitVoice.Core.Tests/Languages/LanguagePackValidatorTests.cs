@@ -2,6 +2,7 @@ using System.Text.RegularExpressions;
 using PitVoice.Core.Intents;
 using PitVoice.Core.Languages;
 using PitVoice.Core.Parsing;
+using PitVoice.Core.Pit;
 using Xunit;
 
 namespace PitVoice.Core.Tests.Languages;
@@ -366,5 +367,131 @@ public class LanguagePackValidatorTests
         Assert.True(result.IsSuccess, string.Join('\n', result.Issues));
         Assert.Empty(LanguagePackTestRunner.Run(result.Pack!));
         Assert.Single(result.Warnings, w => w.Message.Contains("incomplete", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Compound_classes_load_and_make_the_compound_intents_available()
+    {
+        var result = LoadFixture("compounds-minimal.yaml");
+
+        Assert.True(result.IsSuccess, string.Join('\n', result.Issues));
+        var pack = result.Pack!;
+        Assert.Contains(IntentCatalog.TiresDry, pack.Intents);
+        Assert.Contains(IntentCatalog.TiresWet, pack.Intents);
+        Assert.Equal("дождевые", Assert.Single(pack.Lexicon.Of(new WordClass(LexiconGroup.Tires, WordRole.Compound, Compound: TireCompoundKind.Wet))).Text);
+        Assert.Equal("на", Assert.Single(pack.Lexicon.Of(new WordClass(LexiconGroup.Tires, WordRole.Into))).Text);
+        Assert.Equal("tires.compounds.wet", new WordClass(LexiconGroup.Tires, WordRole.Compound, Compound: TireCompoundKind.Wet).Name);
+    }
+
+    [Fact]
+    public void Unknown_compound_names_file_line_and_compound()
+    {
+        var result = LoadFixture("unknown-compound.yaml");
+
+        Assert.False(result.IsSuccess);
+        var error = Assert.Single(result.Errors);
+        Assert.EndsWith("unknown-compound.yaml", error.File, StringComparison.Ordinal);
+        Assert.Contains("'intermediate'", error.Message, StringComparison.Ordinal);
+        Assert.Contains("dry, wet", error.Message, StringComparison.Ordinal);
+        Assert.Equal(FixtureLine("unknown-compound.yaml", "intermediate"), error.Line);
+    }
+
+    [Theory]
+    [InlineData("дождевые", "tires.compounds.wet")]
+    [InlineData("на", "tires.into")]
+    public void Reject_word_that_is_a_compound_word_is_an_error(string word, string wordClass)
+    {
+        var yaml = FixtureText("compounds-minimal.yaml").Replace("fillers: [пожалуйста]", $"fillers: [пожалуйста]\nreject_words: [{word}]", StringComparison.Ordinal);
+
+        var result = LanguagePackLoader.LoadText(yaml, "inline.yaml");
+
+        Assert.False(result.IsSuccess);
+        var error = Assert.Single(result.Errors);
+        Assert.Contains($"reject word '{word}' is also in '{wordClass}'", error.Message, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("no_dry_tires")]
+    [InlineData("no_wet_tires")]
+    [InlineData("several_dry_tires")]
+    public void Missing_compound_response_is_an_error(string key)
+    {
+        var yaml = Regex.Replace(FixtureText("compounds-minimal.yaml"), $"^  {key}:.*\r?\n", string.Empty, RegexOptions.Multiline);
+
+        var result = LanguagePackLoader.LoadText(yaml, "inline.yaml");
+
+        Assert.False(result.IsSuccess);
+        Assert.Null(result.Pack);
+        var error = Assert.Single(result.Errors);
+        Assert.Equal("inline.yaml", error.File);
+        Assert.Contains($"'responses.{key}' is required", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Pack_without_compounds_loads_without_compound_intents_and_warns()
+    {
+        var result = LoadFixture("valid-minimal.yaml");
+
+        Assert.True(result.IsSuccess, string.Join('\n', result.Issues));
+        Assert.DoesNotContain(result.Errors, e => e.Message.Contains("no_wet_tires", StringComparison.Ordinal));
+        Assert.Contains(IntentCatalog.TiresDry, result.Pack!.MissingIntents);
+        Assert.Contains(IntentCatalog.TiresWet, result.Pack.MissingIntents);
+        var warning = Assert.Single(result.Warnings, w => w.Message.Contains("incomplete", StringComparison.Ordinal));
+        Assert.Contains("tires.dry", warning.Message, StringComparison.Ordinal);
+        Assert.Contains("tires.wet", warning.Message, StringComparison.Ordinal);
+        Assert.IsType<ParseResult.Rejected>(new CommandParser(result.Pack).Parse("меняй шины на дождевые"));
+    }
+
+    [Fact]
+    public void Compound_words_and_the_transition_word_are_in_the_vocabulary()
+    {
+        var pack = LoadFixture("compounds-minimal.yaml").Pack!;
+
+        var vocabulary = PitVoice.Core.Asr.VocabularyBuilder.Build(pack);
+
+        Assert.Contains("дождевые", vocabulary);
+        Assert.Contains("дождевую", vocabulary);
+        Assert.Contains("сухие", vocabulary);
+        Assert.Contains("на", vocabulary);
+        Assert.Equal("tires.into", PitVoice.Core.Asr.VocabularyBuilder.Usage(pack, "на"));
+    }
+
+    [Fact]
+    public void Homophones_load_into_the_pack()
+    {
+        var yaml = FixtureText("compounds-minimal.yaml").Replace("fillers: [пожалуйста]", "fillers: [пожалуйста]\ninto_homophones: [два]", StringComparison.Ordinal);
+
+        var result = LanguagePackLoader.LoadText(yaml, "inline.yaml");
+
+        Assert.True(result.IsSuccess, string.Join('\n', result.Issues));
+        Assert.Equal(["два"], result.Pack!.IntoHomophones);
+    }
+
+    [Fact]
+    public void Homophones_without_a_transition_word_are_an_error()
+    {
+        var yaml = FixtureText("valid-minimal.yaml").Replace("fillers: [пожалуйста]", "fillers: [пожалуйста]\ninto_homophones: [два]", StringComparison.Ordinal);
+
+        var result = LanguagePackLoader.LoadText(yaml, "inline.yaml");
+
+        Assert.False(result.IsSuccess);
+        var error = Assert.Single(result.Errors);
+        Assert.Equal("inline.yaml", error.File);
+        Assert.Equal("into_homophones", error.Path);
+        Assert.Contains("'tires.into'", error.Message, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("шины", "'tires.object'")]
+    [InlineData("и", "'conjunctions'")]
+    [InlineData("не", "'negations'")]
+    public void Homophone_that_is_a_command_word_is_an_error(string word, string where)
+    {
+        var yaml = FixtureText("compounds-minimal.yaml").Replace("fillers: [пожалуйста]", $"fillers: [пожалуйста]\ninto_homophones: [{word}]", StringComparison.Ordinal);
+
+        var result = LanguagePackLoader.LoadText(yaml, "inline.yaml");
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains(result.Errors, e => e.Message.Contains($"homophone '{word}' is also in {where}", StringComparison.Ordinal));
     }
 }

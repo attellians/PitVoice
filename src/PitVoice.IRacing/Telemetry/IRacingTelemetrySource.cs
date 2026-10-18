@@ -25,6 +25,7 @@ public sealed unsafe class IRacingTelemetrySource : ITelemetrySource, IDisposabl
     private TimeSpan? _lastOpenAttempt;
     private int _sessionInfoUpdate = -1;
     private double? _fuelCapacity;
+    private IReadOnlyList<TireCompound>? _tireCompounds;
     private bool _disposed;
 
     public IRacingTelemetrySource(TimeProvider? time = null)
@@ -47,7 +48,8 @@ public sealed unsafe class IRacingTelemetrySource : ITelemetrySource, IDisposabl
                     var memory = new ReadOnlySpan<byte>(_pointer, _length);
                     if (IRacingMemoryLayout.TryRead(memory, out var value))
                     {
-                        raw = value with { FuelCapacity = FuelCapacity(memory) };
+                        ReadSessionInfo(memory);
+                        raw = value with { FuelCapacity = _fuelCapacity, TireCompounds = _tireCompounds };
                     }
                 }
 
@@ -72,17 +74,16 @@ public sealed unsafe class IRacingTelemetrySource : ITelemetrySource, IDisposabl
         }
     }
 
-    /// <summary>Tank capacity from session info, parsed again only when the session info changes.</summary>
-    private double? FuelCapacity(ReadOnlySpan<byte> memory)
+    /// <summary>Tank capacity and tire list from session info, parsed again only when the session info changes.</summary>
+    private void ReadSessionInfo(ReadOnlySpan<byte> memory)
     {
         var update = IRacingMemoryLayout.SessionInfoUpdate(memory);
         if (update != _sessionInfoUpdate)
         {
             _sessionInfoUpdate = update;
             _fuelCapacity = IRacingMemoryLayout.TryReadFuelCapacity(memory, out var liters) ? liters : null;
+            _tireCompounds = IRacingMemoryLayout.ReadTireCompounds(memory);
         }
-
-        return _fuelCapacity;
     }
 
     private bool EnsureOpen(TimeSpan now)
@@ -134,5 +135,6 @@ public sealed unsafe class IRacingTelemetrySource : ITelemetrySource, IDisposabl
         _length = 0;
         _sessionInfoUpdate = -1;
         _fuelCapacity = null;
+        _tireCompounds = null;
     }
 }

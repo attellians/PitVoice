@@ -43,6 +43,7 @@ internal static class Texts
     {
         null => Loc.T("class.negations"),
         { Target: { } target } => Loc.T($"target.{Core.Languages.LexiconSchema.Name(target)}"),
+        { Compound: { } compound } => Loc.T($"compound.{Core.Languages.LexiconSchema.Name(compound)}"),
         { } other => Loc.T($"class.{Core.Languages.LexiconSchema.Name(other.Role)}"),
     };
 
@@ -119,7 +120,7 @@ internal static class Texts
         }
 
         yield return "class.negations";
-        foreach (var role in Enum.GetValues<Core.Languages.WordRole>().Where(r => r != Core.Languages.WordRole.Target))
+        foreach (var role in Enum.GetValues<Core.Languages.WordRole>().Where(r => r is not (Core.Languages.WordRole.Target or Core.Languages.WordRole.Compound)))
         {
             yield return $"class.{Core.Languages.LexiconSchema.Name(role)}";
         }
@@ -127,6 +128,11 @@ internal static class Texts
         foreach (var target in Enum.GetValues<Core.Languages.TireTarget>())
         {
             yield return $"target.{Core.Languages.LexiconSchema.Name(target)}";
+        }
+
+        foreach (var compound in Enum.GetValues<Core.Pit.TireCompoundKind>())
+        {
+            yield return $"compound.{Core.Languages.LexiconSchema.Name(compound)}";
         }
 
         foreach (var unit in FuelUnits.All)

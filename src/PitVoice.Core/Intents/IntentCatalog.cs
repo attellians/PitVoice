@@ -20,6 +20,8 @@ public static class IntentCatalog
     public static readonly IntentId TiresRF = new("tires.rf");
     public static readonly IntentId TiresLR = new("tires.lr");
     public static readonly IntentId TiresRR = new("tires.rr");
+    public static readonly IntentId TiresDry = new("tires.dry");
+    public static readonly IntentId TiresWet = new("tires.wet");
     public static readonly IntentId TiresNone = new("tires.none");
     public static readonly IntentId TiresNoneLeft = new("tires.none.left");
     public static readonly IntentId TiresNoneRight = new("tires.none.right");
@@ -57,6 +59,8 @@ public static class IntentCatalog
         AddTires(TiresRF, Wheels.RF),
         AddTires(TiresLR, Wheels.LR),
         AddTires(TiresRR, Wheels.RR),
+        AddTires(TiresDry, Wheels.All) with { Compound = TireCompoundKind.Dry },
+        AddTires(TiresWet, Wheels.All) with { Compound = TireCompoundKind.Wet },
         RemoveTires(TiresNone, Wheels.All),
         RemoveTires(TiresNoneLeft, Wheels.Left),
         RemoveTires(TiresNoneRight, Wheels.Right),

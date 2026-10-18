@@ -112,7 +112,7 @@ samples:
     expect: [{ intent: tires.right }, { intent: tires.none.left }]
   # must be rejected: conflict, fraction, noise and unrelated speech
   - say: "меняем резину на дождевую"
-    expect: reject
+    expect: [{ intent: tires.wet }]                 # a compound command since add-tire-compound
   - say: "меняй шины и не меняй шины"
     expect: reject
   - say: "залей тридцать точка два"
@@ -132,4 +132,14 @@ samples:
   - say: "давай быстрее"
     expect: reject
   - say: "отмена"
+    expect: reject
+
+  # tire compounds (add-tire-compound): appended so that the take numbers of the phrases above stay the same
+  - say: "на сухие"
+    expect: [{ intent: tires.dry }]
+  - say: "дождевые шины"
+    expect: [{ intent: tires.wet }]
+  - say: "меняй на дождевые и залей двадцать литров"
+    expect: [{ intent: tires.wet }, { intent: fuel.add, amount: 20, unit: liters }]
+  - say: "меняй левые на дождевые"
     expect: reject

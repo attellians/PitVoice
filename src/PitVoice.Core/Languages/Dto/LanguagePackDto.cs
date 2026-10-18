@@ -33,6 +33,11 @@ public sealed class LanguagePackDto
     public Dictionary<string, List<string?>?>? WordForms { get; set; }
 
     /// <summary>
+    /// Words that sound like the word leading to a compound (design D10 of add-tire-compound): en <c>two</c> for <c>to</c>.
+    /// </summary>
+    public List<string?>? IntoHomophones { get; set; }
+
+    /// <summary>
     /// Word classes: group → role → words, and for <c>tires.targets</c> target → words. Kept untyped so that an
     /// unknown group, role or target gets an error with its name and line instead of a generic YAML error.
     /// </summary>

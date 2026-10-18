@@ -41,11 +41,14 @@ public enum PitCommand
 
     /// <summary>Uncheck adding fuel.</summary>
     ClearFuel = 11,
+
+    /// <summary>Select a tire compound; the parameter is the index of the compound in the car's tire list.</summary>
+    TC = 12,
 }
 
 /// <summary>One command as it is sent to the game.</summary>
 /// <param name="Command">SDK pit command.</param>
-/// <param name="Parameter">Liters for <see cref="PitCommand.Fuel"/>, kPa for wheels (0 = keep), otherwise 0.</param>
+/// <param name="Parameter">Liters for <see cref="PitCommand.Fuel"/>, kPa for wheels (0 = keep), the compound index for <see cref="PitCommand.TC"/>, otherwise 0.</param>
 public readonly record struct SentCommand(PitCommand Command, int Parameter)
 {
     public override string ToString() => Parameter == 0 ? Command.ToString() : $"{Command}({Parameter})";

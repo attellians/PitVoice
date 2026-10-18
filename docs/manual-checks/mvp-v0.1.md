@@ -53,9 +53,10 @@ does not show it, and the app and `run` cannot run at the same time.
 
 | # | Action | Expected | Result |
 |---|---|---|---|
-| 5.1 | the release v0.1.0: size of `PitVoice-win-Setup.exe` (the Pack job prints it and fails above the limit) | ≤ 90 MB | earlier: 85.8 MB on v0.0.29 |
+| 5.1 | the release v0.1.0: size of `PitVoice-win-Setup.exe` (the Pack job prints it and fails above the limit) | ≤ 90 MB | ok (2026-10-18): `v0.1.0` on 1a4a076 (`main` fast-forwarded to `development`), Release run 13 green, release "PitVoice 0.1.0" is the latest; `PitVoice-win-Setup.exe` 90 038 190 bytes = 85.9 MB in the unit of the limit (1 MB = 1 048 576 bytes; earlier: 85.8 MB on v0.0.29). Margin to the limit 4.1 MB |
 
 ## Result
 
-On 0.0.35 (2026-10-18) every measured item passes: accuracy (1.1, 1.2), idle CPU (2.1), memory (2.2), latency (3.1).
-4.1–4.3 are covered by tests and earlier checks. Left: 5.1, the size of the installer of the release v0.1.0.
+Accepted (2026-10-18): accuracy (1.1, 1.2), idle CPU (2.1), memory (2.2) and latency (3.1) measured on 0.0.35, the
+installer (5.1) on the release v0.1.0; 4.1–4.3 are covered by tests and earlier checks. The code of 0.1.0 differs from
+0.0.35 only by this checklist and `VERSION`.

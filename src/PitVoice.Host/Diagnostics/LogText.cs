@@ -14,6 +14,20 @@ public static class LogText
             $"language {settings.Language}, interface {settings.EffectiveInterfaceLanguage}, theme {settings.Theme}, " +
             $"PTT {settings.PttBinding?.Describe() ?? "not assigned"} ({settings.PttMode}), " +
             $"microphone {settings.Microphone ?? "system default"}, output {settings.OutputDevice ?? "system default"}, " +
-            $"volume {settings.CueVolume}%, unit {settings.DefaultUnit}, threshold {settings.Threshold}");
+            $"volume {settings.CueVolume}%, unit {settings.DefaultUnit}, threshold {settings.Threshold}, " +
+            $"indicator {Describe(settings.Overlay)}");
+    }
+
+    private static string Describe(OverlaySettings overlay)
+    {
+        if (!overlay.Enabled)
+        {
+            return "off";
+        }
+
+        return string.Create(
+            CultureInfo.InvariantCulture,
+            $"{overlay.Kind} {overlay.Scale}% opacity {overlay.Opacity}%" +
+            $"{(overlay.Position is { } p ? $" at {p.X},{p.Y}" : " at the default place")}");
     }
 }

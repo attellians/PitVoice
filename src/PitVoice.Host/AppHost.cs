@@ -128,11 +128,7 @@ public sealed class AppHost : IAsyncDisposable
         _time = time ?? TimeProvider.System;
         _log = options.Log;
         AdditionsDirectory = UserAdditionsLoader.ResolveDirectory(options.AdditionsDirectory);
-        Events = new EventBus(e =>
-        {
-            _log.Error(e, "Event subscriber failed");
-            SubscriberFailed?.Invoke(e);
-        });
+        Events = new EventBus(ReportSubscriberFailure);
         Events.Subscribe(Journal.OnEvent);
         Events.Subscribe(new PipelineIssueLogger(_log).OnEvent);
         _target = AppSettings.Defaults("en");
@@ -337,6 +333,38 @@ public sealed class AppHost : IAsyncDisposable
 
         _applySignal.Release();
         return waiter.Task;
+    }
+
+    /// <summary>
+    /// State of the indicator above the game (overlay-indicator spec), fed by <see cref="Events"/>, the status and the
+    /// settings; only the tray app creates it. Phrase events reach it through its own bus subscription, and an exception
+    /// of its <see cref="IndicatorModel.Changed"/> handler is reported to <see cref="SubscriberFailed"/>, so the
+    /// pipeline is not affected. Dispose the model to detach it.
+    /// </summary>
+    public IndicatorModel CreateIndicator()
+    {
+        var model = new IndicatorModel(_time, Settings.Overlay, Status.Facts.Game, ReportSubscriberFailure);
+        var events = Events.Subscribe(model.OnEvent);
+        Action<HostStatus> status = s => model.OnGame(s.Facts.Game);
+        Action<AppSettings> settings = s => model.Apply(s.Overlay);
+        StatusChanged += status;
+        SettingsChanged += settings;
+        model.OnDispose(() =>
+        {
+            events.Dispose();
+            StatusChanged -= status;
+            SettingsChanged -= settings;
+        });
+
+        // The status may have changed between reading it and subscribing.
+        model.OnGame(Status.Facts.Game);
+        return model;
+    }
+
+    private void ReportSubscriberFailure(Exception e)
+    {
+        _log.Error(e, "Event subscriber failed");
+        SubscriberFailed?.Invoke(e);
     }
 
     /// <summary>Loads the pack, the additions and the model of the current language again ("Reload", model downloaded or deleted).</summary>
@@ -570,10 +598,10 @@ public sealed class AppHost : IAsyncDisposable
         }
     }
 
-    /// <summary>Settings that only the window reads (interface language, theme) do not rebuild the session.</summary>
+    /// <summary>Settings that only the window reads (interface language, theme, indicator) do not rebuild the session.</summary>
     private static bool SameSession(AppSettings? applied, AppSettings target) =>
         applied is not null
-        && applied == target with { InterfaceLanguage = applied.InterfaceLanguage, Theme = applied.Theme };
+        && applied == target with { InterfaceLanguage = applied.InterfaceLanguage, Theme = applied.Theme, Overlay = applied.Overlay };
 
     private async Task WaitIdleAsync(CancellationToken token)
     {

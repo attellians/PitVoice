@@ -134,6 +134,18 @@ ready; the tooltip names the reason. Closing the window keeps PitVoice running; 
 A second start opens the window of the running app. The app and `pitvoice-cli run` never run at the same time: one
 press would otherwise be executed twice.
 
+### Indicator above the game
+
+A small icon above iRacing shows that PitVoice is listening (blue, pulsing), recognizing (dark blue, spinning) and how
+the phrase ended: done (green), didn't get it (amber), no game (grey), error (red); the result stays for 2.5 s and the
+icon goes back to a dim microphone. Kind "Icon and word" adds a short word to the right of the icon; the icon
+never moves and keeps room for the word from the right edge of the screen. Clicks pass through the indicator into the game and it never takes the focus. It is shown only while you
+are in the car: in the menus, replays and without the game it stays hidden and a phrase gives only its cue. Move it
+with "Move" on the "Overlay" page of the window (its settings are there too) or "Move indicator" in the icon menu: drag it with the mouse and press "Done" under it; the
+place is kept per monitor and falls back to the top right corner of the main monitor when that monitor is gone.
+Windows shows it over iRacing in **windowed and borderless** mode only; in exclusive fullscreen it is not visible.
+`pitvoice-cli run` has no indicator.
+
 ## Push-to-talk: from the wheel button to the game
 
 `run` is the whole pipeline without a window: PTT button → microphone → recognition → parsing → iRacing → sound cue. It takes everything from the settings file, so set it up once:
@@ -182,7 +194,8 @@ The reason of an error is in the `run` output. `cues play [start|success|error|a
   "defaultUnit": "liters",
   "threshold": 0.6,
   "interfaceLanguage": null,
-  "theme": "system"
+  "theme": "system",
+  "overlay": { "enabled": true, "kind": "A", "scale": 100, "opacity": 90, "hideWhenNotInCar": false, "position": null }
 }
 ```
 
@@ -191,6 +204,7 @@ The reason of an error is in the `run` output. `cues play [start|success|error|a
 - `microphone`, `outputDevice`: device names as `devices` prints them; `null` is the system default. A missing device falls back to the default with a warning.
 - `cueVolume`: 0 to 100; 0 mutes the cues. `defaultUnit`: `liters` or `gallons`. `threshold`: confidence threshold 0 to 1.
 - `interfaceLanguage`: `ru` or `en` for the window and the tray menu; `null` follows `language`. `theme`: `system`, `light` or `dark`.
+- `overlay`: the indicator above the game. `kind`: `A` (icon) or `B` (icon and word); `scale`: 75 to 200 (%); `opacity`: 30 to 100 (%), the idle icon gets 45 % of it; `position`: center of the icon in physical pixels (`{ "x": …, "y": … }`), `null` is the top right corner of the main monitor. Out-of-range size and opacity are clamped with a warning, an unknown kind becomes `A`.
 
 A missing field gets its default; an invalid value gets its default (the volume is clamped to 0..100) with a warning. A file that is not valid JSON is renamed to `settings.json.bak` and the defaults are used.
 

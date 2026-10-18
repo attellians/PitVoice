@@ -15,6 +15,10 @@
     <ApplicationIcon>Assets\pitvoice.ico</ApplicationIcon>
     <!-- Own Main in Program.cs: the installer commands run before the app starts (design decision 3). -->
     <StartupObject>PitVoice.App.Program</StartupObject>
+    <!-- PerMonitorV2: the indicator is placed in physical pixels (design D6 of add-overlay-indicator). -->
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- The indicator enumerates monitors with an unmanaged callback. -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>

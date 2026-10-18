@@ -38,6 +38,9 @@ public sealed record AppSettings
     /// <summary>Colors of the window.</summary>
     public AppTheme Theme { get; init; } = AppTheme.System;
 
+    /// <summary>The indicator above the game; only the tray app reads it.</summary>
+    public OverlaySettings Overlay { get; init; } = OverlaySettings.Default;
+
     /// <summary>The interface language in effect.</summary>
     public string EffectiveInterfaceLanguage => InterfaceLanguage ?? Language;
 

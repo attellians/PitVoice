@@ -40,6 +40,11 @@
                         <ui:SymbolIcon Symbol="Settings24" />
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
+                <ui:NavigationViewItem Content="{loc:Tr NavOverlay}" TargetPageType="{x:Type pages:OverlayPage}">
+                    <ui:NavigationViewItem.Icon>
+                        <ui:SymbolIcon Symbol="Layer24" />
+                    </ui:NavigationViewItem.Icon>
+                </ui:NavigationViewItem>
                 <ui:NavigationViewItem Content="{loc:Tr NavModels}" TargetPageType="{x:Type pages:ModelsPage}">
                     <ui:NavigationViewItem.Icon>
                         <ui:SymbolIcon Symbol="ArrowDownload24" />

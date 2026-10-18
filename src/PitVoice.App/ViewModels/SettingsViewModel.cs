@@ -32,12 +32,10 @@ internal sealed partial class SettingsViewModel : ObservableObject
 
     /// <summary>The "Diagnostics" block (spec: Diagnostics section in the settings).</summary>
     public DiagnosticsActions Diagnostics => _services.Diagnostics;
-
     public SettingsViewModel(AppServices services, Action openModels)
     {
         _services = services;
-        _openModels = openModels;
-        _volumeTimer = new DispatcherTimer { Interval = VolumeDelay };
+        _openModels = openModels;        _volumeTimer = new DispatcherTimer { Interval = VolumeDelay };
         _volumeTimer.Tick += (_, _) =>
         {
             _volumeTimer.Stop();

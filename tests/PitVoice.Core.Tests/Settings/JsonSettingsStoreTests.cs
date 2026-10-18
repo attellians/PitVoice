@@ -248,6 +248,119 @@ public sealed class JsonSettingsStoreTests : IDisposable
     }
 
     [Fact]
+    public void Overlay_defaults_match_design_D8()
+    {
+        var overlay = AppSettings.Defaults("ru").Overlay;
+
+        Assert.True(overlay.Enabled);
+        Assert.Equal(IndicatorKind.A, overlay.Kind);
+        Assert.Equal(100, overlay.Scale);
+        Assert.Equal(90, overlay.Opacity);
+        Assert.Null(overlay.Position);
+    }
+
+    /// <summary>A file written by 0.1.0 has no <c>overlay</c> object.</summary>
+    [Fact]
+    public void Overlay_missing_in_a_0_1_0_file_gives_defaults()
+    {
+        var result = LoadFrom("""
+            {
+              "version": 1,
+              "language": "ru",
+              "ptt": { "binding": null, "mode": "hold" },
+              "microphone": null,
+              "outputDevice": null,
+              "cueVolume": 100,
+              "defaultUnit": "liters",
+              "threshold": 0.6,
+              "interfaceLanguage": null,
+              "theme": "system"
+            }
+            """);
+
+        Assert.Empty(result.Warnings);
+        Assert.Equal(OverlaySettings.Default, result.Settings.Overlay);
+    }
+
+    [Fact]
+    public void Overlay_missing_fields_get_defaults()
+    {
+        var result = LoadFrom("""{ "overlay": { "kind": "B" } }""");
+
+        Assert.Empty(result.Warnings);
+        Assert.Equal(OverlaySettings.Default with { Kind = IndicatorKind.B }, result.Settings.Overlay);
+    }
+
+    /// <summary>Spec: Out of range in the file — opacity 10 % becomes 30 % with a warning, the rest loads.</summary>
+    [Fact]
+    public void Overlay_opacity_out_of_range_is_clamped_with_warning_and_the_rest_loads()
+    {
+        var result = LoadFrom("""{ "language": "en", "cueVolume": 40, "overlay": { "opacity": 10, "scale": 150 } }""");
+
+        Assert.Equal(30, result.Settings.Overlay.Opacity);
+        Assert.Equal(150, result.Settings.Overlay.Scale);
+        Assert.Equal("en", result.Settings.Language);
+        Assert.Equal(40, result.Settings.CueVolume);
+        Assert.Contains("opacity", Assert.Single(result.Warnings), StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("50", 75)]
+    [InlineData("250", 200)]
+    public void Overlay_scale_out_of_range_is_clamped_with_warning(string value, int expected)
+    {
+        var result = LoadFrom($$"""{ "overlay": { "scale": {{value}} } }""");
+
+        Assert.Equal(expected, result.Settings.Overlay.Scale);
+        Assert.Contains("scale", Assert.Single(result.Warnings), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Overlay_unknown_kind_is_A_with_warning()
+    {
+        var result = LoadFrom("""{ "overlay": { "kind": "C" } }""");
+
+        Assert.Equal(IndicatorKind.A, result.Settings.Overlay.Kind);
+        Assert.Contains("kind", Assert.Single(result.Warnings), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Overlay_invalid_position_is_default_with_warning()
+    {
+        var result = LoadFrom("""{ "overlay": { "position": { "x": "left" } } }""");
+
+        Assert.Null(result.Settings.Overlay.Position);
+        Assert.Contains("position", Assert.Single(result.Warnings), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Overlay_round_trips_with_position()
+    {
+        var settings = AppSettings.Defaults("ru") with
+        {
+            Overlay = new OverlaySettings
+            {
+                Enabled = false,
+                Kind = IndicatorKind.B,
+                Scale = 125,
+                Opacity = 60,
+                Position = new ScreenPoint(-1500, 820),
+            },
+        };
+
+        Store().Save(settings);
+        var loaded = Store().Load();
+
+        Assert.Empty(loaded.Warnings);
+        Assert.Equal(settings, loaded.Settings);
+        Assert.Contains("\"x\": -1500", File.ReadAllText(FilePath), StringComparison.Ordinal);
+
+        Store().Save(settings with { Overlay = settings.Overlay with { Position = null } });
+        Assert.Null(Store().Load().Settings.Overlay.Position);
+        Assert.Contains("\"position\": null", File.ReadAllText(FilePath), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Path_ExplicitWinsOverEnvironment()
     {
         Assert.Equal(FilePath, JsonSettingsStore.ResolvePath(FilePath));

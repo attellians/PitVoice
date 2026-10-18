@@ -119,6 +119,16 @@ internal static class Texts
             yield return $"group.{group}";
         }
 
+        foreach (var visual in Enum.GetValues<IndicatorVisual>().Where(v => v != IndicatorVisual.Idle))
+        {
+            yield return $"overlay.{visual}";
+        }
+
+        foreach (var kind in Enum.GetValues<Core.Settings.IndicatorKind>())
+        {
+            yield return $"overlayKind.{kind}";
+        }
+
         yield return "class.negations";
         foreach (var role in Enum.GetValues<Core.Languages.WordRole>().Where(r => r is not (Core.Languages.WordRole.Target or Core.Languages.WordRole.Compound)))
         {

@@ -1,5 +1,6 @@
 using System.IO;
 using System.Net.Http;
+using PitVoice.App.Overlay;
 using PitVoice.App.ViewModels;
 using PitVoice.Core.Languages;
 using PitVoice.Core.Settings;
@@ -50,6 +51,20 @@ internal sealed class AppServices : IAsyncDisposable
 
     public ModelService Models { get; }
 
+    /// <summary>State of the indicator above the game; created by <see cref="StartIndicator"/> once the host runs.</summary>
+    public IndicatorModel? Indicator { get; private set; }
+
+    /// <summary>Indicator settings and move mode for the settings page and the tray.</summary>
+    public IndicatorControl? IndicatorControl { get; private set; }
+
+    /// <summary>Attaches the indicator to the started host; call on the UI thread.</summary>
+    public OverlayController StartIndicator()
+    {
+        Indicator = Host.CreateIndicator();
+        IndicatorControl = new IndicatorControl(Host, Indicator);
+        return new OverlayController(Indicator, IndicatorControl);
+    }
+
     /// <summary>The built-in packs next to the exe.</summary>
     public static string PacksDirectory => Path.Combine(AppContext.BaseDirectory, "languages");
 
@@ -58,6 +73,8 @@ internal sealed class AppServices : IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
+        IndicatorControl?.Dispose();
+        Indicator?.Dispose();
         var stopping = Task.Run(async () =>
         {
             await Models.DisposeAsync().ConfigureAwait(false);

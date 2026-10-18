@@ -222,7 +222,100 @@ public sealed class JsonSettingsStore : ISettingsStore
             }
         }
 
+        if (TryGet(root, "overlay", out var overlay) && overlay.ValueKind != JsonValueKind.Null)
+        {
+            if (overlay.ValueKind == JsonValueKind.Object)
+            {
+                settings = settings with { Overlay = ReadOverlay(overlay, warnings) };
+            }
+            else
+            {
+                warnings.Add($"settings: invalid overlay {overlay.GetRawText()}, using the default indicator settings");
+            }
+        }
+
         return settings;
+    }
+
+    /// <summary>Missing fields keep their defaults; size and opacity are clamped like the volume (design D8).</summary>
+    private static OverlaySettings ReadOverlay(JsonElement overlay, List<string> warnings)
+    {
+        var defaults = OverlaySettings.Default;
+        var settings = defaults;
+        if (TryGet(overlay, "enabled", out var enabled))
+        {
+            if (enabled.ValueKind is JsonValueKind.True or JsonValueKind.False)
+            {
+                settings = settings with { Enabled = enabled.GetBoolean() };
+            }
+            else
+            {
+                warnings.Add($"settings: invalid overlay.enabled {enabled.GetRawText()}, using true");
+            }
+        }
+
+        if (TryGet(overlay, "kind", out var kind))
+        {
+            switch (kind.ValueKind == JsonValueKind.String ? kind.GetString() : null)
+            {
+                case "A":
+                    break;
+                case "B":
+                    settings = settings with { Kind = IndicatorKind.B };
+                    break;
+                default:
+                    warnings.Add($"settings: unknown overlay.kind {kind.GetRawText()}, using A");
+                    break;
+            }
+        }
+
+        settings = settings with
+        {
+            Scale = ReadPercent(overlay, "scale", OverlaySettings.MinScale, OverlaySettings.MaxScale, defaults.Scale, warnings),
+            Opacity = ReadPercent(overlay, "opacity", OverlaySettings.MinOpacity, OverlaySettings.MaxOpacity, defaults.Opacity, warnings),
+        };
+
+        if (TryGet(overlay, "position", out var position) && position.ValueKind != JsonValueKind.Null)
+        {
+            if (TryGetInt(position, "x", out var px) && TryGetInt(position, "y", out var py))
+            {
+                settings = settings with { Position = new ScreenPoint(px, py) };
+            }
+            else
+            {
+                warnings.Add($"settings: invalid overlay.position {position.GetRawText()}, using the default place");
+            }
+        }
+
+        return settings;
+    }
+
+    private static bool TryGetInt(JsonElement element, string property, out int value)
+    {
+        value = 0;
+        return TryGet(element, property, out var number) && number.ValueKind == JsonValueKind.Number && number.TryGetInt32(out value);
+    }
+
+    private static int ReadPercent(JsonElement element, string property, int min, int max, int fallback, List<string> warnings)
+    {
+        if (!TryGet(element, property, out var value))
+        {
+            return fallback;
+        }
+
+        if (value.ValueKind != JsonValueKind.Number || !value.TryGetDouble(out var number))
+        {
+            warnings.Add(string.Create(CultureInfo.InvariantCulture, $"settings: invalid overlay.{property} {value.GetRawText()}, using {fallback}"));
+            return fallback;
+        }
+
+        var clamped = (int)Math.Round(Math.Clamp(number, min, max));
+        if (clamped != number)
+        {
+            warnings.Add(string.Create(CultureInfo.InvariantCulture, $"settings: overlay.{property} {number} is out of {min}..{max}, using {clamped}"));
+        }
+
+        return clamped;
     }
 
     private static PttBinding? ReadBinding(JsonElement binding, List<string> warnings)
@@ -325,11 +418,34 @@ public sealed class JsonSettingsStore : ISettingsStore
             writer.WriteNumber("threshold", settings.Threshold);
             WriteNullable(writer, "interfaceLanguage", settings.InterfaceLanguage);
             writer.WriteString("theme", settings.Theme.ToString().ToLowerInvariant());
+            WriteOverlay(writer, settings.Overlay);
             writer.WriteEndObject();
         }
 
         stream.Write("\n"u8);
         return stream.ToArray();
+    }
+
+    private static void WriteOverlay(Utf8JsonWriter writer, OverlaySettings overlay)
+    {
+        writer.WriteStartObject("overlay");
+        writer.WriteBoolean("enabled", overlay.Enabled);
+        writer.WriteString("kind", overlay.Kind.ToString());
+        writer.WriteNumber("scale", overlay.Scale);
+        writer.WriteNumber("opacity", overlay.Opacity);
+        if (overlay.Position is { } position)
+        {
+            writer.WriteStartObject("position");
+            writer.WriteNumber("x", position.X);
+            writer.WriteNumber("y", position.Y);
+            writer.WriteEndObject();
+        }
+        else
+        {
+            writer.WriteNull("position");
+        }
+
+        writer.WriteEndObject();
     }
 
     private static void WriteNullable(Utf8JsonWriter writer, string property, string? value)

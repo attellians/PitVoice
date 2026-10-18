@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Threading;
 using PitVoice.App.Localization;
+using PitVoice.App.Overlay;
 using PitVoice.App.Tray;
 using PitVoice.App.ViewModels;
 using PitVoice.Host;
@@ -20,6 +21,7 @@ public partial class App : Application
     private CrashReporter? _crashes;
     private AppServices? _services;
     private TrayIcon? _tray;
+    private OverlayController? _overlay;
     private MainWindow? _window;
     private bool _exiting;
     private Core.Settings.AppTheme? _theme;
@@ -62,9 +64,13 @@ public partial class App : Application
         ApplyLook(_services.Host.Settings);
         _services.Host.SettingsChanged += settings => Ui.Post(() => ApplyLook(settings));
 
-        _tray = new TrayIcon(ShowWindow, () => _ = ExitAsync());
+        _overlay = _services.StartIndicator();
+        var indicator = _services.IndicatorControl!;
+        _tray = new TrayIcon(ShowWindow, () => indicator.Moving = true, () => _ = ExitAsync());
         _tray.Show(_services.Host.Status);
+        _tray.ShowMoveIndicator(indicator.Settings.Enabled);
         _services.Host.StatusChanged += status => Ui.Post(() => _tray?.Show(status));
+        indicator.Changed += () => _tray?.ShowMoveIndicator(indicator.Settings.Enabled);
         _instance.Listen(() => Dispatcher.Invoke(ShowWindow));
 
         ShowWindow();
@@ -140,6 +146,7 @@ public partial class App : Application
 
         _exiting = true;
         _tray?.Dispose();
+        _overlay?.Dispose();
         if (_window is not null)
         {
             _window.AllowClose = true;

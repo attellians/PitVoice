@@ -31,6 +31,12 @@
 > [!WARNING]
 > The only official builds are on this repository's [Releases](https://github.com/attellians/PitVoice/releases) page.
 
+<p align="center">
+  <img width="760" src=".github/assets/window-home.png" alt="PitVoice home page: all set, microphone, button and iRacing connected, recent phrases">
+  <br>
+  <sub>The interface is in Russian here; English is chosen in the settings.</sub>
+</p>
+
 ## Why
 
 Setting up a pit stop in iRacing means looking away to the black box or the keyboard while you drive. With PitVoice
@@ -75,6 +81,10 @@ app.
 
 In Russian: «залей тридцать литров», «меняй левые», «меняй шины на сухие», «сорви плёнку», «быстрый ремонт»,
 «сбрось всё».
+
+<p align="center">
+  <img width="760" src=".github/assets/window-commands.png" alt="The Commands page: group cards with example phrases">
+</p>
 
 ## Install
 

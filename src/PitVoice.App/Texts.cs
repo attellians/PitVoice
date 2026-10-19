@@ -117,6 +117,7 @@ internal static class Texts
         foreach (var group in Enum.GetValues<CommandGroup>())
         {
             yield return $"group.{group}";
+            yield return $"groupHint.{group}";
         }
 
         foreach (var visual in Enum.GetValues<IndicatorVisual>().Where(v => v != IndicatorVisual.Idle))
@@ -163,6 +164,19 @@ internal static class Texts
         foreach (var mode in Enum.GetValues<Core.Ptt.PttMode>())
         {
             yield return $"mode.{mode}";
+            yield return $"modeShort.{mode}";
+        }
+
+        // The home page (spec: Home status card, Phrase counter).
+        yield return "hint.Ready";
+        foreach (var reason in Enum.GetValues<StatusReason>().Where(r => r != StatusReason.None))
+        {
+            yield return $"hint.{reason}";
+        }
+
+        foreach (var category in Enum.GetValues<Core.Plural.PluralCategory>())
+        {
+            yield return $"phrases.{category}";
         }
     }
 }

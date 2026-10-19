@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PitVoice.App.Localization;
@@ -6,19 +7,64 @@ using PitVoice.Host;
 
 namespace PitVoice.App.ViewModels;
 
-/// <summary>A model row with its buttons.</summary>
-internal sealed partial class ModelRow(ModelsViewModel owner, ModelItem item) : ObservableObject
+/// <summary>
+/// A model row with its buttons (spec: Models in the window; design D6): the language code in a circle of the state's
+/// hue, the language name, the state in a word, then size, install date, id and license in small grey, and the
+/// progress "N из M МБ" while downloading.
+/// </summary>
+internal sealed partial class ModelRow : ObservableObject
 {
-    public ModelItem Item { get; private set; } = item;
+    private readonly string _languageName;
+
+    public ModelRow(ModelItem item, string languageName, Func<string, Task> download, Action<string> cancel, Func<string, Task> delete)
+    {
+        ArgumentNullException.ThrowIfNull(item);
+        Item = item;
+        _languageName = languageName;
+        DownloadCommand = new AsyncRelayCommand(() => download(Item.Entry.Id));
+        CancelCommand = new RelayCommand(() => cancel(Item.Entry.Id));
+        DeleteCommand = new AsyncRelayCommand(() => delete(Item.Entry.Id));
+    }
+
+    public ModelItem Item { get; private set; }
 
     public string Id => Item.Entry.Id;
 
-    public string Details => Loc.F("ModelDetails", owner.LanguageName(Item.Entry.Language), Texts.Megabytes(Item.Entry.SizeBytes), Item.Entry.License);
+    /// <summary>"RU", "EN": the first two letters of the language code.</summary>
+    public string Code => Item.Entry.Language.Length >= 2 ? Item.Entry.Language[..2].ToUpperInvariant() : Item.Entry.Language.ToUpperInvariant();
 
-    public string State => Item.State == ModelState.Downloading && Item.Progress is { } progress
-        ? Loc.F("ModelProgress", progress.Percent is { } p ? ((int)p).ToString(System.Globalization.CultureInfo.InvariantCulture) : "…",
-            Texts.Megabytes(progress.BytesReceived), Texts.Megabytes(progress.TotalBytes ?? Item.Entry.SizeBytes))
-        : Loc.T($"model.{Item.State}");
+    public string LanguageName => _languageName;
+
+    public ModelState State => Item.State;
+
+    /// <summary>"используется", "скачивается", "установлена", "не скачана".</summary>
+    public string StateText => Loc.T($"model.{Item.State}");
+
+    public bool IsInUse => Item.State == ModelState.InUse;
+
+    public bool IsNotInstalled => Item.State == ModelState.NotInstalled;
+
+    /// <summary>"45,1 МБ · установлена 19.10.2026 · vosk-model-small-ru-0.22 · лицензия Apache-2.0".</summary>
+    public string Details
+    {
+        get
+        {
+            var parts = new List<string> { Loc.F("ModelSize", Texts.Megabytes(Item.Entry.SizeBytes)) };
+            if (Item.InstalledAt is { } installed)
+            {
+                parts.Add(Loc.F("ModelInstalledOn", FormatDate(installed)));
+            }
+
+            parts.Add(Item.Entry.Id);
+            parts.Add(Loc.F("ModelLicense", Item.Entry.License));
+            return string.Join(" · ", parts);
+        }
+    }
+
+    /// <summary>"12,3 из 45,1 МБ" while downloading, else empty.</summary>
+    public string ProgressText => Item.State == ModelState.Downloading && Item.Progress is { } progress
+        ? Loc.F("ModelBytes", Texts.Megabytes(progress.BytesReceived), Texts.Megabytes(progress.TotalBytes ?? Item.Entry.SizeBytes))
+        : string.Empty;
 
     public double Percent => Item.Progress?.Percent ?? 0;
 
@@ -30,11 +76,15 @@ internal sealed partial class ModelRow(ModelsViewModel owner, ModelItem item) : 
 
     public string Error => Item.Error is { } error ? Loc.F("ModelError", error) : string.Empty;
 
-    public IAsyncRelayCommand DownloadCommand { get; } = new AsyncRelayCommand(() => owner.DownloadAsync(item.Entry.Id));
+    public IAsyncRelayCommand DownloadCommand { get; }
 
-    public IRelayCommand CancelCommand { get; } = new RelayCommand(() => owner.Cancel(item.Entry.Id));
+    public IRelayCommand CancelCommand { get; }
 
-    public IAsyncRelayCommand DeleteCommand { get; } = new AsyncRelayCommand(() => owner.DeleteAsync(item.Entry.Id));
+    public IAsyncRelayCommand DeleteCommand { get; }
+
+    /// <summary>The date in the interface language: "19.10.2026" in Russian, "10/19/2026" in English.</summary>
+    public static string FormatDate(DateTimeOffset date) =>
+        date.ToLocalTime().ToString("d", CultureInfo.GetCultureInfo(Loc.Instance.Language == "ru" ? "ru-RU" : "en-US"));
 
     public void Update(ModelItem next)
     {
@@ -64,6 +114,7 @@ internal sealed partial class ModelsViewModel : ObservableObject
     [ObservableProperty]
     public partial string Message { get; set; } = string.Empty;
 
+    /// <summary>The subtitle: recognition works offline, the model of the commands language is needed.</summary>
     [ObservableProperty]
     public partial string LanguageTitle { get; set; } = string.Empty;
 
@@ -112,7 +163,7 @@ internal sealed partial class ModelsViewModel : ObservableObject
         Rows.Clear();
         foreach (var item in items)
         {
-            Rows.Add(new ModelRow(this, item));
+            Rows.Add(new ModelRow(item, LanguageName(item.Entry.Language), DownloadAsync, Cancel, DeleteAsync));
         }
     }
 }

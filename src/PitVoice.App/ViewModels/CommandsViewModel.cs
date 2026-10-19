@@ -10,14 +10,6 @@ using PitVoice.Host;
 
 namespace PitVoice.App.ViewModels;
 
-internal sealed record WordLine(string Text, bool IsOwn);
-
-internal sealed record ClassEntry(string Name, IReadOnlyList<WordLine> Words);
-
-internal sealed record CommandEntry(string Name, IReadOnlyList<string> Examples);
-
-internal sealed record GroupEntry(string Name, IReadOnlyList<ClassEntry> Classes, IReadOnlyList<CommandEntry> Commands, string ElidedAction);
-
 /// <summary>"Commands" (spec: Command reference, User additions in the reference).</summary>
 internal sealed partial class CommandsViewModel : ObservableObject
 {
@@ -35,6 +27,10 @@ internal sealed partial class CommandsViewModel : ObservableObject
 
     public ObservableCollection<string> AdditionIssues { get; } = [];
 
+    /// <summary>"Язык команд: Русский" (spec: Language switch).</summary>
+    [ObservableProperty]
+    public partial string LanguageTitle { get; set; } = string.Empty;
+
     [ObservableProperty]
     public partial string PackError { get; set; } = string.Empty;
 
@@ -43,6 +39,10 @@ internal sealed partial class CommandsViewModel : ObservableObject
 
     [ObservableProperty]
     public partial string AdditionsState { get; set; } = string.Empty;
+
+    /// <summary>True when the additions file exists and is applied: the green dot of the "Свои слова" card.</summary>
+    [ObservableProperty]
+    public partial bool AdditionsApplied { get; set; }
 
     [ObservableProperty]
     public partial string MissingWords { get; set; } = string.Empty;
@@ -93,6 +93,7 @@ internal sealed partial class CommandsViewModel : ObservableObject
         Refresh();
     }
 
+    /// <summary>Builds the cards again; the "Слова группы" blocks come back collapsed (spec: Words block state is per group).</summary>
     public void Refresh()
     {
         Groups.Clear();
@@ -100,25 +101,20 @@ internal sealed partial class CommandsViewModel : ObservableObject
         AdditionsFile = _services.AdditionsFile;
         var pack = _services.Host.Pack;
         var status = _services.Host.Status;
+        var language = _services.Host.Settings.Language;
+        LanguageTitle = Loc.F("CommandsLanguage", _services.Host.Languages.FirstOrDefault(l => l.Code == language)?.Name ?? language);
         PackError = pack is null && status.Reason == StatusReason.PackFailed ? Loc.F("reason.PackFailed", status.Detail) : string.Empty;
         if (pack is null)
         {
             AdditionsState = string.Empty;
+            AdditionsApplied = false;
             MissingWords = string.Empty;
             return;
         }
 
-        foreach (var group in CommandReference.Build(pack))
+        foreach (var group in CommandCards.Build(CommandReference.Build(pack)))
         {
-            Groups.Add(new GroupEntry(
-                Texts.Group(group.Group),
-                group.Classes.Select(c => new ClassEntry(
-                    Texts.WordClass(c.Class),
-                    c.Words.Select(w => new WordLine(w.Text, w.IsUserAddition)).ToArray())).ToArray(),
-                group.Commands.Select(c => new CommandEntry(
-                    Texts.Intent(c.Intent),
-                    c.Examples.Select(Texts.Pattern).ToArray())).ToArray(),
-                group.ElidedAction is { } elided ? Loc.F("ElidedAction", elided) : string.Empty));
+            Groups.Add(group);
         }
 
         var additions = _services.Host.Additions;
@@ -128,6 +124,7 @@ internal sealed partial class CommandsViewModel : ObservableObject
             { Applied: false } => Loc.T("AdditionsNotApplied"),
             _ => Loc.F("AdditionsApplied", pack.UserEntries.Count),
         };
+        AdditionsApplied = additions is { Exists: true, Applied: true };
         foreach (var issue in additions?.Issues ?? [])
         {
             AdditionIssues.Add(issue.ToString());

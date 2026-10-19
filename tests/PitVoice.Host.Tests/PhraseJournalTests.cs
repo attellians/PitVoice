@@ -123,6 +123,47 @@ public sealed class PhraseJournalTests
         Assert.Equal(21, changes);
     }
 
+    /// <summary>Spec: Phrase counter — counts every phrase of the run, not only the 20 shown; a new journal starts at 0/0.</summary>
+    [Fact]
+    public void Counters_go_beyond_the_capacity_and_start_at_zero()
+    {
+        var journal = new PhraseJournal();
+        Assert.Equal((0, 0), (journal.TotalCount, journal.AppliedCount));
+
+        for (var id = 1; id <= 25; id++)
+        {
+            journal.OnEvent(new PttPressed(id, T0.AddSeconds(id)));
+            journal.OnEvent(new SpeechRecognized(id, T0, Words("залей тридцать"), TimeSpan.Zero));
+            if (id <= 23)
+            {
+                journal.OnEvent(new CommandsApplied(id, T0, [new SentCommand(PitCommand.Fuel, 30)]));
+            }
+            else
+            {
+                journal.OnEvent(new ApplyFailed(id, T0, ExecutionOutcome.NotConnected, []));
+            }
+
+            journal.OnEvent(new ResultSignaled(id, T0, Cue.Success, "заливаем 30 литров", false, TimeSpan.Zero));
+        }
+
+        Assert.Equal(PhraseJournal.Capacity, journal.Entries.Count);
+        Assert.Equal(25, journal.TotalCount);
+        Assert.Equal(23, journal.AppliedCount);
+    }
+
+    /// <summary>A refused press counts as a phrase; an ignored short press does not.</summary>
+    [Fact]
+    public void Refused_press_counts_and_an_ignored_short_press_does_not()
+    {
+        var journal = Feed(
+            new PttPressed(1, T0),
+            new PttUnavailable(1, T0, StatusReason.ModelLoading, "vosk-model-small-en-us-0.15"),
+            new PttPressed(2, T0),
+            new PttReleased(2, T0, true, null));
+
+        Assert.Equal((1, 0), (journal.TotalCount, journal.AppliedCount));
+    }
+
     [Fact]
     public async Task Journal_survives_a_session_rebuild()
     {

@@ -9,5 +9,6 @@ internal partial class HomePage : Page
     {
         DataContext = model;
         InitializeComponent();
+        Loaded += (_, _) => model.Refresh();
     }
 }

@@ -18,7 +18,8 @@ public enum ModelState
 /// <param name="State">Current state.</param>
 /// <param name="Progress">Download progress while downloading.</param>
 /// <param name="Error">Why the last download or delete failed, or null.</param>
-public sealed record ModelItem(ModelEntry Entry, ModelState State, DownloadProgress? Progress, string? Error);
+/// <param name="InstalledAt">When the model was installed, from the marker of its directory; null when it is not installed.</param>
+public sealed record ModelItem(ModelEntry Entry, ModelState State, DownloadProgress? Progress, string? Error, DateTimeOffset? InstalledAt = null);
 
 /// <summary>How deleting a model ended.</summary>
 /// <param name="Deleted">True when the model directory is gone.</param>
@@ -99,11 +100,12 @@ public sealed class ModelService : IAsyncDisposable
                 .Select(e =>
                 {
                     var downloading = _downloads.TryGetValue(e.Id, out var download);
+                    var installed = _host.Models.TryGetInstalled(e.Id, out var marker);
                     var state = downloading ? ModelState.Downloading
-                        : !_host.Models.IsInstalled(e.Id) ? ModelState.NotInstalled
+                        : !installed ? ModelState.NotInstalled
                         : e.Id == inUse ? ModelState.InUse
                         : ModelState.Installed;
-                    return new ModelItem(e, state, download?.Progress, _errors.GetValueOrDefault(e.Id));
+                    return new ModelItem(e, state, download?.Progress, _errors.GetValueOrDefault(e.Id), installed ? marker.InstalledAt : null);
                 })
                 .ToArray();
         }

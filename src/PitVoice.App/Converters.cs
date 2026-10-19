@@ -14,6 +14,16 @@ public sealed class NotEmptyConverter : IValueConverter
         throw new NotSupportedException();
 }
 
+/// <summary>Collapsed for true, visible for false (a block shown while something is absent).</summary>
+public sealed class NotVisibleConverter : IValueConverter
+{
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+        value is true ? Visibility.Collapsed : Visibility.Visible;
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+        throw new NotSupportedException();
+}
+
 /// <summary>Visible for a non-empty string, collapsed otherwise.</summary>
 public sealed class NotEmptyVisibleConverter : IValueConverter
 {

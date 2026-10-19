@@ -40,7 +40,10 @@ public sealed class ModelServiceTests
         Assert.Equal(Archive.Length, item.Entry.SizeBytes);
         Assert.Equal("Apache-2.0", item.Entry.License);
         Assert.Equal(ModelState.NotInstalled, item.State);
-        Assert.Equal(ModelState.Installed, Assert.Single(models.ForLanguage("en")).State);
+        Assert.Null(item.InstalledAt);
+        var en = Assert.Single(models.ForLanguage("en"));
+        Assert.Equal(ModelState.Installed, en.State);
+        Assert.Equal(DateTimeOffset.UnixEpoch, en.InstalledAt); // from the marker the fixture wrote
         Assert.Equal([HostFixture.RuModel, HostFixture.EnModel], models.All().Select(m => m.Entry.Id));
     }
 

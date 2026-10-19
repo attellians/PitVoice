@@ -6,6 +6,7 @@ using Xunit;
 namespace PitVoice.App.Tests;
 
 /// <summary>Interface dictionaries (design decision 7, spec: Interface language).</summary>
+[Collection("Interface language")]
 public sealed partial class LocalizationTests
 {
     private static readonly IReadOnlyDictionary<string, string> English = Loc.LoadDictionary("en")!;

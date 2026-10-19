@@ -3,141 +3,334 @@
     x:ClassModifier="internal"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="clr-namespace:PitVoice.App.Controls"
     xmlns:loc="clr-namespace:PitVoice.App.Localization"
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+    xmlns:vm="clr-namespace:PitVoice.App.ViewModels"
     Foreground="{DynamicResource TextFillColorPrimaryBrush}">
-        <StackPanel Margin="24,16,24,24">
-            <TextBlock Style="{StaticResource PageTitle}" Text="{loc:Tr NavSettings}" />
+    <Page.Resources>
+        <!-- A settings row: icon, label, control on the right (design D7; spec: Settings rows). -->
+        <Style x:Key="RowIcon" TargetType="controls:SectionIcon">
+            <Setter Property="Size" Value="28" />
+            <Setter Property="Section" Value="Settings" />
+            <Setter Property="Margin" Value="0,0,12,0" />
+        </Style>
+        <Style x:Key="RowLabel" TargetType="TextBlock" BasedOn="{StaticResource Body}">
+            <Setter Property="Margin" Value="0,0,16,0" />
+        </Style>
+        <!-- Device names are long: the chosen one is cut with an ellipsis, the list stays on the right (spec: Long value does not break the row). -->
+        <DataTemplate x:Key="DeviceChoice" DataType="{x:Type vm:Choice}">
+            <TextBlock Text="{Binding Display}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Display}" />
+        </DataTemplate>
+        <Style x:Key="PttState" TargetType="TextBlock" BasedOn="{StaticResource Caption}">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding PttTone}" Value="{x:Static vm:StateTone.Ok}">
+                    <Setter Property="Foreground" Value="{DynamicResource StateOkBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding PttTone}" Value="{x:Static vm:StateTone.Problem}">
+                    <Setter Property="Foreground" Value="{DynamicResource StateErrorBrush}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="PttDot" TargetType="Ellipse" BasedOn="{StaticResource StateDot}">
+            <Setter Property="Fill" Value="{DynamicResource StateErrorBrush}" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding PttTone}" Value="{x:Static vm:StateTone.Ok}">
+                    <Setter Property="Fill" Value="{DynamicResource StateOkBrush}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+    </Page.Resources>
 
-            <ui:InfoBar
-                Margin="0,0,0,12"
-                IsClosable="False"
-                IsOpen="{Binding SaveError, Converter={StaticResource NotEmpty}}"
-                Message="{Binding SaveError}"
-                Severity="Error" />
+    <StackPanel Margin="24,16,24,24">
+        <TextBlock Style="{StaticResource PageTitle}" Text="{loc:Tr NavSettings}" />
 
-            <ui:Card Margin="0,0,0,12">
-                <StackPanel>
-                    <TextBlock Style="{StaticResource SectionTitle}" Text="{loc:Tr LanguageLabel}" />
-                    <ComboBox
-                        Width="320"
-                        HorizontalAlignment="Left"
-                        DisplayMemberPath="Display"
-                        ItemsSource="{Binding Languages}"
-                        SelectedValue="{Binding Language}"
-                        SelectedValuePath="Key" />
-                    <StackPanel Margin="0,8,0,0" Orientation="Horizontal" Visibility="{Binding ModelMissing, Converter={StaticResource Visible}}">
-                        <TextBlock VerticalAlignment="Center" Text="{loc:Tr LanguageNoModel}" />
-                        <ui:Button Margin="8,0,0,0" Command="{Binding OpenModelsCommand}" Content="{loc:Tr DownloadModel}" />
-                    </StackPanel>
-                    <TextBlock Margin="0,12,0,4" Text="{loc:Tr InterfaceLanguageLabel}" />
-                    <ComboBox
-                        Width="320"
-                        HorizontalAlignment="Left"
-                        DisplayMemberPath="Display"
-                        ItemsSource="{Binding InterfaceLanguages}"
-                        SelectedValue="{Binding InterfaceLanguage}"
-                        SelectedValuePath="Key" />
-                    <TextBlock Margin="0,12,0,4" Text="{loc:Tr ThemeLabel}" />
-                    <ComboBox
-                        Width="320"
-                        HorizontalAlignment="Left"
-                        DisplayMemberPath="Display"
-                        ItemsSource="{Binding Themes}"
-                        SelectedValue="{Binding Theme}"
-                        SelectedValuePath="Key" />
-                </StackPanel>
-            </ui:Card>
+        <ui:InfoBar
+            Margin="0,0,0,12"
+            IsClosable="False"
+            IsOpen="{Binding SaveError, Converter={StaticResource NotEmpty}}"
+            Message="{Binding SaveError}"
+            Severity="Error" />
 
-            <ui:Card Margin="0,0,0,12">
-                <StackPanel>
-                    <TextBlock Style="{StaticResource SectionTitle}" Text="{loc:Tr PttSection}" />
-                    <TextBlock Text="{Binding PttText}" TextWrapping="Wrap" />
-                    <StackPanel Margin="0,8,0,0" Orientation="Horizontal">
-                        <ui:Button Appearance="Primary" Command="{Binding AssignCommand}" Content="{loc:Tr AssignButton}" />
-                        <TextBlock Margin="12,0,0,0" VerticalAlignment="Center" Text="{Binding AssignMessage}" TextWrapping="Wrap" />
-                    </StackPanel>
-                    <TextBlock Margin="0,12,0,4" Text="{loc:Tr ModeLabel}" />
-                    <ComboBox
-                        Width="320"
-                        HorizontalAlignment="Left"
-                        DisplayMemberPath="Display"
-                        ItemsSource="{Binding Modes}"
-                        SelectedValue="{Binding Mode}"
-                        SelectedValuePath="Key" />
-                </StackPanel>
-            </ui:Card>
+        <!-- Язык и вид -->
+        <Border Style="{StaticResource Card}" Padding="16,8">
+            <StackPanel>
+                <TextBlock Margin="0,4,0,4" Style="{StaticResource SectionTitle}" Text="{loc:Tr LookSection}" />
+                <Border Style="{StaticResource ListRowFirst}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="3*" />
+                            <ColumnDefinition Width="4*" />
+                        </Grid.ColumnDefinitions>
+                        <controls:SectionIcon Style="{StaticResource RowIcon}" Symbol="Translate24" />
+                        <TextBlock Grid.Column="1" Style="{StaticResource RowLabel}" Text="{loc:Tr LanguageLabel}" />
+                        <ComboBox
+                            Grid.Column="2"
+                            DisplayMemberPath="Display"
+                            ItemsSource="{Binding Languages}"
+                            SelectedValue="{Binding Language}"
+                            SelectedValuePath="Key"
+                            Style="{StaticResource RowCombo}" />
+                    </Grid>
+                </Border>
+                <Border Style="{StaticResource ListRow}" Visibility="{Binding ModelMissing, Converter={StaticResource Visible}}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="40" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="1" Style="{StaticResource ErrorText}" Text="{loc:Tr LanguageNoModel}" />
+                        <ui:Button Grid.Column="2" HorizontalAlignment="Right"
+                            VerticalAlignment="Center" Command="{Binding OpenModelsCommand}" Content="{loc:Tr DownloadModel}" />
+                    </Grid>
+                </Border>
+                <Border Style="{StaticResource ListRow}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="3*" />
+                            <ColumnDefinition Width="4*" />
+                        </Grid.ColumnDefinitions>
+                        <controls:SectionIcon Style="{StaticResource RowIcon}" Symbol="Globe24" />
+                        <TextBlock Grid.Column="1" Style="{StaticResource RowLabel}" Text="{loc:Tr InterfaceLanguageLabel}" />
+                        <ComboBox
+                            Grid.Column="2"
+                            DisplayMemberPath="Display"
+                            ItemsSource="{Binding InterfaceLanguages}"
+                            SelectedValue="{Binding InterfaceLanguage}"
+                            SelectedValuePath="Key"
+                            Style="{StaticResource RowCombo}" />
+                    </Grid>
+                </Border>
+                <Border Style="{StaticResource ListRow}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="3*" />
+                            <ColumnDefinition Width="4*" />
+                        </Grid.ColumnDefinitions>
+                        <controls:SectionIcon Style="{StaticResource RowIcon}" Symbol="DarkTheme24" />
+                        <TextBlock Grid.Column="1" Style="{StaticResource RowLabel}" Text="{loc:Tr ThemeLabel}" />
+                        <ComboBox
+                            Grid.Column="2"
+                            DisplayMemberPath="Display"
+                            ItemsSource="{Binding Themes}"
+                            SelectedValue="{Binding Theme}"
+                            SelectedValuePath="Key"
+                            Style="{StaticResource RowCombo}" />
+                    </Grid>
+                </Border>
+            </StackPanel>
+        </Border>
 
-            <ui:Card Margin="0,0,0,12">
-                <StackPanel>
-                    <TextBlock Style="{StaticResource SectionTitle}" Text="{loc:Tr AudioSection}" />
-                    <TextBlock Margin="0,0,0,4" Text="{loc:Tr MicrophoneLabel}" />
-                    <ComboBox
-                        Width="420"
-                        HorizontalAlignment="Left"
-                        DisplayMemberPath="Display"
-                        DropDownOpened="OnDevicesOpened"
-                        ItemsSource="{Binding Microphones}"
-                        SelectedValue="{Binding Microphone}"
-                        SelectedValuePath="Key" />
-                    <TextBlock Margin="0,12,0,4" Text="{loc:Tr OutputLabel}" />
-                    <ComboBox
-                        Width="420"
-                        HorizontalAlignment="Left"
-                        DisplayMemberPath="Display"
-                        DropDownOpened="OnDevicesOpened"
-                        ItemsSource="{Binding Outputs}"
-                        SelectedValue="{Binding Output}"
-                        SelectedValuePath="Key" />
-                    <TextBlock Margin="0,12,0,4" Text="{loc:Tr VolumeLabel}" />
-                    <StackPanel Orientation="Horizontal">
-                        <Slider
-                            Width="320"
-                            IsSnapToTickEnabled="True"
-                            Maximum="100"
-                            Minimum="0"
-                            TickFrequency="5"
-                            Value="{Binding Volume}" />
-                        <TextBlock Width="48" Margin="8,0,0,0" VerticalAlignment="Center" Text="{Binding Volume, StringFormat={}{0}%}" />
-                        <ui:Button Margin="8,0,0,0" Command="{Binding PreviewCommand}" Content="{loc:Tr PreviewButton}" />
-                    </StackPanel>
-                    <TextBlock Margin="0,6,0,0" Text="{Binding PreviewMessage}" TextWrapping="Wrap" />
-                </StackPanel>
-            </ui:Card>
+        <!-- Кнопка push-to-talk -->
+        <Border Style="{StaticResource Card}" Padding="16,8">
+            <StackPanel>
+                <TextBlock Margin="0,4,0,4" Style="{StaticResource SectionTitle}" Text="{loc:Tr PttSection}" />
+                <Border Style="{StaticResource ListRowFirst}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="3*" />
+                            <ColumnDefinition Width="4*" />
+                        </Grid.ColumnDefinitions>
+                        <controls:SectionIcon Section="Overlay" Style="{StaticResource RowIcon}" Symbol="Games24" />
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <TextBlock Style="{StaticResource Body}" Text="{Binding PttText}" ToolTip="{Binding PttText}" />
+                            <StackPanel Margin="0,2,0,0" Orientation="Horizontal">
+                                <Ellipse Style="{StaticResource PttDot}" />
+                                <TextBlock Style="{StaticResource PttState}" Text="{Binding PttStateText}" />
+                            </StackPanel>
+                        </StackPanel>
+                        <ui:Button
+                            Grid.Column="2"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Center"
+                            Appearance="Primary"
+                            Command="{Binding AssignCommand}"
+                            Content="{Binding AssignText}" />
+                    </Grid>
+                </Border>
+                <TextBlock
+                    Margin="40,0,0,8"
+                    Style="{StaticResource CaptionWrap}"
+                    Text="{Binding AssignMessage}"
+                    Visibility="{Binding AssignMessage, Converter={StaticResource NotEmptyVisible}}" />
+                <Border Style="{StaticResource ListRow}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="3*" />
+                            <ColumnDefinition Width="4*" />
+                        </Grid.ColumnDefinitions>
+                        <controls:SectionIcon Style="{StaticResource RowIcon}" Symbol="Options24" />
+                        <TextBlock Grid.Column="1" Style="{StaticResource RowLabel}" Text="{loc:Tr ModeLabel}" />
+                        <ComboBox
+                            Grid.Column="2"
+                            DisplayMemberPath="Display"
+                            ItemsSource="{Binding Modes}"
+                            SelectedValue="{Binding Mode}"
+                            SelectedValuePath="Key"
+                            Style="{StaticResource RowCombo}" />
+                    </Grid>
+                </Border>
+            </StackPanel>
+        </Border>
 
-            <ui:Card Margin="0,0,0,12">
-                <StackPanel>
-                    <TextBlock Style="{StaticResource SectionTitle}" Text="{loc:Tr RecognitionSection}" />
-                    <TextBlock Margin="0,0,0,4" Text="{loc:Tr UnitLabel}" />
-                    <ComboBox
-                        Width="320"
-                        HorizontalAlignment="Left"
-                        DisplayMemberPath="Display"
-                        ItemsSource="{Binding Units}"
-                        SelectedValue="{Binding Unit}"
-                        SelectedValuePath="Key" />
-                    <TextBlock Margin="0,12,0,4" Text="{loc:Tr ThresholdLabel}" />
-                    <StackPanel Orientation="Horizontal">
-                        <ui:TextBox Width="120" LostFocus="OnThresholdLostFocus" Text="{Binding ThresholdText, UpdateSourceTrigger=PropertyChanged}">
+        <!-- Звук -->
+        <Border Style="{StaticResource Card}" Padding="16,8">
+            <StackPanel>
+                <TextBlock Margin="0,4,0,4" Style="{StaticResource SectionTitle}" Text="{loc:Tr AudioSection}" />
+                <Border Style="{StaticResource ListRowFirst}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="3*" />
+                            <ColumnDefinition Width="4*" />
+                        </Grid.ColumnDefinitions>
+                        <controls:SectionIcon Section="Home" Style="{StaticResource RowIcon}" Symbol="Mic24" />
+                        <TextBlock Grid.Column="1" Style="{StaticResource RowLabel}" Text="{loc:Tr MicrophoneLabel}" />
+                        <ComboBox
+                            Grid.Column="2"
+                            DropDownOpened="OnDevicesOpened"
+                            ItemTemplate="{StaticResource DeviceChoice}"
+                            ItemsSource="{Binding Microphones}"
+                            SelectedValue="{Binding Microphone}"
+                            SelectedValuePath="Key"
+                            Style="{StaticResource RowCombo}" />
+                    </Grid>
+                </Border>
+                <Border Style="{StaticResource ListRow}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="3*" />
+                            <ColumnDefinition Width="4*" />
+                        </Grid.ColumnDefinitions>
+                        <controls:SectionIcon Style="{StaticResource RowIcon}" Symbol="Speaker224" />
+                        <TextBlock Grid.Column="1" Style="{StaticResource RowLabel}" Text="{loc:Tr OutputLabel}" />
+                        <ComboBox
+                            Grid.Column="2"
+                            DropDownOpened="OnDevicesOpened"
+                            ItemTemplate="{StaticResource DeviceChoice}"
+                            ItemsSource="{Binding Outputs}"
+                            SelectedValue="{Binding Output}"
+                            SelectedValuePath="Key"
+                            Style="{StaticResource RowCombo}" />
+                    </Grid>
+                </Border>
+                <Border Style="{StaticResource ListRow}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="3*" />
+                            <ColumnDefinition Width="4*" />
+                        </Grid.ColumnDefinitions>
+                        <controls:SectionIcon Style="{StaticResource RowIcon}" Symbol="Speaker224" />
+                        <TextBlock Grid.Column="1" Style="{StaticResource RowLabel}" Text="{loc:Tr VolumeLabel}" />
+                        <StackPanel Grid.Column="2" HorizontalAlignment="Right" Orientation="Horizontal">
+                            <Slider
+                                Maximum="100"
+                                Minimum="0"
+                                Style="{StaticResource RowSlider}"
+                                Value="{Binding Volume}" />
+                            <TextBlock
+                                Width="44"
+                                Margin="8,0,0,0"
+                                Style="{StaticResource Body}"
+                                Text="{Binding Volume, StringFormat={}{0}%}" />
+                            <ui:Button Margin="8,0,0,0" VerticalAlignment="Center" Command="{Binding PreviewCommand}" Content="{loc:Tr PreviewButton}" />
+                        </StackPanel>
+                    </Grid>
+                </Border>
+                <TextBlock
+                    Margin="40,0,0,8"
+                    Style="{StaticResource CaptionWrap}"
+                    Text="{Binding PreviewMessage}"
+                    Visibility="{Binding PreviewMessage, Converter={StaticResource NotEmptyVisible}}" />
+            </StackPanel>
+        </Border>
+
+        <!-- Распознавание -->
+        <Border Style="{StaticResource Card}" Padding="16,8">
+            <StackPanel>
+                <TextBlock Margin="0,4,0,4" Style="{StaticResource SectionTitle}" Text="{loc:Tr RecognitionSection}" />
+                <Border Style="{StaticResource ListRowFirst}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="3*" />
+                            <ColumnDefinition Width="4*" />
+                        </Grid.ColumnDefinitions>
+                        <controls:SectionIcon Section="Commands" Style="{StaticResource RowIcon}" Symbol="GasPump24" />
+                        <TextBlock Grid.Column="1" Style="{StaticResource RowLabel}" Text="{loc:Tr UnitLabel}" TextWrapping="Wrap" TextTrimming="None" />
+                        <ComboBox
+                            Grid.Column="2"
+                            DisplayMemberPath="Display"
+                            ItemsSource="{Binding Units}"
+                            SelectedValue="{Binding Unit}"
+                            SelectedValuePath="Key"
+                            Style="{StaticResource RowCombo}" />
+                    </Grid>
+                </Border>
+                <Border Style="{StaticResource ListRow}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="3*" />
+                            <ColumnDefinition Width="4*" />
+                        </Grid.ColumnDefinitions>
+                        <controls:SectionIcon Style="{StaticResource RowIcon}" Symbol="Beaker24" />
+                        <TextBlock Grid.Column="1" Style="{StaticResource RowLabel}" Text="{loc:Tr ThresholdLabel}" />
+                        <ui:TextBox
+                            Grid.Column="2"
+                            Width="120"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Center"
+                            LostFocus="OnThresholdLostFocus"
+                            Text="{Binding ThresholdText, UpdateSourceTrigger=PropertyChanged}">
                             <ui:TextBox.InputBindings>
                                 <KeyBinding Key="Enter" Command="{Binding ApplyThresholdCommand}" />
                             </ui:TextBox.InputBindings>
                         </ui:TextBox>
-                        <TextBlock Margin="12,0,0,0" VerticalAlignment="Center" Foreground="{DynamicResource SystemFillColorCriticalBrush}" Text="{Binding ThresholdError}" />
-                    </StackPanel>
-                </StackPanel>
-            </ui:Card>
+                    </Grid>
+                </Border>
+                <!-- The threshold error under its row (spec: Invalid threshold input). -->
+                <TextBlock
+                    Margin="40,0,0,8"
+                    Style="{StaticResource ErrorText}"
+                    Text="{Binding ThresholdError}"
+                    Visibility="{Binding ThresholdError, Converter={StaticResource NotEmptyVisible}}" />
+            </StackPanel>
+        </Border>
 
-            <ui:Card Margin="0,0,0,12">
-                <StackPanel>
-                    <TextBlock Style="{StaticResource SectionTitle}" Text="{loc:Tr DiagnosticsSection}" />
-                    <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="{loc:Tr DiagnosticsNote}" TextWrapping="Wrap" />
-                    <StackPanel Margin="0,8,0,0" Orientation="Horizontal">
-                        <ui:Button Command="{Binding Diagnostics.CollectCommand}" Content="{loc:Tr DiagCollectButton}" />
-                        <ui:Button Margin="8,0,0,0" Command="{Binding Diagnostics.OpenLogsCommand}" Content="{loc:Tr DiagOpenLogs}" />
-                    </StackPanel>
-                    <TextBlock Margin="0,6,0,0" Text="{Binding Diagnostics.Message}" TextWrapping="Wrap" />
-                </StackPanel>
-            </ui:Card>
-        </StackPanel>
+        <!-- Диагностика -->
+        <Border Style="{StaticResource Card}" Padding="16,8">
+            <StackPanel>
+                <TextBlock Margin="0,4,0,4" Style="{StaticResource SectionTitle}" Text="{loc:Tr DiagnosticsSection}" />
+                <Border Style="{StaticResource ListRowFirst}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <controls:SectionIcon Section="About" Style="{StaticResource RowIcon}" Symbol="Stethoscope24" VerticalAlignment="Top" Margin="0,2,12,0" />
+                        <TextBlock Grid.Column="1" Style="{StaticResource CaptionWrap}" Text="{loc:Tr DiagnosticsNote}" />
+                        <StackPanel Grid.Column="2" Margin="16,0,0,0" VerticalAlignment="Center">
+                            <ui:Button HorizontalAlignment="Stretch" Command="{Binding Diagnostics.CollectCommand}" Content="{loc:Tr DiagCollectButton}" />
+                            <ui:Button Margin="0,8,0,0" HorizontalAlignment="Stretch" Command="{Binding Diagnostics.OpenLogsCommand}" Content="{loc:Tr DiagOpenLogs}" />
+                        </StackPanel>
+                    </Grid>
+                </Border>
+                <TextBlock
+                    Margin="40,0,0,8"
+                    Style="{StaticResource CaptionWrap}"
+                    Text="{Binding Diagnostics.Message}"
+                    Visibility="{Binding Diagnostics.Message, Converter={StaticResource NotEmptyVisible}}" />
+            </StackPanel>
+        </Border>
+    </StackPanel>
 </Page>

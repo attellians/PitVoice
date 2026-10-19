@@ -33,6 +33,10 @@
 > Официальные сборки — только на странице [Releases](https://github.com/attellians/PitVoice/releases) этого
 > репозитория.
 
+<p align="center">
+  <img width="760" src=".github/assets/window-home.png" alt="Главная страница PitVoice: всё готово, микрофон, кнопка и iRacing подключены, последние фразы">
+</p>
+
 ## Зачем
 
 Чтобы выставить пит-стоп в iRacing, приходится отвлекаться на чёрный ящик или клавиатуру прямо на трассе. С PitVoice
@@ -76,6 +80,10 @@
 
 По-английски: «add thirty liters», «change left side and fronts», «change to wet tires», «tear off», «fast repair»,
 «clear all».
+
+<p align="center">
+  <img width="760" src=".github/assets/window-commands.png" alt="Раздел «Команды»: карточки групп с примерами фраз">
+</p>
 
 ## Установка
 

@@ -1,0 +1,54 @@
+<!-- Section hues of the dark theme (design D1 of refresh-window-visual-style): the approved mockup colors; tints are the same colors at 17 % alpha. -->
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <SolidColorBrush x:Key="SectionHomeBrush" Color="#6EA8FF" />
+    <SolidColorBrush x:Key="SectionHomeTintBrush" Color="#2B6EA8FF" />
+    <SolidColorBrush x:Key="SectionSettingsBrush" Color="#B0B0B8" />
+    <SolidColorBrush x:Key="SectionSettingsTintBrush" Color="#2BB0B0B8" />
+    <SolidColorBrush x:Key="SectionOverlayBrush" Color="#CDB8FF" />
+    <SolidColorBrush x:Key="SectionOverlayTintBrush" Color="#33A88CFF" />
+    <SolidColorBrush x:Key="SectionModelsBrush" Color="#6FD39A" />
+    <SolidColorBrush x:Key="SectionModelsTintBrush" Color="#2B6FD39A" />
+    <SolidColorBrush x:Key="SectionCommandsBrush" Color="#FFB27A" />
+    <SolidColorBrush x:Key="SectionCommandsTintBrush" Color="#2BFFB27A" />
+    <SolidColorBrush x:Key="SectionAboutBrush" Color="#6FD6C9" />
+    <SolidColorBrush x:Key="SectionAboutTintBrush" Color="#2B6FD6C9" />
+    <SolidColorBrush x:Key="SectionAlertBrush" Color="#FF8A80" />
+    <SolidColorBrush x:Key="SectionAlertTintBrush" Color="#2BFF8A80" />
+
+    <SolidColorBrush x:Key="StateOkBrush" Color="#6FD39A" />
+    <SolidColorBrush x:Key="StateWarnBrush" Color="#F2C14E" />
+    <SolidColorBrush x:Key="StateErrorBrush" Color="#FF8A80" />
+
+    <SolidColorBrush x:Key="DividerBrush" Color="#1AFFFFFF" />
+    <SolidColorBrush x:Key="ChipBrush" Color="#24FFFFFF" />
+    <SolidColorBrush x:Key="ChipStrokeBrush" Color="#2EFFFFFF" />
+    <SolidColorBrush x:Key="NeutralCircleBrush" Color="#2BB0B0B8" />
+
+    <!-- The accent: always blue, never the Windows accent (user decision 2026-10-19). Put over the WPF-UI resources by Themes. -->
+    <SolidColorBrush x:Key="AccentFillColorDefaultBrush" Color="#3D8BFF" />
+    <SolidColorBrush x:Key="AccentFillColorSecondaryBrush" Color="#5A9CFF" />
+    <SolidColorBrush x:Key="AccentFillColorTertiaryBrush" Color="#2F74D9" />
+    <SolidColorBrush x:Key="AccentTextFillColorPrimaryBrush" Color="#8CB8FF" />
+    <SolidColorBrush x:Key="AccentButtonBackground" Color="#3D8BFF" />
+    <SolidColorBrush x:Key="AccentButtonBackgroundPointerOver" Color="#5A9CFF" />
+    <SolidColorBrush x:Key="AccentButtonBackgroundPressed" Color="#2F74D9" />
+    <SolidColorBrush x:Key="AccentButtonForeground" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="AccentButtonForegroundPointerOver" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="AccentButtonForegroundPressed" Color="#E6FFFFFF" />
+    <SolidColorBrush x:Key="SliderThumbBackground" Color="#3D8BFF" />
+    <SolidColorBrush x:Key="SliderThumbBackgroundPointerOver" Color="#5A9CFF" />
+    <SolidColorBrush x:Key="ToggleSwitchFillOn" Color="#3D8BFF" />
+    <SolidColorBrush x:Key="ToggleSwitchFillOnPointerOver" Color="#5A9CFF" />
+    <SolidColorBrush x:Key="ToggleSwitchFillOnPressed" Color="#2F74D9" />
+    <SolidColorBrush x:Key="ToggleSwitchStrokeOn" Color="#3D8BFF" />
+    <SolidColorBrush x:Key="ToggleSwitchStrokeOnPointerOver" Color="#5A9CFF" />
+    <SolidColorBrush x:Key="ToggleSwitchStrokeOnPressed" Color="#2F74D9" />
+    <SolidColorBrush x:Key="ToggleSwitchKnobFillOn" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="ToggleSwitchKnobFillOnPointerOver" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="ToggleSwitchKnobFillOnPressed" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="ProgressBarForeground" Color="#3D8BFF" />
+    <SolidColorBrush x:Key="NavigationViewSelectionIndicatorForeground" Color="Transparent" />
+</ResourceDictionary>

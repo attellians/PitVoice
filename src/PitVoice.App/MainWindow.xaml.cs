@@ -48,6 +48,12 @@ internal partial class MainWindow : FluentWindow
         Focus();
     }
 
+    /// <summary>The button left of the app icon collapses the menu to its icons and opens it again.</summary>
+    private void OnPaneToggle(object sender, RoutedEventArgs e) => RootNavigation.IsPaneOpen = !RootNavigation.IsPaneOpen;
+
+    /// <summary>Opens the "Settings" page (the "Assign" link of the home page).</summary>
+    public void OpenSettings() => RootNavigation.Navigate(typeof(SettingsPage));
+
     /// <summary>Opens the "Models" page (a link of the settings page).</summary>
     public void OpenModels() => RootNavigation.Navigate(typeof(ModelsPage));
 
@@ -91,7 +97,7 @@ internal partial class MainWindow : FluentWindow
 
             page = pageType.Name switch
             {
-                nameof(HomePage) => new HomePage(new HomeViewModel(services)),
+                nameof(HomePage) => new HomePage(new HomeViewModel(services, window.OpenSettings)),
                 nameof(SettingsPage) => new SettingsPage(Settings = new SettingsViewModel(services, window.OpenModels)),
                 nameof(OverlayPage) when services.IndicatorControl is { } indicator => new OverlayPage(new IndicatorSettingsViewModel(indicator)),
                 nameof(ModelsPage) =>new ModelsPage(new ModelsViewModel(services, window.ConfirmDeleteAsync)),

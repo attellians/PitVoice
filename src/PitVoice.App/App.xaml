@@ -10,28 +10,15 @@
             <ResourceDictionary.MergedDictionaries>
                 <ui:ThemesDictionary Theme="Dark" />
                 <ui:ControlsDictionary />
+                <!-- The hue set is swapped by Themes together with the WPF-UI theme (design D1). -->
+                <ResourceDictionary Source="Themes/Style.Dark.xaml" />
+                <ResourceDictionary Source="Themes/Style.xaml" />
             </ResourceDictionary.MergedDictionaries>
 
             <BooleanToVisibilityConverter x:Key="Visible" />
+            <app:NotVisibleConverter x:Key="NotVisible" />
             <app:NotEmptyConverter x:Key="NotEmpty" />
             <app:NotEmptyVisibleConverter x:Key="NotEmptyVisible" />
-
-            <Style x:Key="PageTitle" TargetType="TextBlock">
-                <Setter Property="FontSize" Value="24" />
-                <Setter Property="FontWeight" Value="SemiBold" />
-                <Setter Property="Margin" Value="0,0,0,16" />
-                <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
-            </Style>
-            <Style x:Key="SectionTitle" TargetType="TextBlock">
-                <Setter Property="FontSize" Value="15" />
-                <Setter Property="FontWeight" Value="SemiBold" />
-                <Setter Property="Margin" Value="0,0,0,8" />
-                <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
-            </Style>
-            <Style x:Key="FieldLabel" TargetType="TextBlock">
-                <Setter Property="Margin" Value="0,6,16,0" />
-                <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
-            </Style>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

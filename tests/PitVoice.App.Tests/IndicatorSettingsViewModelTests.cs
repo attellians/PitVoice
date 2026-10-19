@@ -8,6 +8,7 @@ using Xunit;
 namespace PitVoice.App.Tests;
 
 /// <summary>The "Indicator" block of the settings (spec: Indicator settings, Moving the indicator).</summary>
+[Collection("Interface language")]
 public sealed class IndicatorSettingsViewModelTests
 {
     [Fact]

@@ -95,6 +95,17 @@ internal sealed partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     public partial string PttText { get; set; } = string.Empty;
 
+    /// <summary>"подключена", "не подключено", "не назначена": the state word of the PTT row (spec: PTT row).</summary>
+    [ObservableProperty]
+    public partial string PttStateText { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial StateTone PttTone { get; set; }
+
+    /// <summary>"Назначить кнопку" without a binding, "Назначить другую" with one.</summary>
+    [ObservableProperty]
+    public partial string AssignText { get; set; } = string.Empty;
+
     [ObservableProperty]
     public partial string AssignMessage { get; set; } = string.Empty;
 
@@ -294,9 +305,11 @@ internal sealed partial class SettingsViewModel : ObservableObject
     {
         var status = _services.Host.Status;
         var binding = _services.Host.Settings.PttBinding;
-        PttText = binding is null ? Loc.T("PttNotAssigned")
-            : status.Reason == StatusReason.PttDeviceDisconnected ? Loc.F("PttDisconnected", binding.Describe())
-            : binding.Describe();
+        PttText = binding is null ? Loc.T("PttNone") : HomeCards.Binding(binding);
+        (PttStateText, PttTone) = binding is null ? (Loc.T("PttNotAssigned"), StateTone.Problem)
+            : status.Reason == StatusReason.PttDeviceDisconnected ? (Loc.T("PttDisconnectedShort"), StateTone.Problem)
+            : (Loc.T(binding.Kind == PttDeviceKind.Joystick ? "PttConnected" : "PttKeyboardReady"), StateTone.Ok);
+        AssignText = Loc.T(binding is null ? "AssignButton" : "AssignAnother");
         ModelMissing = status.Reason == StatusReason.ModelNotInstalled;
     }
 

@@ -38,6 +38,41 @@ public sealed class CueSoundsTests
     }
 
     [Fact]
+    public void SuccessCue_GoesUpAFourthFrom520Hz()
+    {
+        var sound = CueSounds.Load(Cue.Success);
+
+        Assert.InRange(PeakHz(sound, 20, 115), 505, 535);
+        Assert.InRange(PeakHz(sound, 140, 250), 679, 709);
+    }
+
+    [Fact]
+    public void ErrorCue_GoesDownAFourthBelowSuccess()
+    {
+        var error = CueSounds.Load(Cue.Error);
+        var first = PeakHz(error, 20, 150);
+        var second = PeakHz(error, 180, 300);
+
+        Assert.InRange(first, 297, 327);
+        Assert.InRange(second, 219, 249);
+        var successFirst = PeakHz(CueSounds.Load(Cue.Success), 20, 115);
+        Assert.True(first < successFirst && second < successFirst, $"error notes {first}/{second} Hz, success {successFirst} Hz");
+    }
+
+    [Theory]
+    [MemberData(nameof(AllCues))]
+    public void Sound_EndsWithoutAClick(Cue cue)
+    {
+        var samples = CueSounds.Load(cue).Samples;
+        var peak = samples.Max(Math.Abs);
+
+        foreach (var sample in samples[^10..])
+        {
+            Assert.True(Math.Abs(sample) < 0.01f * peak, $"tail sample {sample}, peak {peak}");
+        }
+    }
+
+    [Fact]
     public void BrokenSound_IsInvalidData()
     {
         using var stream = new MemoryStream("RIFF\0\0\0\0WAVEjunk"u8.ToArray());
@@ -73,5 +108,38 @@ public sealed class CueSoundsTests
         {
             Assert.Equal(rendered[i], rendered[i + 1]);
         }
+    }
+
+    /// <summary>
+    /// Strongest frequency between 200 and 1200 Hz (1 Hz steps) in a Hann-windowed slice of the sound. The band leaves
+    /// out the sub-bass, which stays at or below 160 Hz plus its short push.
+    /// </summary>
+    private static int PeakHz(CueSound sound, int fromMs, int toMs)
+    {
+        var from = fromMs * sound.SampleRate / 1000;
+        var count = (toMs * sound.SampleRate / 1000) - from;
+        var best = 0;
+        var bestPower = -1.0;
+        for (var hz = 200; hz <= 1200; hz++)
+        {
+            double re = 0, im = 0;
+            for (var i = 0; i < count; i++)
+            {
+                var window = 0.5 * (1 - Math.Cos(2 * Math.PI * i / (count - 1)));
+                var angle = 2 * Math.PI * hz * i / sound.SampleRate;
+                var value = sound.Samples[from + i] * window;
+                re += value * Math.Cos(angle);
+                im -= value * Math.Sin(angle);
+            }
+
+            var power = (re * re) + (im * im);
+            if (power > bestPower)
+            {
+                bestPower = power;
+                best = hz;
+            }
+        }
+
+        return best;
     }
 }

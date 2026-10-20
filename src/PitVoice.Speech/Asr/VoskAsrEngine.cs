@@ -9,6 +9,7 @@ namespace PitVoice.Speech.Asr;
 /// <summary>
 /// Vosk recognizer (design D4–D5). The model and grammar are loaded once per language; every <see cref="Recognize"/>
 /// creates a fresh recognizer over the loaded model with per-word confidence enabled and feeds it the whole buffer.
+/// Speech left after the last recognized word is recognized once more on its own and appended (FR-ASR-8).
 /// </summary>
 public sealed class VoskAsrEngine : IAsrEngine, IDisposable
 {
@@ -172,6 +173,21 @@ public sealed class VoskAsrEngine : IAsrEngine, IDisposable
             return RecognizedPhrase.Empty;
         }
 
+        var samples = buffer.ToArray();
+        var (phrase, lastWordEnd) = RecognizeTimed(model, grammar, samples);
+        if (phrase.Words.Count == 0 || lastWordEnd is not { } end || !PhraseTail.IsDropped(samples, end))
+        {
+            return phrase;
+        }
+
+        // FR-ASR-8: the tail is recognized once, on its own, from the end of the last word.
+        var start = Math.Clamp((int)(end * AudioBuffer.SampleRate), 0, samples.Length);
+        var (tail, _) = RecognizeTimed(model, grammar, samples[start..]);
+        return AppendTail(phrase, tail);
+    }
+
+    private static (RecognizedPhrase Phrase, double? LastWordEnd) RecognizeTimed(VoskModelHandle model, string grammar, short[] samples)
+    {
         using var recognizer = VoskNative.RecognizerNewGrammar(model, AudioBuffer.SampleRate, grammar);
         if (recognizer.IsInvalid)
         {
@@ -179,7 +195,7 @@ public sealed class VoskAsrEngine : IAsrEngine, IDisposable
         }
 
         VoskNative.RecognizerSetWords(recognizer, 1);
-        return ParseResult(recognizer.Recognize(buffer.ToArray()));
+        return ParseTimedResult(recognizer.Recognize(samples));
     }
 
     /// <summary>Alternatives asked for when a word may be only unsure of its form.</summary>
@@ -358,13 +374,20 @@ public sealed class VoskAsrEngine : IAsrEngine, IDisposable
     public void Dispose() => Unload();
 
     /// <summary>Turns Vosk's final JSON (<c>{"result":[{"word","conf"}...],"text"}</c>) into a phrase.</summary>
-    internal static RecognizedPhrase ParseResult(string json)
+    internal static RecognizedPhrase ParseResult(string json) => ParseTimedResult(json).Phrase;
+
+    /// <summary>
+    /// <see cref="ParseResult"/> with the end of the last word in seconds (<c>"end"</c>); null without words or
+    /// without per-word times.
+    /// </summary>
+    internal static (RecognizedPhrase Phrase, double? LastWordEnd) ParseTimedResult(string json)
     {
         using var document = JsonDocument.Parse(json);
         var root = document.RootElement;
         if (root.TryGetProperty("result", out var result) && result.ValueKind == JsonValueKind.Array)
         {
             var words = new List<RecognizedWord>(result.GetArrayLength());
+            double? lastEnd = null;
             foreach (var item in result.EnumerateArray())
             {
                 var word = item.GetProperty("word").GetString() ?? string.Empty;
@@ -375,13 +398,26 @@ public sealed class VoskAsrEngine : IAsrEngine, IDisposable
                 }
 
                 words.Add(new RecognizedWord(word, confidence));
+                lastEnd = item.TryGetProperty("end", out var end) ? end.GetDouble() : null;
             }
 
-            return new RecognizedPhrase(words);
+            return (new RecognizedPhrase(words), words.Count > 0 ? lastEnd : null);
         }
 
         // No word list: silence, or a result without per-word data.
         var text = root.TryGetProperty("text", out var t) ? t.GetString() : null;
-        return string.IsNullOrWhiteSpace(text) ? RecognizedPhrase.Empty : RecognizedPhrase.FromText(text);
+        return (string.IsNullOrWhiteSpace(text) ? RecognizedPhrase.Empty : RecognizedPhrase.FromText(text), null);
+    }
+
+    /// <summary>
+    /// The phrase with the words of its separately recognized tail (design D2–D3 of recover-dropped-phrase-tail); a
+    /// tail without words adds the unknown word, so the confidence threshold rejects the phrase.
+    /// </summary>
+    internal static RecognizedPhrase AppendTail(RecognizedPhrase phrase, RecognizedPhrase tail)
+    {
+        ArgumentNullException.ThrowIfNull(phrase);
+        ArgumentNullException.ThrowIfNull(tail);
+        IEnumerable<RecognizedWord> added = tail.Words.Count > 0 ? tail.Words : [new RecognizedWord(SpeechRecognizer.UnknownWord, 0.0)];
+        return new RecognizedPhrase([.. phrase.Words, .. added]);
     }
 }

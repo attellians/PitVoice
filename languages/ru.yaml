@@ -22,7 +22,7 @@ negations: [не, без]
 # talks to someone else ("кто впереди меня"). Without them the recognizer drops the tail it cannot write.
 # The model knows only "слик": "на слики" is heard as "на слик" or "на слик и", and the dangling conjunction is
 # dropped. If a word is lost anyway, "на" without a compound rejects the phrase. After "меняем резину" the recognizer
-# may drop "на слики" whole and hear "меняем резину" (all four tires, compound unchanged); the old pack does the same.
+# may drop a quiet "на слики" whole; that tail is then recognized on its own and gives "слик" (FR-ASR-8).
 reject_words: [точка, запятая, кто, впереди, сзади, позади, меня]
 # The recognizer swaps these forms freely ("меняй переднее" for "меняй передние"): a form said alone is its word.
 # A wheel matches only as written ("переднее левое"), and a side and an axle in a row are rejected: say

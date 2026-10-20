@@ -41,6 +41,71 @@ public sealed class VoskAsrEngineTests
     }
 
     [Fact]
+    public void Vosk_ParseTimedResult_EndOfLastWord()
+    {
+        const string json = """
+            {"result":[{"conf":1.0,"end":0.81,"start":0.3,"word":"меняем"},{"conf":1.0,"end":1.29,"start":0.81,"word":"резину"}],"text":"меняем резину"}
+            """;
+
+        var (phrase, lastWordEnd) = VoskAsrEngine.ParseTimedResult(json);
+
+        Assert.Equal("меняем резину", phrase.Text);
+        Assert.Equal(1.29, lastWordEnd);
+    }
+
+    [Fact]
+    public void Vosk_ParseTimedResult_NoWordsOrNoEnd_NoTime()
+    {
+        var silence = VoskAsrEngine.ParseTimedResult("""{"text" : ""}""");
+        var emptyList = VoskAsrEngine.ParseTimedResult("""{"result":[],"text":""}""");
+        var noEnd = VoskAsrEngine.ParseTimedResult("""{"result":[{"conf":1.0,"word":"меняй"},{"conf":1.0,"word":"шины"}],"text":"меняй шины"}""");
+
+        Assert.Empty(silence.Phrase.Words);
+        Assert.Null(silence.LastWordEnd);
+        Assert.Empty(emptyList.Phrase.Words);
+        Assert.Null(emptyList.LastWordEnd);
+        Assert.Equal("меняй шины", noEnd.Phrase.Text);
+        Assert.Null(noEnd.LastWordEnd);
+    }
+
+    [Fact]
+    public void Vosk_AppendTail_WordsOfTheTailAreAdded()
+    {
+        var phrase = new RecognizedPhrase([new("меняем", 1.0), new("резину", 1.0)]);
+        var tail = VoskAsrEngine.ParseResult("""{"result":[{"conf":1.0,"end":0.4,"start":0.1,"word":"слик"}],"text":"слик"}""");
+
+        var joined = VoskAsrEngine.AppendTail(phrase, tail);
+
+        Assert.Equal([new RecognizedWord("меняем", 1.0), new RecognizedWord("резину", 1.0), new RecognizedWord("слик", 1.0)], joined.Words);
+        Assert.Equal(["tires.dry"], Assert.IsType<ParseResult.Accepted>(new CommandParser(TestEnvironment.Pack("ru")).Parse(joined)).Commands.Select(c => c.Intent.Value));
+    }
+
+    [Fact]
+    public void Vosk_AppendTail_EmptyTailAddsUnknownWord()
+    {
+        var phrase = new RecognizedPhrase([new("меняем", 1.0), new("резину", 1.0)]);
+
+        var joined = VoskAsrEngine.AppendTail(phrase, VoskAsrEngine.ParseResult("""{"text" : ""}"""));
+
+        Assert.Equal("меняем резину [unk]", joined.Text);
+        Assert.Equal(0.0, joined.Words[2].Confidence);
+        Assert.Equal(RejectReason.LowConfidence, Assert.IsType<ParseResult.Rejected>(new CommandParser(TestEnvironment.Pack("ru")).Parse(joined)).Reason);
+    }
+
+    [Fact]
+    public void Vosk_AppendTail_UnknownTailIsRejected()
+    {
+        var phrase = new RecognizedPhrase([new("меняем", 1.0), new("резину", 1.0)]);
+        var tail = VoskAsrEngine.ParseResult("""{"result":[{"conf":1.0,"end":0.4,"start":0.1,"word":"[unk]"}],"text":"[unk]"}""");
+
+        var joined = VoskAsrEngine.AppendTail(phrase, tail);
+
+        Assert.Equal("меняем резину [unk]", joined.Text);
+        Assert.Equal(0.0, joined.Words[2].Confidence);
+        Assert.False(new CommandParser(TestEnvironment.Pack("ru")).Parse(joined).IsAccepted);
+    }
+
+    [Fact]
     public async Task Vosk_ModelNotInstalled_ErrorWithModelId()
     {
         using var engine = new VoskAsrEngine();

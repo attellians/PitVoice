@@ -143,3 +143,36 @@ samples:
     expect: [{ intent: tires.wet }, { intent: fuel.add, amount: 20, unit: liters }]
   - say: "меняй левые на дождевые"
     expect: reject
+
+  # new verb forms (extend-command-phrases), from take-066 on. "на слики" and "заправь двадцать литров" have words the
+  # model does not know: they are recorded with `listen --save-wav` only and added to samples.yaml by hand.
+  - say: "залить двадцать литров"
+    expect: [{ intent: fuel.add, amount: 20, unit: liters }]
+  - say: "добавим десять литров"
+    expect: [{ intent: fuel.add, amount: 10, unit: liters }]
+  - say: "дозаправку тридцать литров"
+    expect: [{ intent: fuel.add, amount: 30, unit: liters }]
+  - say: "замена на сухие"
+    expect: [{ intent: tires.dry }]
+  - say: "свежую резину"
+    expect: [{ intent: tires.all }]
+  - say: "новые передние"
+    expect: [{ intent: tires.front }]
+  - say: "смена резины"
+    expect: [{ intent: tires.all }]
+  - say: "почистить стекло"
+    expect: [{ intent: windshield.tearoff }]
+  - say: "снимай плёнку"
+    expect: [{ intent: windshield.tearoff }]
+  - say: "починить машину"
+    expect: [{ intent: repair.fast }]
+  - say: "отменить всё"
+    expect: [{ intent: pit.clear }]
+  - say: "снимай всё"
+    expect: [{ intent: pit.clear }]
+  - say: "сбросим всё"
+    expect: [{ intent: pit.clear }]
+  - say: "снимай все шины"
+    expect: reject
+  - say: "снимаем"
+    expect: reject

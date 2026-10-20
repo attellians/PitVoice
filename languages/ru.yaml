@@ -20,8 +20,9 @@ fillers: [пожалуйста, давай, так, ну, слушай, эй, к
 negations: [не, без]
 # Words that reject the whole phrase: the driver asks for something PitVoice cannot do (a fraction with "точка") or
 # talks to someone else ("кто впереди меня"). Without them the recognizer drops the tail it cannot write.
-# "слики" is not in the model: "меняем резину на слики" is heard as "меняем резину на", and "на" without a compound
-# rejects the phrase.
+# The model knows only "слик": "на слики" is heard as "на слик" or "на слик и", and the dangling conjunction is
+# dropped. If a word is lost anyway, "на" without a compound rejects the phrase. After "меняем резину" the recognizer
+# may drop "на слики" whole and hear "меняем резину" (all four tires, compound unchanged); the old pack does the same.
 reject_words: [точка, запятая, кто, впереди, сзади, позади, меня]
 # The recognizer swaps these forms freely ("меняй переднее" for "меняй передние"): a form said alone is its word.
 # A wheel matches only as written ("переднее левое"), and a side and an axle in a row are rejected: say
@@ -37,11 +38,14 @@ word_forms:
 
 lexicon:
   fuel:
-    action: [залей, заливай, добавь, заправить, долей, налей]
+    action: [залей, заливай, добавь, заправить, долей, налей, залить, долить, налить, добавить, наливай, добавляй, заливаем,
+      добавим, заправку, дозаправку]
     object: [топливо, топлива]
   tires:
-    action: [меняй, меняем, поменяй, поменяем, поменять, смени, сменим, замени, заменим, заменяем, заменить]
-    object: [шины, шин, резину, колесо]
+    # "новые" and "свежие" act like a verb: "свежую резину", "новые передние".
+    action: [меняй, меняем, поменяй, поменяем, поменять, смени, сменим, замени, заменим, заменяем, заменить, замена, замену,
+      смена, смену, менять, сменить, новые, новую, свежие, свежую]
+    object: [шины, шин, резину, резины, колесо]
     keep: [трогай]
     targets:
       all: [все, все четыре]
@@ -55,19 +59,22 @@ lexicon:
       rr: [заднее правое, правое заднее]
     # A compound changes all four tires; "на" leads to it: "меняем резину на дождевые".
     compounds:
-      dry: [сухие]
+      dry: [сухие, слик]
       wet: [дождевые, мокрые]
     into: [на]
   windshield:
-    action: [сорви, сними, снимай, протри, почисти, смени]
+    action: [сорви, сними, снимай, протри, почисти, смени, сорвать, снять, протереть, почистить, оторви, протираем, снимаем]
     object: [стекло, плёнку]
     keep: [трогай]
   repair:
-    action: [почини, чини]
+    action: [почини, чини, починить, починим, ремонтировать, отремонтировать, ремонтируем]
     object: [машину, ремонт, ремонта, починка, починки]
     fast: [быстрый, быстрая]
   clear:
-    action: [сбрось, очисти, отмени, убери]
+    # "сними", "снимай", "снимаем", "снять" are windshield verbs too: the object picks the group ("снимай всё",
+    # "снимай плёнку"), and "снимай все шины" fits two commands and is rejected.
+    action: [сбрось, очисти, отмени, убери, отменить, очистить, сбросить, убрать, удали, удалить, отмена, сбросим, сбрасываем,
+      отменим, отменяем, очищаем, удаляй, удаляем, убирай, убираем, сотри, стереть, сними, снимай, снимаем, снять]
     object: [всё, все команды]
 
 responses:
@@ -132,6 +139,29 @@ tests:
     expect: [{ intent: fuel.add, amount: 21, unit: liters }]
   - say: "залей 40 литров"
     expect: [{ intent: fuel.add, amount: 40, unit: liters }]
+  # infinitives, we-forms and nouns of the action
+  - say: "залить двадцать литров"
+    expect: [{ intent: fuel.add, amount: 20, unit: liters }]
+  - say: "долить десять"
+    expect: [{ intent: fuel.add, amount: 10 }]
+  - say: "налить тридцать литров"
+    expect: [{ intent: fuel.add, amount: 30, unit: liters }]
+  - say: "добавить двадцать литров топлива"
+    expect: [{ intent: fuel.add, amount: 20, unit: liters }]
+  - say: "наливай сорок"
+    expect: [{ intent: fuel.add, amount: 40 }]
+  - say: "добавляй двадцать"
+    expect: [{ intent: fuel.add, amount: 20 }]
+  - say: "заливаем тридцать литров"
+    expect: [{ intent: fuel.add, amount: 30, unit: liters }]
+  - say: "добавим десять литров"
+    expect: [{ intent: fuel.add, amount: 10, unit: liters }]
+  - say: "заправку двадцать литров"
+    expect: [{ intent: fuel.add, amount: 20, unit: liters }]
+  - say: "дозаправку тридцать литров"
+    expect: [{ intent: fuel.add, amount: 30, unit: liters }]
+  - say: "залить"
+    expect: reject
 
   # fuel.none
   - say: "без топлива"
@@ -139,6 +169,8 @@ tests:
   - say: "топливо не надо"
     expect: [{ intent: fuel.none }]
   - say: "не заливай"
+    expect: [{ intent: fuel.none }]
+  - say: "не заливаем"
     expect: [{ intent: fuel.none }]
 
   # tires.all
@@ -154,6 +186,31 @@ tests:
     expect: [{ intent: tires.all }]
   - say: "замени колесо"
     expect: [{ intent: tires.all }]
+  # nouns of the action, "новые" and "свежие"
+  - say: "замена шин"
+    expect: [{ intent: tires.all }]
+  - say: "смена резины"
+    expect: [{ intent: tires.all }]
+  - say: "менять шины"
+    expect: [{ intent: tires.all }]
+  - say: "свежую резину"
+    expect: [{ intent: tires.all }]
+  - say: "новые шины"
+    expect: [{ intent: tires.all }]
+  - say: "сменить передние"
+    expect: [{ intent: tires.front }]
+  - say: "свежие передние"
+    expect: [{ intent: tires.front }]
+  - say: "замена"
+    expect: reject
+  - say: "свежие"
+    expect: reject
+  - say: "новые"
+    expect: reject
+  - say: "меняй на свежие"
+    expect: reject                                       # "свежие" is no compound, and "на" needs one
+  - say: "не меняй новые"
+    expect: reject
 
   # sides and axles, with and without a verb, in any order
   - say: "меняй левые"
@@ -282,6 +339,22 @@ tests:
     expect: [{ intent: windshield.none }]
   - say: "не снимай плёнку"
     expect: [{ intent: windshield.none }]
+  - say: "сорвать плёнку"
+    expect: [{ intent: windshield.tearoff }]
+  - say: "снять плёнку"
+    expect: [{ intent: windshield.tearoff }]
+  - say: "протереть стекло"
+    expect: [{ intent: windshield.tearoff }]
+  - say: "почистить стекло"
+    expect: [{ intent: windshield.tearoff }]
+  - say: "оторви плёнку"
+    expect: [{ intent: windshield.tearoff }]
+  - say: "протираем стекло"
+    expect: [{ intent: windshield.tearoff }]
+  - say: "снимаем плёнку"
+    expect: [{ intent: windshield.tearoff }]
+  - say: "не снимаем плёнку"
+    expect: [{ intent: windshield.none }]
 
   # repair: every verb
   - say: "быстрый ремонт"
@@ -298,6 +371,18 @@ tests:
     expect: [{ intent: repair.none }]
   - say: "без починки"
     expect: [{ intent: repair.none }]
+  - say: "починить машину"
+    expect: [{ intent: repair.fast }]
+  - say: "починим машину"
+    expect: [{ intent: repair.fast }]
+  - say: "ремонтировать машину"
+    expect: [{ intent: repair.fast }]
+  - say: "отремонтировать машину"
+    expect: [{ intent: repair.fast }]
+  - say: "ремонтируем машину"
+    expect: [{ intent: repair.fast }]
+  - say: "не ремонтируем"
+    expect: [{ intent: repair.none }]
 
   # pit.clear: every verb
   - say: "сбрось всё"
@@ -308,6 +393,67 @@ tests:
     expect: [{ intent: pit.clear }]
   - say: "убери всё"
     expect: [{ intent: pit.clear }]
+  - say: "отменить всё"
+    expect: [{ intent: pit.clear }]
+  - say: "очистить всё"
+    expect: [{ intent: pit.clear }]
+  - say: "сбросить все команды"
+    expect: [{ intent: pit.clear }]
+  - say: "убрать всё"
+    expect: [{ intent: pit.clear }]
+  - say: "удали всё"
+    expect: [{ intent: pit.clear }]
+  - say: "удалить все команды"
+    expect: [{ intent: pit.clear }]
+  - say: "отмена всё"
+    expect: [{ intent: pit.clear }]
+  - say: "сбросим всё"
+    expect: [{ intent: pit.clear }]
+  - say: "сбрасываем всё"
+    expect: [{ intent: pit.clear }]
+  - say: "отменим всё"
+    expect: [{ intent: pit.clear }]
+  - say: "отменяем все команды"
+    expect: [{ intent: pit.clear }]
+  - say: "очищаем всё"
+    expect: [{ intent: pit.clear }]
+  - say: "удаляй все"
+    expect: [{ intent: pit.clear }]
+  - say: "удаляем всё"
+    expect: [{ intent: pit.clear }]
+  - say: "убирай всё"
+    expect: [{ intent: pit.clear }]
+  - say: "убираем все"
+    expect: [{ intent: pit.clear }]
+  - say: "сотри все"
+    expect: [{ intent: pit.clear }]
+  - say: "стереть все команды"
+    expect: [{ intent: pit.clear }]
+  # verbs shared with the windshield: the object picks the group
+  - say: "сними всё"
+    expect: [{ intent: pit.clear }]
+  - say: "снимай все"
+    expect: [{ intent: pit.clear }]
+  - say: "снимаем всё"
+    expect: [{ intent: pit.clear }]
+  - say: "снять все команды"
+    expect: [{ intent: pit.clear }]
+  - say: "отменить"
+    expect: reject                                       # a clear verb needs its object
+  - say: "удали"
+    expect: reject
+  - say: "сними"
+    expect: reject
+  - say: "снимаем"
+    expect: reject
+  - say: "удали шины"
+    expect: reject
+  - say: "отмени шины"
+    expect: reject
+  - say: "снимай все шины"
+    expect: reject                                       # fits both "снимай всё" and "все шины"
+  - say: "снять все шины"
+    expect: reject
 
   # compound commands, also with the conjunction lost by the recognizer
   - say: "меняй шины и залей двадцать пять литров"
@@ -333,6 +479,8 @@ tests:
   - say: "отмени всё, залей десять литров и меняй правую сторону"
     expect: reject
   - say: "сбрось все шины"
+    expect: reject
+  - say: "снимай плёнку и снимай всё"
     expect: reject
 
   # fractions are never rounded
@@ -410,7 +558,29 @@ tests:
     expect: reject
   - say: "меняй резину на дождевые и не меняй левые"
     expect: reject
-  # "на" without a compound: the recognizer lost a word it cannot write ("слики")
+  # "слик": the only form in the model; "на слики" is heard as "на слик" or "на слик и"
+  - say: "на слик"
+    expect: [{ intent: tires.dry }]
+  - say: "меняем резину на слик"
+    expect: [{ intent: tires.dry }]
+  - say: "меняем резину на слик и"
+    expect: [{ intent: tires.dry }]
+  - say: "на слик и залей двадцать литров"
+    expect: [{ intent: tires.dry }, { intent: fuel.add, amount: 20, unit: liters }]
+  - say: "слик"
+    expect: reject
+  - say: "меняй левые на слик"
+    expect: reject
+  - say: "меняй на слик и на дождевые"
+    expect: reject
+  # tire action nouns and "новые" lead to a compound too
+  - say: "замена на сухие"
+    expect: [{ intent: tires.dry }]
+  - say: "смену на дождевые"
+    expect: [{ intent: tires.wet }]
+  - say: "новые на сухие"
+    expect: [{ intent: tires.dry }]
+  # "на" without a compound: the recognizer lost the word after it
   - say: "меняем резину на"
     expect: reject
   - say: "залей двадцать на и меняй шины"

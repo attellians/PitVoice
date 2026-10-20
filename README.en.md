@@ -79,8 +79,8 @@ app.
 | Clear everything | "clear all" |
 | Together | "change tires and add twenty five liters" |
 
-In Russian: «залей тридцать литров», «меняй левые», «меняй шины на сухие», «сорви плёнку», «быстрый ремонт»,
-«сбрось всё».
+In Russian: «залей тридцать литров», «залить двадцать», «меняй левые», «свежую резину», «замена на сухие», «на слики»,
+«почистить стекло», «быстрый ремонт», «отмени всё», «снимай всё».
 
 <p align="center">
   <img width="760" src=".github/assets/window-commands.png" alt="The Commands page: group cards with example phrases">

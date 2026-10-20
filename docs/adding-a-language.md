@@ -105,7 +105,7 @@ the windshield are rejected in this language. The shipped `ru` and `en` packs ha
 | `tires` | `action`, `object`, `keep`, `targets`, `compounds`, `into` | меняй, замени / change, swap; шины / tires; трогай; дождевые / wets; на / to |
 | `windshield` | `action`, `object`, `keep` | сорви, протри / tear off, clean; плёнку / windshield |
 | `repair` | `action`, `object`, `fast` | почини / fix; машину, ремонт / car, repair; быстрый / fast |
-| `clear` | `action`, `object` | сбрось / clear, reset; всё, все команды / all, everything |
+| `clear` | `action`, `object` | сбрось, отмени, отменить, удали, сотри, отмена; снимай, снять (shared with the windshield) / clear, reset; всё, все команды / all, everything |
 
 Tire `targets` are `all`, `left`, `right`, `front`, `rear` (sides and axles) and `lf`, `rf`, `lr`, `rr` (front left,
 front right, rear left, rear right). A pack may leave a group, a class or a target out; the commands that need it
@@ -118,10 +118,13 @@ compound words the pack has no `tires.dry` and `tires.wet`, and validation warns
 ```yaml
   tires:
     compounds:
-      dry: [сухие]
+      dry: [сухие, слик]
       wet: [дождевые, мокрые]
     into: [на]
 ```
+
+A compound word must be in the model too. `vosk-model-small-ru-0.22` knows "слик" but not "слики": the recognizer
+hears "на слики" as "на слик" or "на слик и" (the dangling conjunction is dropped), so the pack lists "слик" only.
 
 `into_homophones` (optional, top level) lists words that sound like the `into` word: the English pack has
 `into_homophones: [two]`, because the recognizer cannot tell "to" from "two" and hears "change to slicks" as "change two
@@ -135,9 +138,19 @@ use as its own entry ("меняй", "меняем", "поменяй"): there are
 Write both orders of a wheel name ("переднее левое", "левое переднее"). An entry is normalized like a spoken phrase:
 case, punctuation and `ё` do not matter, and a number word inside it ("все четыре") matches the spoken number too.
 
+Which forms to list: the shipped `ru` pack gives every action its imperative ("залей"), its we-form ("заливаем",
+"добавим") and its infinitive ("залить"), and a noun of the action where drivers say one ("замена", "смена",
+"дозаправку"; "новые" and "свежие" work as a tire action too: "свежую резину"). A form goes in only if the model has
+it (`validate` warns about the others: "заправь", "переобуй", "доливай" and "слики" are not in
+`vosk-model-small-ru-0.22`), if it does not sound like a word of the opposite meaning ("ставь" is close to "оставь"),
+and if it is no noise word that drivers use in questions ("бензин", "горючего"). Mixing up two forms of one action is
+safe: "залить" for "залей" gives the same command.
+
 The same word may be in several groups: "смени" changes tires and the windshield film, "все" is a tire target and
 what "сбрось всё" clears, "repair" is the action and the object of repair. The parser picks the group from the other
-words of the command, and rejects the phrase when both readings give a command ("сбрось все шины").
+words of the command, and rejects the phrase when both readings give a command ("сбрось все шины"). "сними",
+"снимай", "снимаем" and "снять" are windshield and clear verbs: "снимай плёнку" tears off the film, "снимай всё"
+clears the pit stop, "снимай все шины" is rejected, and "снимаем" alone is no command.
 
 Validation errors, each with the file and line:
 
@@ -195,8 +208,9 @@ More rules worth knowing:
   ("меняй левые на дождевые"), with a negation or `keep` ("не меняй на дождевые"), with a second compound or with a
   number is rejected. One compound word alone ("дождевые") is not a command.
 - **`into` needs a compound.** A piece with `into` and no compound ("меняем резину на") rejects the whole phrase: the
-  recognizer drops a compound it cannot write ("слики" is not in the model), and the phrase would change all tires on
-  the old compound.
+  recognizer may drop a compound word it did not catch, and the phrase would change all tires on the old compound.
+  When it drops "на" too ("меняем резину на слики" heard as "меняем резину"), the rule cannot see it: say "на слики"
+  without "меняем резину".
 - Conflicts: adding and removing the same wheel, a command and its removal, `pit.clear` with anything else, the two
   compounds, a compound with any tire removal ("меняй на дождевые и не меняй левые"). A compound with a tire addition
   is no conflict: the wheels merge. Repeated commands collapse; of several `fuel.add` the last one wins.
@@ -213,7 +227,7 @@ reject_words: [точка, кто, впереди]
 
 The recognizer only writes words of the pack, and a phrase tail without such words is dropped without a trace:
 "кто впереди меня" would be heard as some command words with full confidence. With the words in `reject_words` the
-recognizer hears them, and the phrase is rejected. ("меняем резину на слики" is caught by `into`: "на" without a
+recognizer hears them, and the phrase is rejected. (A lost compound after "на" is caught by `into`: "на" without a
 compound rejects the phrase.) Reject words go into the recognizer grammar, so list words the model knows (`validate`
 warns about the others) and that do not sound like command words: short words such as "on" are heard as "one". A
 reject word must not be a word of any command (a lexicon entry, a compound, `into`, a conjunction, a negation, a

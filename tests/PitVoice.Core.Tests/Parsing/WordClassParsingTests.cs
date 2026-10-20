@@ -284,6 +284,17 @@ public class WordClassParsingTests
     }
 
     [Fact]
+    public void Excluded_forms_stay_out_of_the_vocabulary()
+    {
+        // "ставь" and its forms sound like "оставь" (keep), "бензин" is a question, "отбой" means "over and out".
+        var vocabulary = VocabularyBuilder.Build(TestPacks.Ru);
+        foreach (var word in new[] { "ставь", "ставим", "поставим", "бензин", "отбой" })
+        {
+            Assert.DoesNotContain(word, vocabulary);
+        }
+    }
+
+    [Fact]
     public void Built_in_packs_have_no_voice_field()
     {
         foreach (var language in new[] { "ru", "en" })

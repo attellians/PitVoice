@@ -81,7 +81,7 @@ public class TireCompoundParsingTests
     // --- Transition word without a compound
 
     [Theory]
-    [InlineData("ru", "меняем резину на")]                 // what the recognizer hears for "меняем резину на слики"
+    [InlineData("ru", "меняем резину на")]                 // the recognizer lost the compound ("слики" is heard as "слик")
     [InlineData("ru", "залей двадцать на и меняй шины")]
     [InlineData("en", "change tires to")]
     public void Transition_word_without_a_compound(string language, string phrase) => Rejected(language, phrase);
@@ -165,6 +165,7 @@ public class TireCompoundParsingTests
     {
         var vocabulary = VocabularyBuilder.Build(TestPacks.Ru);
         Assert.Contains("сухие", vocabulary);
+        Assert.Contains("слик", vocabulary);
         Assert.Contains("дождевые", vocabulary);
         Assert.Contains("мокрые", vocabulary);
         Assert.Contains("на", vocabulary);
@@ -183,9 +184,20 @@ public class TireCompoundParsingTests
     [Fact]
     public void Word_missing_from_the_model_is_not_in_the_pack()
     {
-        // "слики" is not in vosk-model-small-ru-0.22; the check against the model itself runs in the speech tests.
+        // "слики" is not in vosk-model-small-ru-0.22, only "слик"; the check against the model itself runs in the speech tests.
         Assert.DoesNotContain("слики", VocabularyBuilder.Build(TestPacks.Ru));
     }
+
+    [Theory]
+    [InlineData("на слик")]
+    [InlineData("меняем резину на слик")]
+    [InlineData("меняем резину на слик и")]                // "слики" heard as "слик и": the dangling conjunction is dropped
+    public void Slick_in_the_model_form(string phrase) => Assert.Equal(["tires.dry"], Intents("ru", phrase));
+
+    [Theory]
+    [InlineData("слик")]
+    [InlineData("меняй левые на слик")]
+    public void Slick_alone_or_on_part_of_the_tires(string phrase) => Rejected("ru", phrase);
 
     [Fact]
     public void Both_packs_have_compound_commands()

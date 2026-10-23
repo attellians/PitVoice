@@ -170,26 +170,25 @@ public sealed class WindowHelpersTests
     }
 
     [Fact]
-    public void Template_file_adds_nothing_and_is_not_overwritten()
+    public void Reference_shows_own_ready_phrases_in_their_group_and_never_in_examples()
     {
-        var directory = Path.Combine(Path.GetTempPath(), "pitvoice-template-" + Guid.NewGuid().ToString("N"));
-        try
-        {
-            var path = UserAdditionsLoader.CreateTemplate(directory, "ru");
+        var merged = UserAdditions.Merge(
+            TestPacks.Ru,
+            UserAdditionsLoader.LoadText("""
+                phrases:
+                  - { text: идет дождь, intent: tires.wet }
+                  - { text: начнем заново, intent: pit.clear }
+                """, "ru.yaml").Additions!);
+        Assert.True(merged.Applied, string.Join('\n', merged.Issues));
 
-            var result = UserAdditions.Apply(TestPacks.Ru, directory);
-            Assert.True(result.Applied, string.Join('\n', result.Issues));
-            Assert.Empty(result.Issues);
-            Assert.Contains("lexicon:", File.ReadAllText(path), StringComparison.Ordinal);
+        var groups = CommandReference.Build(merged.Pack);
 
-            File.WriteAllText(path, "language: ru\nintents: {}\n");
-            Assert.Equal(path, UserAdditionsLoader.CreateTemplate(directory, "ru"));
-            Assert.Equal("language: ru\nintents: {}\n", File.ReadAllText(path));
-        }
-        finally
-        {
-            Directory.Delete(directory, recursive: true);
-        }
+        var tires = groups.Single(g => g.Group == CommandGroup.Tires);
+        Assert.Equal([new ReferencePhrase("идет дождь", IntentCatalog.TiresWet)], tires.Phrases);
+        Assert.Equal([new ReferencePhrase("начнем заново", IntentCatalog.PitClear)], groups.Single(g => g.Group == CommandGroup.Reset).Phrases);
+        Assert.Empty(groups.Single(g => g.Group == CommandGroup.Fuel).Phrases);
+        Assert.DoesNotContain(groups.SelectMany(g => g.Commands).SelectMany(c => c.Examples), e => e.Contains("дождь", StringComparison.Ordinal) || e.Contains("заново", StringComparison.Ordinal));
+        Assert.Equal(CommandReference.Build(TestPacks.Ru).SelectMany(g => g.Commands).SelectMany(c => c.Examples), groups.SelectMany(g => g.Commands).SelectMany(c => c.Examples));
     }
 
     private sealed class FailingCuesPlatform(FakePlatform inner) : IHostPlatform

@@ -33,3 +33,13 @@ public sealed class NotEmptyVisibleConverter : IValueConverter
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
         throw new NotSupportedException();
 }
+
+/// <summary>True when a width (double) is below the parameter: a row switches to two lines in a narrow window.</summary>
+public sealed class NarrowerThanConverter : IValueConverter
+{
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+        value is double width && width > 0 && width < double.Parse(parameter as string ?? "0", CultureInfo.InvariantCulture);
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+        throw new NotSupportedException();
+}

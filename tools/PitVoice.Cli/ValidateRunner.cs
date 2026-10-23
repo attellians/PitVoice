@@ -59,8 +59,12 @@ internal static class ValidateRunner
                 errors += additions.Errors.Count();
                 warnings += additions.Warnings.Count();
                 Console.WriteLine(additions.Applied
-                    ? $"{additions.File}: {additions.Pack.UserEntries.Count} own word(s) added to {pack.Language}"
+                    ? $"{additions.File}: {(Packs.Count(additions.Pack) is { Length: > 0 } count ? count : "nothing")} added to {pack.Language}"
                     : $"{additions.File}: FAILED validation, the built-in {pack.Language} pack is used");
+                if (additions.NotBuilderFormat)
+                {
+                    Console.WriteLine($"{additions.File}: {Packs.NotBuilderFormatNote}");
+                }
             }
 
             warnings += await CheckModelVocabularyAsync(additions.Pack, result.File, store, cancellationToken).ConfigureAwait(false);

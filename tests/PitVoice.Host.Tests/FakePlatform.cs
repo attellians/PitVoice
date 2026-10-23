@@ -37,6 +37,9 @@ internal sealed class FakePlatform : IHostPlatform
 
     public string? LoadError { get; set; }
 
+    /// <summary>Words the loaded fake model does not know.</summary>
+    public HashSet<string> UnknownWords { get; } = new(StringComparer.Ordinal);
+
     public ConcurrentQueue<(string? Device, int Volume, FakeCuePlayer Player)> CuePlayers { get; } = new();
 
     public FakeCuePlayer LastCues => CuePlayers.Last().Player;
@@ -179,6 +182,8 @@ internal sealed class FakeEngine(FakePlatform platform) : IAsrEngine, IDisposabl
     }
 
     public RecognizedPhrase Recognize(AudioBuffer buffer) => platform.Script.Recognize(buffer);
+
+    public Func<string, bool>? KnownWords => IsLoaded ? word => !platform.UnknownWords.Contains(word) : null;
 
     public void Unload()
     {

@@ -87,6 +87,52 @@ public sealed class CommandCardsTests : IDisposable
     }
 
     [Fact]
+    public void Own_ready_phrase_is_in_its_group_and_the_verb_stays_among_fuel_actions()
+    {
+        var merged = UserAdditions.Merge(Pack("ru"), UserAdditionsLoader.LoadText("""
+            lexicon:
+              fuel: { action: [плесни] }
+            phrases:
+              - { text: идет дождь, intent: tires.wet }
+            """, "ru.yaml").Additions!);
+        Assert.True(merged.Applied, string.Join('\n', merged.Issues));
+
+        var cards = CommandCards.Build(CommandReference.Build(merged.Pack));
+
+        var tires = Group(cards, "Шины");
+        var own = Assert.Single(tires.Classes, c => c.Name == "Свои фразы");
+        Assert.Equal([new WordLine("«идет дождь» — Дождевые шины", true)], own.Words);
+        Assert.Equal("Свои фразы", tires.Classes[^1].Name);
+        Assert.DoesNotContain(tires.Examples, e => e.Contains("дождь", StringComparison.Ordinal));
+
+        var fuel = Group(cards, "Топливо");
+        Assert.DoesNotContain(fuel.Classes, c => c.Name == "Свои фразы");
+        Assert.Contains(fuel.Classes, c => c.Name == "Действия" && c.Words.Any(w => w is { Text: "плесни", IsOwn: true }));
+    }
+
+    [Fact]
+    public void Phrases_card_states()
+    {
+        var pack = Pack("ru");
+        var three = UserAdditions.Merge(pack, UserAdditionsLoader.LoadText("""
+            lexicon:
+              fuel: { action: [плесни] }
+            phrases:
+              - { text: идет дождь, intent: tires.wet }
+              - { text: начнем заново, intent: pit.clear }
+            """, "ru.yaml").Additions!);
+        Assert.True(three.Applied, string.Join('\n', three.Issues));
+        Assert.Equal(("3 фразы работают.", true), CommandsViewModel.CardState(three, three.Pack));
+
+        var none = new PackAdditionsResult(pack, "ru.yaml", Exists: false, Applied: false, []);
+        Assert.Equal(("Своих фраз нет.", false), CommandsViewModel.CardState(none, pack));
+
+        var broken = UserAdditions.Merge(pack, UserAdditionsLoader.LoadText("phrases:\n  - { text: почисти, intent: windshield.tearoff }\n", "ru.yaml").Additions!);
+        Assert.False(broken.Applied);
+        Assert.Equal(("Прежние свои слова не применены: откройте «Настроить».", false), CommandsViewModel.CardState(broken, broken.Pack));
+    }
+
+    [Fact]
     public void English_cards_use_the_english_pack()
     {
         Loc.Instance.SetLanguage("en");

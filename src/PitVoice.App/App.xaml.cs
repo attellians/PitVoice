@@ -144,6 +144,12 @@ public partial class App : Application
             return;
         }
 
+        // Unsaved own phrases: the window shows itself with the leave dialog, "Остаться" cancels the exit (spec: Exit from the tray).
+        if (_window is not null && !await _window.ConfirmLeaveAsync())
+        {
+            return;
+        }
+
         _exiting = true;
         _tray?.Dispose();
         _overlay?.Dispose();

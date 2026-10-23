@@ -61,6 +61,15 @@ public sealed record SettingsSaveResult(bool Saved, string? Error)
 /// <param name="Save">Whether the new binding reached the settings file.</param>
 public sealed record AssignmentResult(PttAssignmentStatus Status, PttBinding? Binding, string? Error, SettingsSaveResult? Save);
 
+/// <summary>Result of <see cref="AppHost.CheckDraft"/>.</summary>
+/// <param name="Merge">The draft merged into the built-in pack, as a file would be at load time.</param>
+/// <param name="Issues">Problems of the merge plus words the loaded model does not know.</param>
+/// <param name="ModelLoaded">False when no model is loaded and words could not be checked.</param>
+public sealed record DraftCheck(PackAdditionsResult Merge, IReadOnlyList<PackIssue> Issues, bool ModelLoaded)
+{
+    public bool HasErrors => Issues.Any(i => i.Severity == IssueSeverity.Error);
+}
+
 /// <summary>A built-in language the user can choose.</summary>
 public sealed record LanguageOption(string Code, string Name);
 
@@ -106,6 +115,7 @@ public sealed class AppHost : IAsyncDisposable
 
     // The session; replaced only by the apply loop.
     private LanguagePack? _pack;
+    private LanguagePack? _builtIn;
     private PackAdditionsResult? _additions;
     private IReadOnlyList<string> _missingAdditionWords = [];
     private IAsrEngine? _engine;
@@ -233,6 +243,117 @@ public sealed class AppHost : IAsyncDisposable
                 return _missingAdditionWords;
             }
         }
+    }
+
+    /// <summary>Built-in pack of the current language without the user's additions, or null when it did not load.</summary>
+    public LanguagePack? BuiltInPack
+    {
+        get
+        {
+            lock (_lock)
+            {
+                return _builtIn;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Checks a draft of own phrases without writing it (design D4/D5 of replace-additions-with-phrase-builder): the
+    /// same <see cref="UserAdditions.Merge"/> as the file at load time, plus words the loaded model does not know, which
+    /// are errors here. Null without a built-in pack.
+    /// </summary>
+    public DraftCheck? CheckDraft(UserPackAdditions draft)
+    {
+        ArgumentNullException.ThrowIfNull(draft);
+        if (BuiltInPack is not { } builtIn)
+        {
+            return null;
+        }
+
+        var merge = UserAdditions.Merge(builtIn, draft);
+        var issues = merge.Issues.ToList();
+        var knownWords = Engine?.KnownWords;
+        if (knownWords is not null)
+        {
+            var entries = draft.Words.Select(w => (w.Entry, w.Text, w.Line)).Concat(draft.Phrases.Select(p => (p.Entry, p.Text, p.Line)));
+            foreach (var (entry, text, line) in entries)
+            {
+                var missing = Normalizer.SplitWords(text).Where(w => !knownWords(w)).Distinct().ToArray();
+                if (missing.Length > 0)
+                {
+                    issues.Add(new PackIssue(IssueSeverity.Error, draft.File, line, string.Empty,
+                        $"not in the speech model: {string.Join(", ", missing)}")
+                    {
+                        Entry = entry,
+                        Problem = AdditionProblem.NotInModel,
+                        Argument = string.Join(", ", missing),
+                    });
+                }
+            }
+        }
+
+        return new DraftCheck(merge, issues, knownWords is not null);
+    }
+
+    /// <summary>
+    /// Parses <paramref name="text"/> the way the pack with <paramref name="draft"/> saved would (design D6): entries
+    /// with errors are left out. Nothing is executed or published, so neither the journal nor the phrase count sees it.
+    /// The text of the command's response, or null when the phrase is not understood or there is no pack.
+    /// </summary>
+    public string? TryPhrase(UserPackAdditions draft, string text)
+    {
+        ArgumentNullException.ThrowIfNull(draft);
+        ArgumentNullException.ThrowIfNull(text);
+        if (BuiltInPack is not { } builtIn)
+        {
+            return null;
+        }
+
+        var merge = UserAdditions.Merge(builtIn, draft);
+        if (!merge.Applied)
+        {
+            var broken = merge.Errors.Select(e => e.Entry).ToHashSet();
+            merge = UserAdditions.Merge(builtIn, draft with
+            {
+                Words = draft.Words.Where(w => !broken.Contains(w.Entry)).ToArray(),
+                Phrases = draft.Phrases.Where(p => !broken.Contains(p.Entry)).ToArray(),
+            });
+        }
+
+        var pack = merge.Applied ? merge.Pack : builtIn;
+        return new CommandParser(pack).Parse(text, Settings.ToParseOptions()) is ParseResult.Accepted accepted
+            ? new ResponseBuilder(pack).Build(accepted)
+            : null;
+    }
+
+    /// <summary>
+    /// Writes the draft as the additions file of the current language and applies it at once (design D7): entries that
+    /// already work or are repeated are not written. The error message when the draft has errors or the file cannot be
+    /// written; the previous phrases keep working then.
+    /// </summary>
+    public async Task<string?> SaveAdditionsAsync(UserPackAdditions draft)
+    {
+        ArgumentNullException.ThrowIfNull(draft);
+        if (CheckDraft(draft) is not { } check)
+        {
+            return "the language pack is not loaded";
+        }
+
+        if (check.HasErrors || check.Merge.Kept is not { } kept)
+        {
+            return "the phrases have errors";
+        }
+
+        var file = UserAdditionsLoader.GetFile(AdditionsDirectory, check.Merge.Pack.Language);
+        if (UserAdditionsWriter.TryWrite(file, check.Merge.Pack.Language, kept.Words, kept.Phrases) is { } error)
+        {
+            _log.Warning("User additions {File} not saved: {Error}", file, error);
+            return error;
+        }
+
+        _log.Information("User additions {File} saved: {Words} verbs, {Phrases} phrases", file, kept.Words.Count, kept.Phrases.Count);
+        await ReloadAsync().ConfigureAwait(false);
+        return null;
     }
 
     /// <summary>The recognizer with the loaded model, or null while there is none.</summary>
@@ -671,6 +792,7 @@ public sealed class AppHost : IAsyncDisposable
         lock (_lock)
         {
             _pack = pack;
+            _builtIn = match?.Pack;
             _additions = additions;
             _missingAdditionWords = [];
             oldEngine = _engine;

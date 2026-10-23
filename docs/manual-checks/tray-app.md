@@ -92,9 +92,9 @@ Removed from the stage by the user (2026-10-16): PitVoice is started by hand, no
 |---|---|---|---|---|
 | 5.1 | language ru | "Commands" | groups Fuel, Tires, …; "Add fuel" has «залей ‹число› ‹единица›» | ok (2026-10-16): groups Топливо, Шины…; «залей ‹число› ‹единица›» |
 | 5.2 | 5.1 | language → English | English phrases, e.g. "add ‹number› ‹unit›" | ok (checked as 2.11 with the interface in English) |
-| 5.3 | no additions file | "Open file" | `spike\c1\languages\ru.yaml` is created with a format comment and opens in the editor | ok: ru.yaml created with the format comment and opened |
-| 5.4 | 5.3 | add `language: ru` and `intents: { fuel.add: { patterns: ["плесни {amount} {unit?}"] } }`, save, "Reload" | «плесни ‹число› ‹единица›» marked "own"; «плесни тридцать литров» on "Check" gives Add fuel 30 | ok: «плесни ‹число› ‹единица›» marked own; «плесни тридцать литров» understood |
-| 5.5 | 5.4 | add `tires.flip:` with a pattern, "Reload" | the error names the file, the line and `tires.flip`; built-in phrases are shown and work | ok: "…\ru.yaml:6: error: intents/tires.flip/patterns: unknown intent 'tires.flip'…", built-in phrases shown |
+| 5.3 | **replaced by phrase-builder.md 1.1–1.3 (2026-10-23)** no additions file | "Open file" | `spike\c1\languages\ru.yaml` is created with a format comment and opens in the editor | ok: ru.yaml created with the format comment and opened |
+| 5.4 | **replaced by phrase-builder.md 3.1–3.3 (2026-10-23)** 5.3 | add `language: ru` and `intents: { fuel.add: { patterns: ["плесни {amount} {unit?}"] } }`, save, "Reload" | «плесни ‹число› ‹единица›» marked "own"; «плесни тридцать литров» on "Check" gives Add fuel 30 | ok: «плесни ‹число› ‹единица›» marked own; «плесни тридцать литров» understood |
+| 5.5 | **replaced by phrase-builder.md 5.3 (2026-10-23)** 5.4 | add `tires.flip:` with a pattern, "Reload" | the error names the file, the line and `tires.flip`; built-in phrases are shown and work | ok: "…\ru.yaml:6: error: intents/tires.flip/patterns: unknown intent 'tires.flip'…", built-in phrases shown |
 
 ## 6. About, icon, idle CPU
 

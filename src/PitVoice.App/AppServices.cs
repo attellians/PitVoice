@@ -2,7 +2,6 @@ using System.IO;
 using System.Net.Http;
 using PitVoice.App.Overlay;
 using PitVoice.App.ViewModels;
-using PitVoice.Core.Languages;
 using PitVoice.Core.Settings;
 using PitVoice.Host;
 using PitVoice.Host.Diagnostics;
@@ -67,9 +66,6 @@ internal sealed class AppServices : IAsyncDisposable
 
     /// <summary>The built-in packs next to the exe.</summary>
     public static string PacksDirectory => Path.Combine(AppContext.BaseDirectory, "languages");
-
-    /// <summary>Additions file of the current language (spec: User additions in the reference).</summary>
-    public string AdditionsFile => UserAdditionsLoader.GetFile(Host.AdditionsDirectory, Host.Settings.Language);
 
     public async ValueTask DisposeAsync()
     {

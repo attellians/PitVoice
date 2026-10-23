@@ -25,6 +25,9 @@ public sealed record ReferenceClass(WordClass? Class, IReadOnlyList<ReferenceWor
 /// <summary>A command with 1–2 example phrases; <c>{amount}</c> and <c>{unit}</c> stand for the slots.</summary>
 public sealed record ReferenceCommand(IntentId Intent, IReadOnlyList<string> Examples);
 
+/// <summary>A ready phrase of the user (design D12 of replace-additions-with-phrase-builder): its words and its command.</summary>
+public sealed record ReferencePhrase(string Text, IntentId Intent);
+
 /// <summary>A group of the reference.</summary>
 /// <param name="Group">The group.</param>
 /// <param name="Classes">Words of the group by class, then the negations when the group has removal commands.</param>
@@ -36,7 +39,11 @@ public sealed record ReferenceGroup(
     CommandGroup Group,
     IReadOnlyList<ReferenceClass> Classes,
     IReadOnlyList<ReferenceCommand> Commands,
-    string? ElidedAction);
+    string? ElidedAction)
+{
+    /// <summary>The user's ready phrases whose command is in this group, in file order.</summary>
+    public IReadOnlyList<ReferencePhrase> Phrases { get; init; } = [];
+}
 
 /// <summary>
 /// The "Commands" page, built from the loaded pack with the user's additions, so it always matches what is really
@@ -75,7 +82,8 @@ public static class CommandReference
             }
 
             var elided = group == CommandGroup.Tires ? ElidedActionExample(pack, parser) : null;
-            groups.Add(new ReferenceGroup(group, classes, commands, elided));
+            var phrases = pack.UserPhrases.Where(p => GroupOf(p.Intent) == group).Select(p => new ReferencePhrase(p.Text, p.Intent)).ToArray();
+            groups.Add(new ReferenceGroup(group, classes, commands, elided) { Phrases = phrases });
         }
 
         return groups;

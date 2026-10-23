@@ -21,6 +21,7 @@ public sealed class CommandParser
     private readonly LanguagePack _pack;
     private readonly Dictionary<string, LexiconEntry[]> _entriesByKeys;
     private readonly HashSet<string> _fragmentKeys;
+    private readonly Dictionary<string, IntentId> _readyPhrases;
 
     public CommandParser(LanguagePack pack)
     {
@@ -32,6 +33,7 @@ public sealed class CommandParser
 
         // Words that are only a part of a longer entry: "переднее" of "переднее левое" is not a target by itself.
         _fragmentKeys = pack.Lexicon.Entries.Where(e => e.Keys.Count > 1).SelectMany(e => e.Keys).ToHashSet(StringComparer.Ordinal);
+        _readyPhrases = pack.UserPhrases.ToDictionary(p => p.Key, p => p.Intent, StringComparer.Ordinal);
     }
 
     public LanguagePack Pack => _pack;
@@ -82,6 +84,17 @@ public sealed class CommandParser
         var previousGaveCommands = false;
         foreach (var piece in SplitByConjunctions(tokens))
         {
+            // A piece that is exactly a ready phrase of the user gives its command without word classes (design D3 of
+            // replace-additions-with-phrase-builder); conflicts and the threshold apply to it as to any part.
+            if (_readyPhrases.TryGetValue(ReadyPhrase.KeyOf(piece), out var ready))
+            {
+                var command = new ParsedCommand(ready, null, null, MinConfidence(piece));
+                parts.Add(command);
+                previousGaveCommands = true;
+                previousTire = IntentCatalog.Get(ready).ExclusionGroup == IntentCatalog.TiresGroup ? command : null;
+                continue;
+            }
+
             var text = string.Join(' ', piece.Select(t => t.Text));
             if (Mark(piece) is not { } spans)
             {

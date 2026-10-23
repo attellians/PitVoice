@@ -12,57 +12,38 @@
         <TextBlock Margin="0,0,0,4" Style="{StaticResource PageTitle}" Text="{loc:Tr NavCommands}" />
         <TextBlock Margin="0,0,0,16" Style="{StaticResource Caption}" Text="{Binding LanguageTitle}" />
 
-        <!-- "Свои слова" first: icon, state in one line, buttons on the right, path and errors under it (spec: User additions in the reference). -->
-        <Border Style="{StaticResource Card}">
-            <StackPanel>
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <controls:SectionIcon
-                        Margin="0,0,12,0"
-                        Fallback="{loc:Tr AdditionsTitle}"
-                        Section="Commands"
-                        Size="32"
-                        Symbol="Edit24" />
-                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                        <TextBlock Style="{StaticResource SectionTitle}" Text="{loc:Tr AdditionsTitle}" />
-                        <Grid Margin="0,2,0,0">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
-                            <Ellipse Fill="{DynamicResource StateOkBrush}" Style="{StaticResource StateDot}" Visibility="{Binding AdditionsApplied, Converter={StaticResource Visible}}" />
-                            <TextBlock Grid.Column="1" Style="{StaticResource CaptionWrap}" Text="{Binding AdditionsState}" />
-                        </Grid>
-                    </StackPanel>
-                    <StackPanel Grid.Column="2" Margin="12,0,0,0" VerticalAlignment="Center" Orientation="Horizontal">
-                        <ui:Button Command="{Binding OpenFileCommand}" Content="{loc:Tr OpenFileButton}" />
-                        <ui:Button Margin="8,0,0,0" Command="{Binding ReloadCommand}" Content="{loc:Tr ReloadButton}" />
-                    </StackPanel>
-                </Grid>
-                <TextBlock Margin="0,8,0,0" Style="{StaticResource CaptionWrap}" Text="{Binding AdditionsFile}" />
-                <ItemsControl ItemsSource="{Binding AdditionIssues}">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <TextBlock Margin="0,4,0,0" Style="{StaticResource ErrorText}" Text="{Binding}" />
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-                <TextBlock
-                    Margin="0,4,0,0"
-                    Foreground="{DynamicResource StateWarnBrush}"
-                    Style="{StaticResource CaptionWrap}"
-                    Text="{Binding MissingWords}"
-                    Visibility="{Binding MissingWords, Converter={StaticResource NotEmptyVisible}}" />
-                <TextBlock
-                    Margin="0,4,0,0"
-                    Style="{StaticResource ErrorText}"
-                    Text="{Binding Message}"
-                    Visibility="{Binding Message, Converter={StaticResource NotEmptyVisible}}" />
-            </StackPanel>
+        <!-- "Свои фразы" first: icon, state in one line, "Настроить" on the right (spec: User additions in the reference). -->
+        <Border Style="{StaticResource Card}" Visibility="{Binding HasPack, Converter={StaticResource Visible}}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <controls:SectionIcon
+                    Margin="0,0,12,0"
+                    Fallback="{loc:Tr PhrasesTitle}"
+                    Section="Commands"
+                    Size="32"
+                    Symbol="Edit24" />
+                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock Style="{StaticResource SectionTitle}" Text="{loc:Tr PhrasesTitle}" />
+                    <Grid Margin="0,2,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Ellipse Fill="{DynamicResource StateOkBrush}" Style="{StaticResource StateDot}" Visibility="{Binding PhrasesApplied, Converter={StaticResource Visible}}" />
+                        <TextBlock Grid.Column="1" Style="{StaticResource CaptionWrap}" Text="{Binding PhrasesState}" />
+                    </Grid>
+                </StackPanel>
+                <ui:Button
+                    Grid.Column="2"
+                    Margin="12,0,0,0"
+                    VerticalAlignment="Center"
+                    Command="{Binding ConfigureCommand}"
+                    Content="{loc:Tr PhrasesConfigure}" />
+            </Grid>
         </Border>
 
         <!-- The pack did not load: the reason instead of the cards (spec: Pack failed to load). -->

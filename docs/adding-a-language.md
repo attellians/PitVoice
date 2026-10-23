@@ -266,30 +266,45 @@ does not load: the error names the field. Rewrite the templates as words of thei
 
 ## Own words (user additions)
 
-A user can add words to the classes of a built-in pack without touching it: `%AppData%\PitVoice\languages\<code>.yaml`
-(the directory can be changed with `PITVOICE_USER_LANGUAGES`, which tests and tools use). The window's "Commands" page
-shows the path and has "Open file" (creates the file with a comment about the format) and "Reload".
+A user adds own phrases on the window's page "Commands" → "Own phrases" → "Set up". Each row is a phrase, a command
+and its variant: a fuel verb ("Refuel" → "Add fuel (I say how much)") or a ready phrase for one of the commands of the
+page (no fuel, every tire change of the reference, dry and wet compounds, no tire change, repair, windshield, clear
+all). The page checks every row as it is typed, with the same check as below, and parses a typed phrase with the
+unsaved rows in its "Check" field. Nothing applies until "Save".
+
+The page keeps the rows in `%AppData%\PitVoice\languages\<code>.yaml`. The format is internal: the application writes
+the file (into a temporary file next to it, then replaces it) and nobody is expected to edit it. The directory can be
+changed with `PITVOICE_USER_LANGUAGES`, which tests and tools such as `pitvoice-cli` use:
 
 ```yaml
+# Managed by PitVoice: Commands → Own phrases. Changes made here by hand may be lost.
+language: ru
 lexicon:
-  fuel: { action: [плесни] }
-  tires: { targets: { front: [перёд] } }
+  fuel: { action: ["плесни"] }
+phrases:
+  - { text: "идет дождь", intent: tires.wet }
 ```
 
-"плесни тридцать литров" then works like "залей тридцать литров", and "заменяем перёд" like "заменяем передние".
-`language` may be given and must match the file name. Only words of existing groups, classes and targets can be
-added: additions cannot remove built-in words or add conjunctions, fillers, negations or responses. Every word is
-checked by the rules above; a word with opposite meaning (a negation, or a tire verb that is in `keep`) is an error
-that names both classes. Any error (including invalid YAML and the old `intents:` section) leaves the whole file out
-and the built-in pack is used; the error names the file and the line. A word already in its class is skipped with a
-warning. A file for a language without a built-in pack (e.g. `de.yaml`) is ignored with a warning. One own word never
-makes a command alone: every rule needs two words.
+"плесни тридцать литров" then works like "залей тридцать литров": a fuel verb is a word of `fuel.action` and goes with
+every amount and unit of the pack. A ready phrase gives its command when a piece of the phrase (between conjunctions,
+without fillers) is exactly the phrase, so "идет дождь и залей двадцать литров" works too; a piece with another word is
+parsed by word classes as usual. The confidence of the piece and the conflict rules apply to it like to any part.
 
-Own words go into the recognizer vocabulary. A word the model does not know is reported as a warning: the phrase still
-works when typed (`pitvoice-cli parse`), but cannot be recognized by voice.
+A fuel verb is checked by the word rules above and must give "‹verb› twenty liters" as a fuel amount; a negation is an
+error that names both classes. A ready phrase needs two words or more without fillers, no digits, braces, conjunctions
+or reject words, and a command the pack has. A phrase the built-in words read as another command (or as two) is an
+error that names it; a phrase that already gives the same command, and a repeat, are skipped with a warning. Any error
+leaves the whole file out and the built-in pack is used. A file the page cannot show is not applied either: invalid
+YAML, the old `intents:` section, words of any class other than `fuel.action`, or a command the page does not have.
+The page then shows an empty list and offers "Start over"; the file stays as it is until a save replaces it. A file
+for a language without a built-in pack (e.g. `de.yaml`) is ignored with a warning.
+
+Fuel verbs and the words of ready phrases go into the recognizer vocabulary. On the page a word the model does not
+know is an error of its row; when a file is loaded it is a warning: the phrase still works when typed
+(`pitvoice-cli parse`), but cannot be recognized by voice.
 
 `pitvoice-cli parse`, `listen`, `recognize`, `send` and `run` load the additions and print their problems;
-`validate` checks the additions files too, when they exist.
+`validate` checks the additions files too, when they exist, and says when the page cannot open one.
 
 ## What needs code
 

@@ -58,7 +58,8 @@ them.
 - **Three short sounds** instead of a voice: recording started, success, error.
 - **Indicator above the game.** A small icon in the car shows "listening", "recognizing" and how the phrase ended.
   Clicks pass through it into the game. Kind, size, opacity and place are set on the "Overlay" page.
-- **Your own words.** Add your own verbs and names to the commands; the "Commands" page shows the result.
+- **Own phrases.** Give a pit command your own phrase: "Commands" → "Own phrases" → "Set up". The phrase is checked
+  at once, before it is saved, and the reference shows it marked "own".
 - **Recent phrases** on the home page: what was heard, how it ended and why.
 - **Lives in the tray**, needs no administrator rights and never touches the game process.
 
@@ -109,13 +110,13 @@ In Russian: «залей тридцать литров», «залить два�
 
 **New versions.** The app does not look for updates and never goes online on its own. Download the installer of the
 new version from the [releases](https://github.com/attellians/PitVoice/releases) and run it; it says PitVoice is
-already installed: press **Repair**. Settings, models and your own words stay.
+already installed: press **Repair**. Settings, models and your own phrases stay.
 
 **Alpha builds.** Work in progress is published as pre-releases `PitVoice X.Y.Z-alpha` that install the same way, over
 the stable version. To go back, run the installer of a stable version.
 
 **Uninstall.** "Settings → Apps → Installed apps → PitVoice → Uninstall" removes the program and all its data: models,
-logs, diagnostics, settings and your own words.
+logs, diagnostics, settings and your own phrases.
 
 ## FAQ
 
@@ -146,8 +147,8 @@ keys pressed in its window. Start both normally. A wheel button is more reliable
 <summary><b>PitVoice does not understand me well</b></summary>
 <br/>
 Speak after the start sound and release the button when you are done. The home page shows exactly what was heard. If
-you call a command your own way, add your words: "Commands" → "Open file". A rejected phrase sends nothing to the game:
-asking again is better than guessing.
+you call a command your own way, add your own phrase: "Commands" → "Own phrases" → "Set up". A rejected phrase sends
+nothing to the game: asking again is better than guessing.
 </details>
 
 <details>
@@ -162,7 +163,7 @@ indicator" in the tray icon menu.
 <summary><b>Where does PitVoice keep its data?</b></summary>
 <br/>
 The program: <code>%LocalAppData%\PitVoiceApp</code>; models, logs and diagnostics archives: <code>%LocalAppData%\PitVoice</code>;
-settings and your own words: <code>%AppData%\PitVoice</code>.
+settings and your own phrases: <code>%AppData%\PitVoice</code>.
 </details>
 
 <details>

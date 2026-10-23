@@ -19,6 +19,11 @@ public static class VocabularyBuilder
             words.UnionWith(entry.Words);
         }
 
+        foreach (var phrase in pack.UserPhrases)
+        {
+            words.UnionWith(phrase.Words);
+        }
+
         foreach (var unit in pack.Units.Values)
         {
             words.UnionWith(unit.Synonyms);
@@ -49,9 +54,15 @@ public static class VocabularyBuilder
     {
         ArgumentNullException.ThrowIfNull(pack);
         var builtIn = pack.Lexicon.Entries.Where(e => !e.IsUserAddition).SelectMany(e => e.Words).ToHashSet(StringComparer.Ordinal);
-        var added = new SortedSet<string>(pack.UserEntries.SelectMany(e => e.Words), StringComparer.Ordinal);
+        var added = new SortedSet<string>(pack.UserEntries.SelectMany(e => e.Words).Concat(pack.UserPhrases.SelectMany(p => p.Words)), StringComparer.Ordinal);
         added.ExceptWith(builtIn);
         added.ExceptWith(pack.NumberParser.Words);
+        added.ExceptWith(pack.Fillers);
+        added.ExceptWith(pack.Negations);
+        foreach (var unit in pack.Units.Values)
+        {
+            added.ExceptWith(unit.Synonyms);
+        }
         return [.. added];
     }
 
@@ -70,6 +81,11 @@ public static class VocabularyBuilder
         if (classes.Length > 0)
         {
             return string.Join(", ", classes);
+        }
+
+        if (pack.UserPhrases.Any(p => p.Words.Contains(word)))
+        {
+            return "ready phrases (own)";
         }
 
         if (pack.Units.Values.Any(u => u.Synonyms.Contains(word)))

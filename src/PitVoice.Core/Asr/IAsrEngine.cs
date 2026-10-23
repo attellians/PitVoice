@@ -55,5 +55,11 @@ public interface IAsrEngine
     /// <param name="readAs">The word a form is read as ("левое" → "левые"); other words are returned as they are.</param>
     IReadOnlyList<RecognizedPhrase> RecognizeFormAlternatives(AudioBuffer buffer, RecognizedPhrase phrase, Func<string, string> readAs) => [];
 
+    /// <summary>
+    /// Whether the loaded model knows a word in any of its spellings ("еще" and "ещё" are one word), for checking own
+    /// phrases before they are saved (design D5 of replace-additions-with-phrase-builder). Null while no model is loaded.
+    /// </summary>
+    Func<string, bool>? KnownWords => null;
+
     void Unload();
 }

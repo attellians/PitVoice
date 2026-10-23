@@ -10,6 +10,7 @@ namespace PitVoice.Speech.Tests.Asr;
 public sealed class UserAdditionsVocabularyTests
 {
     private const string UnknownWord = "шмыгздрязь";
+    private const string UnknownPhraseWord = "чпокнутые";
 
     private static LanguagePack RuWithAdditions()
     {
@@ -17,6 +18,9 @@ public sealed class UserAdditionsVocabularyTests
             $$"""
             lexicon:
               fuel: { action: [плесни, {{UnknownWord}}] }
+            phrases:
+              - { text: идёт дождь, intent: tires.wet }
+              - { text: шины {{UnknownPhraseWord}}, intent: tires.all }
             """,
             "ru.yaml");
         var merged = UserAdditions.Merge(TestEnvironment.Pack("ru"), additions.Additions!);
@@ -31,7 +35,8 @@ public sealed class UserAdditionsVocabularyTests
 
         Assert.Contains("плесни", VocabularyBuilder.Build(pack));
         Assert.Contains("плесни", GrammarBuilder.Build(pack));
-        Assert.Equal(["плесни", UnknownWord], VocabularyBuilder.BuildUserAdditionWords(pack));
+        Assert.Contains("дождь", GrammarBuilder.Build(pack));
+        Assert.Equal(["дождь", "идет", "плесни", UnknownPhraseWord, UnknownWord], VocabularyBuilder.BuildUserAdditionWords(pack));
         Assert.Empty(VocabularyBuilder.BuildUserAdditionWords(TestEnvironment.Pack("ru")));
     }
 
@@ -44,8 +49,27 @@ public sealed class UserAdditionsVocabularyTests
         Assert.True((await engine.LoadAsync(pack, TestEnvironment.RequireModel("ru"))).IsLoaded);
 
         var missing = GrammarBuilder.MissingAdditionWords(pack, engine.Vocabulary!);
-        Assert.Contains(UnknownWord, missing);
-        Assert.DoesNotContain("залей", missing);
+        Assert.Equal([UnknownPhraseWord, UnknownWord], missing);
         Assert.True(new CommandParser(pack).Parse($"{UnknownWord} тридцать литров").IsAccepted);
+        Assert.True(new CommandParser(pack).Parse($"шины {UnknownPhraseWord}").IsAccepted);
+    }
+
+    [ModelFact("ru")]
+    public async Task Known_words_come_from_the_loaded_model_in_any_spelling()
+    {
+        using var engine = new VoskAsrEngine();
+        Assert.Null(engine.KnownWords);
+
+        Assert.True((await engine.LoadAsync(TestEnvironment.Pack("ru"), TestEnvironment.RequireModel("ru"))).IsLoaded);
+
+        var known = engine.KnownWords!;
+        Assert.True(known("еще"));
+        Assert.True(known("ещё"));
+        Assert.True(known("Дождь"));
+        Assert.False(known(UnknownWord));
+
+        engine.Unload();
+        Assert.Null(engine.KnownWords);
+        Assert.False(known("дождь"));
     }
 }

@@ -19,6 +19,7 @@
             <app:NotVisibleConverter x:Key="NotVisible" />
             <app:NotEmptyConverter x:Key="NotEmpty" />
             <app:NotEmptyVisibleConverter x:Key="NotEmptyVisible" />
+            <app:NarrowerThanConverter x:Key="NarrowerThan" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>

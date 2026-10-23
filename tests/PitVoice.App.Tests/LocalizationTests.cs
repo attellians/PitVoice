@@ -23,6 +23,34 @@ public sealed partial class LocalizationTests
         Assert.DoesNotContain(Russian, p => string.IsNullOrWhiteSpace(p.Value));
     }
 
+    [Theory]
+    [InlineData("AdditionsTitle")]
+    [InlineData("AdditionsNone")]
+    [InlineData("AdditionsNotApplied")]
+    [InlineData("AdditionsApplied")]
+    [InlineData("AdditionsMissingWords")]
+    [InlineData("OpenFileButton")]
+    [InlineData("ReloadButton")]
+    [InlineData("OpenFileFailed")]
+    public void Keys_of_the_additions_file_are_gone(string key)
+    {
+        Assert.False(English.ContainsKey(key));
+        Assert.False(Russian.ContainsKey(key));
+    }
+
+    [Theory]
+    [InlineData("PhrasesTitle", "Свои фразы")]
+    [InlineData("PhrasesConfigure", "Настроить")]
+    [InlineData("PhrasesStartOver", "Начать заново")]
+    [InlineData("LeaveSave", "Сохранить")]
+    [InlineData("LeaveDiscard", "Не сохранять")]
+    [InlineData("LeaveStay", "Остаться")]
+    public void Keys_of_the_phrase_builder_are_in_both_languages(string key, string russian)
+    {
+        Assert.Equal(russian, Russian[key]);
+        Assert.False(string.IsNullOrWhiteSpace(English[key]));
+    }
+
     [Fact]
     public void Every_key_used_in_xaml_and_code_is_in_english()
     {

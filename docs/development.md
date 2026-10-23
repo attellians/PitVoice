@@ -109,8 +109,8 @@ Every setting is saved at once and applies from the next PTT press, without a re
 with the old settings. Switching the language switches the interface, the commands and the speech model. The home
 page shows the state with its reason (no model, no PTT button, no game), the button and the last 20 phrases of this
 run (kept in memory only) with the recognized text, the outcome and the response, so a command is checked by saying
-it. "Commands" lists the words of every command with example phrases, including your own words (`%AppData%\PitVoice\languages\<code>.yaml`, see
-[docs/adding-a-language.md](adding-a-language.md#own-words-user-additions)).
+it. "Commands" lists the words of every command with example phrases, including your own phrases, which are set on its
+page "Own phrases" (see [docs/adding-a-language.md](adding-a-language.md#own-words-user-additions)).
 
 The icon shows one state: no model, error (button not assigned or unplugged, pack failed), no connection to iRacing,
 ready; the tooltip names the reason. Closing the window keeps PitVoice running; "Exit" in the icon menu stops it.

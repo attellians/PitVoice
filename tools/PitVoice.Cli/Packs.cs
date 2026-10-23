@@ -73,10 +73,33 @@ internal static class Packs
         if (result.Exists && !result.Applied)
         {
             errors.WriteLine($"Additions {result.File} not applied; using the built-in '{result.Pack.Language}' pack.");
+            if (result.NotBuilderFormat)
+            {
+                errors.WriteLine(NotBuilderFormatNote);
+            }
         }
-        else if (result.Pack.UserEntries.Count is var count and > 0)
+        else if (Count(result.Pack) is { Length: > 0 } count)
         {
-            errors.WriteLine($"additions:  {count} own word(s) from {result.File}");
+            errors.WriteLine($"additions:  {count} from {result.File}");
         }
+    }
+
+    public const string NotBuilderFormatNote = "The file cannot be opened on the page Commands → Own phrases; saving there replaces it.";
+
+    /// <summary>"1 fuel verb, 2 ready phrases", or empty when the pack has no additions.</summary>
+    public static string Count(LanguagePack pack)
+    {
+        var parts = new List<string>();
+        if (pack.UserEntries.Count is var verbs and > 0)
+        {
+            parts.Add($"{verbs} fuel verb(s)");
+        }
+
+        if (pack.UserPhrases.Count is var phrases and > 0)
+        {
+            parts.Add($"{phrases} ready phrase(s)");
+        }
+
+        return string.Join(", ", parts);
     }
 }

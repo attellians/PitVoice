@@ -38,6 +38,26 @@ internal static class Texts
 
     public static string Group(CommandGroup group) => Loc.T($"group.{group}");
 
+    /// <summary>"Замена резины": a command of the "Own phrases" page.</summary>
+    public static string Builder(Core.Languages.BuilderCommand command) => Loc.T($"builder.{command}");
+
+    /// <summary>"Дождевые": a variant of a command of the "Own phrases" page; empty for a command without variants.</summary>
+    public static string Variant(Core.Languages.BuilderOption option) => option.Variant is { } variant ? Loc.T($"variant.{variant}") : string.Empty;
+
+    /// <summary>The message under a row of the "Own phrases" page.</summary>
+    public static string Problem(Core.Languages.PackIssue issue)
+    {
+        var argument = issue.Argument ?? string.Empty;
+        return issue.Problem switch
+        {
+            // Intents are named the way the reference names them.
+            Core.Languages.AdditionProblem.MeansOther or Core.Languages.AdditionProblem.AssignedElsewhere =>
+                Loc.F($"problem.{issue.Problem}", string.Join(", ", argument.Split(", ").Select(i => Intent(new IntentId(i))))),
+            { } problem => Loc.F($"problem.{problem}", argument),
+            null => issue.Message,
+        };
+    }
+
     /// <summary>"Действия", "Переднее левое", "Отрицания": the name of a class of words in the reference.</summary>
     public static string WordClass(Core.Languages.WordClass? wordClass) => wordClass switch
     {
@@ -177,6 +197,23 @@ internal static class Texts
         foreach (var category in Enum.GetValues<Core.Plural.PluralCategory>())
         {
             yield return $"phrases.{category}";
+            yield return $"ownPhrases.{category}";
+        }
+
+        // The "Own phrases" page (spec: Phrase rows, Row check while typing).
+        foreach (var command in Enum.GetValues<Core.Languages.BuilderCommand>())
+        {
+            yield return $"builder.{command}";
+        }
+
+        foreach (var option in Core.Languages.BuilderCommands.All.Where(o => o.Variant is not null))
+        {
+            yield return $"variant.{option.Variant}";
+        }
+
+        foreach (var problem in Enum.GetValues<Core.Languages.AdditionProblem>())
+        {
+            yield return $"problem.{problem}";
         }
     }
 }

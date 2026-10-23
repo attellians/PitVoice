@@ -149,13 +149,30 @@ public sealed class LanguagePack
     /// <summary>Entries from the user's additions.</summary>
     public IReadOnlyList<LexiconEntry> UserEntries => Lexicon.Entries.Where(e => e.IsUserAddition).ToArray();
 
-    /// <summary>A copy with <paramref name="extra"/> entries added to the lexicon (already validated).</summary>
-    internal LanguagePack WithEntries(IReadOnlyList<LexiconEntry> extra, string additionsFile) =>
+    /// <summary>Ready phrases from the user's additions (design D3), in file order.</summary>
+    public IReadOnlyList<ReadyPhrase> UserPhrases { get; private init; } = [];
+
+    /// <summary>A copy with <paramref name="extra"/> entries and <paramref name="phrases"/> added (already validated).</summary>
+    internal LanguagePack WithAdditions(IReadOnlyList<LexiconEntry> extra, IReadOnlyList<ReadyPhrase> phrases, string additionsFile) =>
         new(SourceFile, Language, Name, Version, AsrModel, NumberParser, PluralRules, Units, Conjunctions, Fillers, Negations,
             Lexicon.With(extra), Responses, Tests, Normalizer, Intents)
         {
             AdditionsFile = additionsFile,
             RejectWords = RejectWords,
             IntoHomophones = IntoHomophones,
+            UserPhrases = [.. UserPhrases, .. phrases],
         };
+}
+
+/// <summary>A ready phrase of the user's additions: one command for a whole piece of a phrase (design D3).</summary>
+/// <param name="Text">Words as written, lower case, <c>ё</c> folded: what the recognizer must hear.</param>
+/// <param name="Key">The piece it matches: normalized tokens without fillers (<see cref="KeyOf"/>).</param>
+/// <param name="Intent">Command of the phrase.</param>
+public sealed record ReadyPhrase(string Text, string Key, IntentId Intent)
+{
+    /// <summary>Words of the phrase.</summary>
+    public IReadOnlyList<string> Words => Text.Split(' ');
+
+    /// <summary>The key of a piece of normalized tokens.</summary>
+    public static string KeyOf(IEnumerable<Token> tokens) => string.Join(' ', tokens.Select(Lexicon.KeyOf));
 }

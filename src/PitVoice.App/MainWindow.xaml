@@ -88,5 +88,8 @@
                 </StackPanel>
             </ui:TitleBar.Header>
         </ui:TitleBar>
+
+        <!-- Dialogs over the whole window: the leave dialog of "Свои фразы" (design D8). -->
+        <ui:ContentDialogHost x:Name="RootDialogHost" Grid.Row="0" Grid.RowSpan="2" />
     </Grid>
 </ui:FluentWindow>

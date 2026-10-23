@@ -53,13 +53,30 @@ internal static class CommandCards
             SymbolOf(group.Group),
             Loc.T($"groupHint.{group.Group}"),
             Examples(group),
-            group.Classes.Select(c => new ClassEntry(
-                Texts.WordClass(c.Class),
-                c.Words.Select(w => new WordLine(w.Text, w.IsUserAddition)).ToArray())).ToArray(),
+            Classes(group),
             group.Commands.Select(c => new CommandEntry(
                 Texts.Intent(c.Intent),
                 c.Examples.Select(Texts.Pattern).ToArray())).ToArray(),
             group.ElidedAction is { } elided ? Loc.F("ElidedAction", elided) : string.Empty);
+    }
+
+    /// <summary>
+    /// Words of the group by class, then the line "Свои фразы:" with the user's ready phrases and their commands, each
+    /// marked "своё" (design D12 of replace-additions-with-phrase-builder).
+    /// </summary>
+    private static IReadOnlyList<ClassEntry> Classes(ReferenceGroup group)
+    {
+        var classes = group.Classes.Select(c => new ClassEntry(
+            Texts.WordClass(c.Class),
+            c.Words.Select(w => new WordLine(w.Text, w.IsUserAddition)).ToArray())).ToList();
+        if (group.Phrases.Count > 0)
+        {
+            classes.Add(new ClassEntry(
+                Loc.T("OwnPhrasesLine"),
+                group.Phrases.Select(p => new WordLine($"«{p.Text}» — {Texts.Intent(p.Intent)}", true)).ToArray()));
+        }
+
+        return classes;
     }
 
     /// <summary>

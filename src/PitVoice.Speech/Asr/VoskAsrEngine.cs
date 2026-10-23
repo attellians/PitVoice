@@ -112,6 +112,29 @@ public sealed class VoskAsrEngine : IAsrEngine, IDisposable
 
     private static Func<string, bool> IsKnownWord(VoskModelHandle model) => model.Contains;
 
+    public Func<string, bool>? KnownWords
+    {
+        get
+        {
+            lock (_lock)
+            {
+                if (_model is not { } model)
+                {
+                    return null;
+                }
+
+                // The model may be unloaded later: the lookup then knows nothing instead of touching a disposed handle.
+                return word =>
+                {
+                    lock (_lock)
+                    {
+                        return ReferenceEquals(_model, model) && GrammarBuilder.ModelSpelling(Normalizer.NormalizeWord(word), model.Contains) is not null;
+                    }
+                };
+            }
+        }
+    }
+
     /// <summary>Opens a model directory; failures are returned as messages, the process never crashes on a bad model.</summary>
     private static async Task<(VoskModelHandle? Model, string? Error)> OpenModelAsync(
         string modelPath,

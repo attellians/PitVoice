@@ -1,9 +1,11 @@
-# Manual check: the look of the window (`refresh-window-visual-style`)
+# Manual check: the look of the window (`simplify-window-screens`)
 
-The restyled window on a Release build (spec `window-visual-style`, TZ FR-APP-12 and the updated FR-APP-6, FR-APP-7,
-FR-APP-8): both themes and a Windows theme switch on the fly, both interface languages, every state of the home page,
-downloading and deleting a model, the reference in ru and en, long device names, the minimum width, two DPI scales and
-the idle CPU against 0.1.3. Items that need the game use iRacing **Test Drive**.
+The simplified screens on a Release build (specs `tray-app`, `window-visual-style`, `app-settings`, `overlay-indicator`,
+`model-management`, `language-packs`; TZ FR-APP-5…FR-APP-7, FR-APP-9, FR-APP-12, FR-OVL-7, FR-OVL-8): the one-line status
+card and tiles of Home, the result chips of the recent phrases, the threshold slider, the "VR mode" row on Overlay, the
+two model groups, the "Own phrases" title and the license line — in both themes, both interface languages, at the
+minimum width and two DPI scales. Items that need the game use iRacing **Test Drive**. This list replaces the one of
+`refresh-window-visual-style` (2026-10-19); the look it checked (hues, cards, icons, theme switch) is unchanged.
 
 Build once from the repository root in PowerShell (exit PitVoice from the tray menu first, the build replaces its files):
 
@@ -13,7 +15,7 @@ dotnet build-server shutdown
 Set-Alias pitvoice "$PWD\src\PitVoice.App\bin\Release\net10.0-windows\PitVoice.exe"
 ```
 
-**Working profile.** Point settings, models and own words at the manual-run folders (`spike/` is ignored by git) and
+**Working profile.** Point settings, models and own phrases at the manual-run folders (`spike/` is ignored by git) and
 start the app from the same PowerShell window, so it inherits the variables:
 
 ```
@@ -22,87 +24,82 @@ $env:PITVOICE_MODELS_DIR = "$PWD\spike\c1\models"
 $env:PITVOICE_USER_LANGUAGES = "$PWD\spike\c1\languages"
 ```
 
-Mark every item **ok**, **mismatch** or **not checked** (with the reason) and write what was seen. A remark about the
-look is either fixed or written down as a decision in the Result column. Defaults: theme "as in Windows", interface
-language Russian, window 1000 × 720.
+States without hardware come from the settings file: an unknown joystick GUID in `ptt.binding` is a disconnected wheel,
+`"binding": null` is no button, a `microphone` name that is not in the system is a missing microphone, an empty
+`PITVOICE_MODELS_DIR` folder is no model.
 
-**Who checks what** (to shorten the run, 2026-10-19). The user checks only what needs a voice, the hardware or a Windows
-setting: 1.3 (Windows theme on the fly), 1.5 (Windows accent), 3.3 (rest), 3.4 (phrases), 3.6 (unplugged wheel), 4.4 (no
-network), 7.2 (display scale 150 %). Everything else is checked by driving the Release build with screenshots and the
-settings file; such results say "checked by screenshot".
+Mark every item **ok**, **mismatch** or **not checked** (with the reason) and write what was seen. Defaults: theme
+"as in Windows", interface language Russian, window 1000 × 760.
 
-## 1. Themes
+**Who checks what.** The user checks only what needs a voice, the hardware, the network or a Windows setting: 1.3, 3.2,
+3.3, 3.4, 4.2, 4.4, 6.2 (150 %), 7.2. Everything else is checked by driving the Release build through UI Automation with
+screenshots and the settings file; such results say "checked by screenshot".
 
-| # | Setup | Action | Expected | Result |
-|---|---|---|---|---|
-| 1.1 | Windows in the dark theme, settings theme "as in Windows" | open the window, look at the menu | six items with six hues: Home blue, Settings grey, Overlay lilac (readable on its tint), Models green, Commands peach, About teal; icons on a soft tint, no white icons on solid fills; the active item has a background and no coloured bar on its left, the others none | ok (2026-10-19, Release, checked by screenshot): six hues, icons on tints, the active item has a background and no bar |
-| 1.2 | 1.1 | Settings → Theme → Light | the whole window switches at once: hues darker, tints lighter, text readable on every tint, cards white-ish with no coloured frames; then set Dark and back to "as in Windows" | ok (2026-10-19, Release, checked by screenshot): every page in the light theme readable; dark → light → dark switches the hue set each time (a bug of the second switch was fixed on the way) |
-| 1.3 | theme "as in Windows" | Windows Settings → Personalization → Colors → switch the Windows mode light ↔ dark while the PitVoice window is open | the window follows within a second without a restart: hues, tints, cards and the status card change together, no grey patches; switch back | ok (2026-10-19, Release, user) |
-| 1.4 | any theme | look at every page | cards of one tone, 12 px corners, rows inside a card divided by thin lines, no card inside a card | ok (2026-10-19, Release, checked by screenshot) |
-| 1.5 | Windows accent colour set to something other than blue (e.g. peach) | look at the primary buttons, the switch on Overlay and the sliders, in both themes | all blue, nothing in the Windows accent colour | ok (2026-10-19, Release, user) |
-| 1.6 | any | press the menu button left of the app icon in the title bar, twice | the menu collapses to the section icons and expands again; the window still moves by dragging the title bar; after a restart the menu is expanded | ok (2026-10-19, Release, checked by screenshot): collapses to icons and back; dragging the title bar next to the button moved the window by 80 × 50 px; expanded after a restart |
-
-## 2. Interface language
+## 1. Themes and language
 
 | # | Setup | Action | Expected | Result |
 |---|---|---|---|---|
-| 2.1 | Russian | open every page | all new texts are Russian: status card, tiles, counter, "Язык команд: Русский", group descriptions, "Слова группы", model rows ("используется", "установлена 19.10.2026"), settings groups "Язык и вид" … "Диагностика" | ok (2026-10-19, Release, checked by screenshot) |
-| 2.2 | Settings → Interface language → English | open every page | the same texts in English, dates as "10/19/2026", "Words of the group", no Russian left; the window keeps its layout (no row wraps onto two lines at 1000 px); set Russian back | ok (2026-10-19, Release, checked by screenshot): all texts English, date "10/15/2026", no wrapped rows at 1000 px |
+| 1.1 | dark theme, Russian | open Home, Settings, Overlay, Models, Commands → Own phrases, About | every page readable; new texts Russian; chips, the red tile and the state dots in their colours; no white icons on solid fills | ok (2026-10-24, Release, checked by screenshot) |
+| 1.2 | light theme | the same pages | text and dots readable on light cards; the red tile fill is a soft pink, not a solid red; the download icon blue on a grey button | ok (2026-10-24, Release, checked by screenshot): Home with the red tile, Overlay, Models, Settings, About |
+| 1.3 | theme "as in Windows" | switch the Windows mode light ↔ dark with the window open on Home | the card, tiles and chips follow within a second without a restart | not checked: user (Windows setting) |
+| 1.4 | English interface | open every page | "All set", "Waiting for iRacing", "Assign button", "Indicator position", "Installed" / "Available to download", "They work offline.", "MIT License"; no Russian left except the language names | ok (2026-10-24, Release, checked by screenshot) |
 
-## 3. Home: states
+## 2. Home
 
 | # | Setup | Action | Expected | Result |
 |---|---|---|---|---|
-| 3.1 | model installed, wheel button assigned and connected, iRacing not running | open Home | status card "Нет связи с iRacing" without the green mark and the hint to start iRacing; tiles: microphone with a green dot, "SIMAGIC GT Neo, кнопка 1 · удержание" with a green dot "подключена", iRacing "Не запущен" in grey with the hint; no counter, "Фраз пока нет…" | ok (2026-10-19, checked by screenshot): "Нет связи с iRacing" without the mark (Debug); on Release with the wheel unplugged the error wins, the iRacing tile "Не запущен" grey with the hint |
-| 3.2 | 3.1 | start iRacing Test Drive, stay in the menu, then get in the car | the status card turns "Всё готово" with the green mark within 5 s of the tray icon; the iRacing tile shows "Запущен, вы не в машине" then "Вы в машине" with a green dot | ok (2026-10-19, Release, user in Test Drive): "Всё готово", the iRacing tile "Вы в машине" with a green dot |
-| 3.3 | in the car | say "залей тридцать литров", then something that is not a command, then leave the car and say "залей тридцать литров" | three rows in "Последние фразы": applied (outcome and response in grey), "не понял" in amber with the reason as a second line, "вы не в машине" in red; no icons or coloured chips in the rows; the counter in the title reads "3 фразы, 1 применено" | ok (2026-10-19, Release, user): applied phrases and the counter "4 фразы, 4 применено" seen earlier; "не понял" amber and "вы не в машине" red checked by the user |
-| 3.4 | 3.3 | say 20 more phrases (any), then look at the list and the counter | 20 rows, the oldest gone; the counter counts all 23 | ok (2026-10-19, Release, user) |
-| 3.5 | Models → delete the model of the commands language | open Home | status card "Нет модели" without the mark and the hint to download it on the Models page; the tray icon says "no model" too; download it again | ok (2026-10-19, Release, checked by screenshot): after delete "Нет модели" with the hint naming vosk-model-small-ru-0.22; downloaded again from the window |
-| 3.6 | Settings → assign a key, then unplug the wheel; or just unplug the wheel with the wheel button assigned | open Home | status card "Ошибка — устройство кнопки «…» не подключено" with the hint; the "Кнопка голоса" tile shows only the short red "не подключено" and the "Назначить" link (no second hint line, the hint is in the status card); the link opens Settings | ok (2026-10-19, Release, checked by screenshot; the wheel was unplugged by the user): error card with the device name, red "не подключено" and "Назначить", which opens Settings |
-| 3.7 | settings file without a PTT binding (set `"binding": null`, restart) | open Home | "Кнопка голоса" tile "Кнопка не выбрана" with the red "не назначена" and the "Назначить" link; the status card says the button is not assigned; assign the button again | ok (2026-10-19, Release, checked by screenshot): "Кнопка не выбрана", red "не назначена", "Назначить" → Settings with "Назначить кнопку" |
-| 3.8 | Settings → Microphone → a device, then unplug it | open Home | the tile shows the device name and the red "не найден" with the hint that the Windows default is used | ok (2026-10-19, Release, checked by screenshot): device name, red "не найден", hint about the Windows default |
-| 3.9 | Settings → Microphone → "Системное по умолчанию" | open Home | the tile shows "Как в Windows (‹device name›)" with a green dot | ok (2026-10-19, Release, checked by screenshot): "Как в Windows (Microphone (fifine Microphone))" with a green dot |
-| 3.10 | exit from the tray, start again | open Home | the counter is hidden, the list says "Фраз пока нет…" | ok (2026-10-19, Release): counter hidden and "Фраз пока нет…" after every restart |
+| 2.1 | model installed, wheel button assigned and connected, iRacing not running | open Home | the status card is one line: grey flag, "Ждём iRacing", no button, no second line, the hint in the tooltip; tiles in one row without titles: microphone name with a green dot in the icon corner, "SIMAGIC GT Neo · кнопка 1" with a green dot and no mode, "● iRacing не запущен" with a grey dot before the text; no phrase counter, "Фраз пока нет…" | ok (2026-10-24, Release, checked by screenshot) |
+| 2.2 | settings `microphone` of a device that is not there | open Home | the tile shows the name with a red dot, the tooltip says "не найден" and that the Windows default is used | ok (2026-10-24, Release, checked by screenshot): "Ghost USB Mic" with a red dot |
+| 2.3 | settings `microphone: null` | open Home | the tile shows only the name of the Windows default device, no "Как в Windows", the tooltip says it is the Windows default | ok (2026-10-24, Release, checked by screenshot): "Microphone (fifine Microphone)"; reader name "… Microphone: connected / The Windows default microphone." |
+| 2.4 | wheel disconnected (unknown GUID in the binding) | open Home, click the voice button tile | card "Кнопка голоса не подключена" with "Назначить"; the tile is soft red with "Назначить кнопку" and a chevron, the tooltip names the device; the tile and the card button open Settings | ok (2026-10-24, Release, checked by screenshot): the tile button's reader name names "Fanatec ClubSport Universal Hub V2 Formula Rim, кнопка 3"; invoking it opened Settings |
+| 2.5 | `"binding": null` | open Home | card "Кнопка голоса не назначена" with "Назначить", the tile "Назначить кнопку" in red | ok (2026-10-24, Release, checked by screenshot, English: "Voice button is not assigned", "Assign button") |
+| 2.6 | empty models folder | open Home, press the card button | card "Нет модели" with the download icon and the blue "Скачать"; the button opens Models | ok (2026-10-24, Release, checked by screenshot) |
+| 2.7 | window 760 px wide | open Home | the three tiles stand one under another, each still one line and readable ("iRacing не запущен" whole); at 1000 px they are back in one row | ok after a fix (2026-10-24, Release, checked by screenshot): at 760 px the tiles were cut to "Assign…" and "iRacing i…"; they now stack below 600 px of content |
+| 2.8 | any | read the tiles with UI Automation (or Narrator) | every tile's name has the state in words: "… Микрофон: подключён", "… Кнопка голоса: подключена", "iRacing не запущен. …" | ok after a fix (2026-10-24, Release, UI Automation): the name was on a panel without an automation peer and did not reach the reader; now it is on the tile text |
+
+## 3. Recent phrases
+
+| # | Setup | Action | Expected | Result |
+|---|---|---|---|---|
+| 3.1 | no phrases yet | open Home | "Фраз пока нет. Зажмите кнопку PTT и скажите команду." and no counter anywhere | ok (2026-10-24, Release, checked by screenshot) |
+| 3.2 | in the car | say "меняй шины и залей двадцать пять литров" | one line: the recognized text, a green chip "все шины · +25 л", the time "HH:mm"; the tooltip of the line shows "меняем все шины, заливаем 25 литров" and the time with seconds | not checked: user (voice) |
+| 3.3 | in the car | say something that is not a command, then leave the car and say "залей тридцать литров" | a muted text with an amber chip "не понял", no "не понял, повтори" next to it and no second line, the reason only in the tooltip; then a red chip "не в машине" | not checked: user (voice) |
+| 3.4 | in the car | say "меняй левые и залей десять литров и протри стекло и быстрый ремонт" | the chip "левые · +10 л · стекло · ремонт" or cut with an ellipsis, the time stays in place, the full response in the tooltip | not checked: user (voice) |
 
 ## 4. Models
 
 | # | Setup | Action | Expected | Result |
 |---|---|---|---|---|
-| 4.1 | en model not downloaded | open Models | the subtitle says recognition works offline and names the commands language; row "RU · Русский · используется" with a green dot, size, install date, id and license in small grey, "Удалить" grey; row "EN · English · не скачана" with a dashed circle, no date, and the single blue "Скачать" | ok (2026-10-19, Release, checked by screenshot) |
-| 4.2 | 4.1 | "Скачать" for English | a thin progress bar with "N из M МБ" and "Отмена"; then "установлена" in grey with the install date of today, "Удалить"; the ru row stays "используется" | ok (2026-10-19, Release, checked by screenshot): bar with "9.5 из 39.3 МБ" and "Отмена"; then "установлена" grey with today's date and "Удалить"; ru stays "используется" |
-| 4.3 | 4.2 | "Скачать" again after a delete, press "Отмена" in the middle | the row goes back to "не скачана", no error | ok (2026-10-19, Release): cancelled at once, the row back to "не скачана" without an error, no partial files |
-| 4.4 | network off (Wi-Fi off) | "Скачать" | the row shows the error in red and "Скачать" again; nothing partial left in the models folder | ok (2026-10-19, Release, user) |
+| 4.1 | ru installed, en not | open Models | subtitle "Работают без интернета."; group "Установлены" with "Русский ● используется" and a grey delete icon; group "Можно скачать" with "English 39.3 МБ" and a blue download icon; no code circle, date, id or license | ok (2026-10-24, Release, checked by screenshot) |
+| 4.2 | 4.1 | press the download icon of English, then let it finish | a thin bar, "N из M МБ" and a cancel icon in the row; then the row moves to "Установлены" without "используется"; the "Можно скачать" title disappears | not checked: user (network download) |
+| 4.3 | 4.2 | delete English (icon, confirm) | the row moves back to "Можно скачать" | not checked: user, together with 4.2 |
+| 4.4 | network off | press the download icon | the error in red in the row and the download icon again | not checked: user (network) |
+| 4.5 | any | hover the icon buttons | tooltips "Скачать", "Отмена", "Удалить"; the same names for the screen reader | ok (2026-10-24, Release, UI Automation: names present) |
 
-## 5. Commands
-
-| # | Setup | Action | Expected | Result |
-|---|---|---|---|---|
-| 5.1 | Russian | open Commands | "Язык команд: Русский"; "Свои слова" first with its icon, the state in one line, the two buttons on the right, the path under it; then Fuel, Tires, Windshield, Repair, Reset cards with icons in their hues (fuel peach, tires blue, windshield teal, repair red, reset grey), a description and example chips; every "Слова группы" collapsed | ok (2026-10-19, Release, checked by screenshot) |
-| 5.2 | 5.1 | expand "Слова группы" of Fuel, go to Home and back | the block is collapsed again; the other groups never opened | ok (2026-10-19, Release, checked by screenshot) |
-| 5.3 | **replaced by phrase-builder.md 3.3 (2026-10-23)** own words: `lexicon: { fuel: { action: [плесни] } }` in `spike\c1\languages\ru.yaml`, "Перечитать" | expand "Слова группы" of Fuel | "плесни" among the actions with the "своё" mark; "плесни" is not in the chips | ok (2026-10-19, Release, checked by screenshot): "плесни" with "своё" in the block, not in the chips |
-| 5.4 | **replaced by phrase-builder.md 5.3 (2026-10-23)** put an unknown class into the file, "Перечитать" | look at "Свои слова" | the error with the file name and line in red under the path; the built-in words still work | ok (2026-10-19, Release, checked by screenshot): "fuel.pour" → state "в файле ошибки…" and the file:line error in red; built-in cards stay |
-| 5.5 | Settings → Commands language → English | open Commands | "Commands language: English", chips from the English pack ("add ‹number› ‹unit›"), words "add, fill…" in the block; set Russian back | ok (2026-10-19, Release, checked by screenshot): "Язык команд: English", chips and words from the English pack |
-
-## 6. Settings, overlay, about
+## 5. Settings and Overlay
 
 | # | Setup | Action | Expected | Result |
 |---|---|---|---|---|
-| 6.1 | any | open Settings | five cards "Язык и вид", "Кнопка push-to-talk", "Звук", "Распознавание", "Диагностика"; every setting is a row "icon — label — control on the right"; rows divided by lines; the PTT row shows the device and button with the green "подключена" (or red "не подключено") and "Назначить другую" at the right edge, the mode on the row below; the volume slider with "Прослушать" and the threshold box at the right edge; "Собрать диагностику" and "Открыть папку логов" one under the other | ok (2026-10-19, Release, checked by screenshot) |
-| 6.2 | 6.1 | change the volume to 40 %, the unit to gallons, the threshold to 0.7 | each change is in `settings.json` at once; a threshold of 1.5 shows the range error in red under the row and keeps the old value; set the values back | ok (2026-10-19, Release): volume 40, gallons and 0.7 saved to the file at once; an invalid threshold shows "Введите число от 0 до 1." under the row and keeps 0.6; values set back |
-| 6.3 | a microphone with a long name (or rename one in Windows) | open Settings | the name is cut with an ellipsis, the list stays on the right, the row does not wrap | ok (2026-10-19, Release, checked by screenshot): "Системное по умолчанию (Microphone (fifine…" cut with an ellipsis, list on the right, also at 760 px |
-| 6.4 | any | open Overlay | the "Показывать оверлей" row with the switch on the right and no note under it, then "Внешний вид" and "Место на экране" cards with rows, every control on the right edge; "Переместить" and "Сбросить положение" one under the other; "Переместить" turns into "Готово" and the indicator can be dragged as before; "Сбросить положение" works | ok (2026-10-19, Release, checked by screenshot): switch on the right, no note; "Переместить" shows the indicator with the dashed frame and "Готово", the page button turns into "Готово" and back |
-| 6.5 | any | open About | the version card, the models card with licenses and links, the components as chips with a visible fill and a thin outline; the GitHub link opens the browser | ok (2026-10-19, Release): the GitHub link opened attellians/PitVoice in Chrome |
+| 5.1 | any | open Settings | "Язык и вид" has three rows — commands language, interface language, theme; no "Режим VR" and no SteamVR hint | ok (2026-10-24, Release, checked by screenshot) |
+| 5.2 | threshold 0.6 | look at "Порог уверенности", move the slider to 0.75 | a gauge icon; the label with the explanation under it, wrapping before the slider; the slider and "0.6" on the right; after the move "0.75" and the file gets 0.75 once, after the movement stops | ok (2026-10-24, Release, UI Automation): three steps 0.65 → 0.7 → 0.75, the file still 0.6 right after them, 0.75 after 800 ms |
+| 5.3 | `"threshold": 0.2` in the file | open Settings | "0.2" on the right, the thumb at the left edge, the file keeps 0.2 | ok (2026-10-24, Release, checked by screenshot) |
+| 5.4 | window 760 px, English | open Settings | the threshold label and the explanation wrap in their column, the slider and the number stay whole on the right | ok after a fix (2026-10-24, Release, checked by screenshot): "Confidence thresho…" was cut, the label now wraps |
+| 5.5 | any | open Overlay | top card: "Показывать оверлей" and under it "Режим VR ● выключен" in one line with the switch on the right; "Размер" with the frame-with-arrows icon; "Место на экране" one row "Положение индикатора" with "Перетащите мышью, потом «Готово»", the blue "Переместить" and a grey reset icon (disabled without a moved position) with the tooltip "Сбросить положение"; no paragraph about the tray menu | ok (2026-10-24, Release, checked by screenshot) |
+| 5.6 | SteamVR not running | switch "Режим VR" on, then off | "● ждёт SteamVR" appears right after the label at once, the row stays one line, `overlay.vr` is true in the file; off again | ok (2026-10-24, Release, checked by screenshot) |
+| 5.7 | 5.5 | "Переместить", drag the indicator, "Готово", then the reset icon | the indicator moves and stays; the reset icon becomes active and puts it back to the top right corner | not checked: the move itself is unchanged (checked in `overlay-indicator.md`); the button state is covered by the model tests |
 
-## 7. Window size and DPI
-
-| # | Setup | Action | Expected | Result |
-|---|---|---|---|---|
-| 7.1 | any | shrink the window to its minimum width (760 px) and open every page | cards narrow, tiles share the width, the status title wraps, long rows cut with an ellipsis; a vertical scroll bar where needed, never a horizontal one | ok after a fix (2026-10-19, Release, checked by screenshot): the "Кнопка голоса" tile title was clipped at 760 px, now wraps; other pages narrow, ellipsis on long values, no horizontal scroll |
-| 7.2 | Windows display scale 150 % (sign out / in if Windows asks) | open every page at 1000 × 720 and at 760 px | the same layout, icons and tints crisp, nothing clipped; set 100 % back | ok (2026-10-19, Release, user) |
-
-## 8. Idle CPU
+## 6. Own phrases and About
 
 | # | Setup | Action | Expected | Result |
 |---|---|---|---|---|
-| 8.1 | Release build, window open on Home, iRacing not running | Task Manager → Details, watch PitVoice for a minute | CPU below 1 % and not above the 0.1.3 reading (0.52 % on 2026-10-18); no periodic spikes from the window | ok (2026-10-19, Release 0.1.3+, iRacing not running): 0.01 % over 60 s on 16 logical cores (0.1.3: 0.52 %), working set 354 MB |
-| 8.2 | 8.1 | close the window to the tray, wait a minute | CPU the same or lower | ok (2026-10-19, Release): 0.01 % over 60 s with the window closed to the tray |
+| 6.1 | display scale 100 % | Commands → "Настроить" | "Команды / Свои фразы": the bottoms of the letters of "Команды", "/" and "Свои фразы" on one line | ok (2026-10-24, Release, checked by screenshot, zoomed) |
+| 6.2 | display scale 150 % | the same | the same, one baseline | not checked: user (Windows setting) |
+| 6.3 | Russian / English | open About | "Лицензия MIT" / "MIT License" without a colon and a period | ok (2026-10-24, Release, checked by screenshot) |
+
+## 7. Window size, DPI and CPU
+
+| # | Setup | Action | Expected | Result |
+|---|---|---|---|---|
+| 7.1 | any | 760 px wide, every page | no horizontal scroll; long values cut with an ellipsis; the tiles stacked (2.7) | ok (2026-10-24, Release, checked by screenshot): Home, Settings, Overlay, Models, About, Own phrases |
+| 7.2 | Windows display scale 150 % | every page at 1000 × 760 and at 760 px | the same layout, icons and dots crisp, nothing clipped; set 100 % back | not checked: user (Windows setting) |
+| 7.3 | Release, window open on Home, iRacing not running | watch the CPU for 30 s | below 1 % | ok (2026-10-24, Release): 0.05 % of 16 cores over 30 s, working set 408 MB |

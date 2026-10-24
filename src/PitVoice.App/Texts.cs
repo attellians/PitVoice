@@ -172,11 +172,6 @@ internal static class Texts
             yield return $"unit.{unit}";
         }
 
-        foreach (var state in Enum.GetValues<ModelState>())
-        {
-            yield return $"model.{state}";
-        }
-
         foreach (var theme in Enum.GetValues<Core.Settings.AppTheme>())
         {
             yield return $"theme.{theme}";

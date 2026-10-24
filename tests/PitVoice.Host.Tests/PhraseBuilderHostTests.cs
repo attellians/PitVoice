@@ -43,11 +43,9 @@ public sealed class PhraseBuilderHostTests
         var file = UserAdditionsLoader.GetFile(fixture.AdditionsDirectory, "ru");
         var before = File.ReadAllText(file);
 
-        string? error;
-        using (new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.None))
-        {
-            error = await host.SaveAdditionsAsync(Draft(("начнем заново", IntentCatalog.PitClear)));
-        }
+        // A directory where the temporary file goes fails the write on every OS (a lock blocks a replace only on Windows).
+        Directory.CreateDirectory(file + ".tmp");
+        var error = await host.SaveAdditionsAsync(Draft(("начнем заново", IntentCatalog.PitClear)));
 
         Assert.NotNull(error);
         Assert.Equal(before, File.ReadAllText(file));

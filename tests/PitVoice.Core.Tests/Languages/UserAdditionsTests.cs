@@ -511,16 +511,14 @@ public sealed class UserAdditionsTests : IDisposable
     }
 
     [Fact]
-    public void Busy_file_returns_an_error_and_the_old_file_stays()
+    public void Failed_write_returns_an_error_and_the_old_file_stays()
     {
         var path = Write("ru", "lexicon:\n  fuel: { action: [плесни] }\n");
         var before = File.ReadAllText(path);
 
-        string? error;
-        using (new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.None))
-        {
-            error = UserAdditionsWriter.TryWrite(path, "ru", [], [new AdditionPhrase("идет дождь", IntentCatalog.TiresWet, null)]);
-        }
+        // A directory where the temporary file goes fails the write on every OS (a lock blocks a replace only on Windows).
+        Directory.CreateDirectory(path + ".tmp");
+        var error = UserAdditionsWriter.TryWrite(path, "ru", [], [new AdditionPhrase("идет дождь", IntentCatalog.TiresWet, null)]);
 
         Assert.NotNull(error);
         Assert.Equal(before, File.ReadAllText(path));

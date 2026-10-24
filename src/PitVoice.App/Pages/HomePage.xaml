@@ -10,8 +10,38 @@
     Foreground="{DynamicResource TextFillColorPrimaryBrush}"
     x:Name="Root">
     <Page.Resources>
-        <!-- A word of state: grey, green, amber or red by its tone (spec: Color for state only). -->
-        <Style x:Key="StateText" TargetType="TextBlock" BasedOn="{StaticResource Caption}">
+        <!-- A state dot: grey (waits), green (works) or red (a problem) by its tone (spec: Color for state only). -->
+        <Style x:Key="StateDotOfTone" TargetType="Ellipse" BasedOn="{StaticResource StateDot}">
+            <Setter Property="Fill" Value="{DynamicResource TextFillColorTertiaryBrush}" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Tone}" Value="{x:Static vm:StateTone.Ok}">
+                    <Setter Property="Fill" Value="{DynamicResource StateOkBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Tone}" Value="{x:Static vm:StateTone.Problem}">
+                    <Setter Property="Fill" Value="{DynamicResource StateErrorBrush}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- A result chip: a muted fill and the text in the color of the outcome (spec: Recent phrases). -->
+        <Style x:Key="ResultChip" TargetType="Border">
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="Padding" Value="8,2" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Background" Value="{DynamicResource ChipBrush}" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Tone}" Value="{x:Static vm:StateTone.Ok}">
+                    <Setter Property="Background" Value="{DynamicResource StateOkTintBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Tone}" Value="{x:Static vm:StateTone.Warn}">
+                    <Setter Property="Background" Value="{DynamicResource StateWarnTintBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Tone}" Value="{x:Static vm:StateTone.Problem}">
+                    <Setter Property="Background" Value="{DynamicResource StateErrorTintBrush}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="ResultChipText" TargetType="TextBlock" BasedOn="{StaticResource Caption}">
             <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
             <Style.Triggers>
                 <DataTrigger Binding="{Binding Tone}" Value="{x:Static vm:StateTone.Ok}">
@@ -25,80 +55,104 @@
                 </DataTrigger>
             </Style.Triggers>
         </Style>
-        <Style x:Key="StateDotOfTone" TargetType="Ellipse" BasedOn="{StaticResource StateDot}">
-            <Setter Property="Fill" Value="{DynamicResource TextFillColorTertiaryBrush}" />
-            <Setter Property="Visibility" Value="Collapsed" />
-            <Style.Triggers>
-                <DataTrigger Binding="{Binding Tone}" Value="{x:Static vm:StateTone.Ok}">
-                    <Setter Property="Fill" Value="{DynamicResource StateOkBrush}" />
-                    <Setter Property="Visibility" Value="Visible" />
-                </DataTrigger>
-                <DataTrigger Binding="{Binding Tone}" Value="{x:Static vm:StateTone.Problem}">
-                    <Setter Property="Fill" Value="{DynamicResource StateErrorBrush}" />
-                    <Setter Property="Visibility" Value="Visible" />
-                </DataTrigger>
-            </Style.Triggers>
-        </Style>
 
-        <!-- A check tile: icon and title, the value, the state word with a dot, a detail line (spec: Home check tiles). -->
+        <!--
+            A check tile in one line: the icon with the state dot in its corner (or the dot before the text), the value
+            trimmed with an ellipsis; the state in words is in the tooltip and the screen reader name (spec: Home check
+            tiles). A tile with a problem is a muted red button to the settings.
+        -->
         <DataTemplate x:Key="TileTemplate" DataType="{x:Type vm:Tile}">
-            <Border Style="{StaticResource Tile}">
-                <StackPanel>
+            <Grid AutomationProperties.Name="{Binding AccessibleName}" ToolTip="{Binding ToolTip}">
+                <Border>
+                    <Border.Style>
+                        <Style TargetType="Border" BasedOn="{StaticResource Tile}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsAction}" Value="True">
+                                    <Setter Property="Background" Value="{DynamicResource StateErrorTintBrush}" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
-                        <controls:SectionIcon
-                            Margin="0,0,10,0"
-                            Fallback="{Binding Title}"
-                            Section="{Binding Section}"
-                            Size="32"
-                            Symbol="{Binding Symbol}" />
-                        <TextBlock Grid.Column="1" Style="{StaticResource CaptionWrap}" Text="{Binding Title}" />
+                        <Grid Margin="0,0,10,0">
+                            <controls:SectionIcon
+                                Fallback="{Binding Value}"
+                                Section="{Binding Section}"
+                                Size="32"
+                                Symbol="{Binding Symbol}" />
+                            <Ellipse
+                                Width="10"
+                                Height="10"
+                                Margin="0,0,-2,-2"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Bottom"
+                                Stroke="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                                StrokeThickness="2">
+                                <Ellipse.Style>
+                                    <Style TargetType="Ellipse" BasedOn="{StaticResource StateDotOfTone}">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding DotInText}" Value="True">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding IsAction}" Value="True">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Ellipse.Style>
+                            </Ellipse>
+                        </Grid>
+                        <Ellipse Grid.Column="1" Visibility="{Binding DotInText, Converter={StaticResource Visible}}">
+                            <Ellipse.Style>
+                                <Style TargetType="Ellipse" BasedOn="{StaticResource StateDotOfTone}">
+                                    <Setter Property="Margin" Value="0,0,8,0" />
+                                </Style>
+                            </Ellipse.Style>
+                        </Ellipse>
+                        <TextBlock Grid.Column="2" Text="{Binding Value}">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource Body}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsAction}" Value="True">
+                                            <Setter Property="Foreground" Value="{DynamicResource StateErrorBrush}" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                        <ui:SymbolIcon
+                            Grid.Column="3"
+                            Margin="6,0,0,0"
+                            FontSize="16"
+                            Foreground="{DynamicResource StateErrorBrush}"
+                            Symbol="ChevronRight24"
+                            Visibility="{Binding IsAction, Converter={StaticResource Visible}}" />
                     </Grid>
-                    <TextBlock
-                        Margin="0,10,0,0"
-                        Style="{StaticResource BodyWrap}"
-                        Text="{Binding Value}" />
-                    <WrapPanel
-                        Margin="0,4,0,0"
-                        Visibility="{Binding StateText, Converter={StaticResource NotEmptyVisible}}">
-                        <Ellipse Style="{StaticResource StateDotOfTone}" />
-                        <TextBlock Style="{StaticResource StateText}" Text="{Binding StateText}" />
-                        <ui:HyperlinkButton
-                            Margin="8,-6,0,-6"
-                            Padding="4,2"
-                            Command="{Binding DataContext.OpenSettingsCommand, ElementName=Root}"
-                            Content="{loc:Tr AssignLink}"
-                            FontSize="13"
-                            Visibility="{Binding ShowAssign, Converter={StaticResource Visible}}" />
-                    </WrapPanel>
-                    <TextBlock
-                        Margin="0,4,0,0"
-                        Style="{StaticResource CaptionWrap}"
-                        Text="{Binding Detail}"
-                        Visibility="{Binding Detail, Converter={StaticResource NotEmptyVisible}}" />
-                </StackPanel>
-            </Border>
+                </Border>
+                <!-- The whole tile with a problem is the button "Назначить кнопку" (spec: Button not assigned). -->
+                <Button
+                    AutomationProperties.Name="{Binding AccessibleName}"
+                    Command="{Binding DataContext.OpenSettingsCommand, ElementName=Root}"
+                    Cursor="Hand"
+                    Visibility="{Binding IsAction, Converter={StaticResource Visible}}">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border Background="Transparent" />
+                        </ControlTemplate>
+                    </Button.Template>
+                </Button>
+            </Grid>
         </DataTemplate>
     </Page.Resources>
 
     <StackPanel Margin="24,16,24,24">
-        <Grid Margin="0,0,0,16">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
-            <TextBlock Margin="0" Style="{StaticResource PageTitle}" Text="{loc:Tr NavHome}" />
-            <!-- "25 фраз, 23 применено" (spec: Phrase counter). -->
-            <TextBlock
-                Grid.Column="1"
-                VerticalAlignment="Bottom"
-                Style="{StaticResource Caption}"
-                Text="{Binding Counter}"
-                Visibility="{Binding Counter, Converter={StaticResource NotEmptyVisible}}" />
-        </Grid>
+        <TextBlock Style="{StaticResource PageTitle}" Text="{loc:Tr NavHome}" />
 
         <!-- WPF-UI InfoBar does not show its content, so the buttons are a row under it. -->
         <StackPanel Margin="0,0,0,12" Visibility="{Binding CrashOfferVisible, Converter={StaticResource Visible}}">
@@ -129,29 +183,38 @@
             Message="{loc:Tr ElevationHint}"
             Severity="Warning" />
 
-        <!-- The status card (spec: Home status card). -->
-        <Border Style="{StaticResource Card}" Padding="16,14">
+        <!-- The status card in one line: icon, title, the action on the right; the hint is the tooltip (spec: Home status card). -->
+        <Border
+            Padding="16,12"
+            DataContext="{Binding Status}"
+            Style="{StaticResource Card}"
+            ToolTip="{Binding ToolTip}">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
+                <!-- The green mark of "ready" is the icon itself: a green check on its green tint. -->
                 <controls:SectionIcon
-                    Margin="0,0,14,0"
-                    VerticalAlignment="Top"
-                    Fallback="{Binding StatusTitle}"
-                    Section="{Binding StatusSection}"
-                    Size="44"
-                    Symbol="{Binding StatusSymbol}" />
-                <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                    <!-- The green mark of "ready" is the icon itself: a green check on its green tint. -->
-                    <TextBlock
-                            FontSize="20"
-                            FontWeight="SemiBold"
-                            Style="{StaticResource BodyWrap}"
-                            Text="{Binding StatusTitle}" />
-                    <TextBlock Margin="0,4,0,0" Style="{StaticResource CaptionWrap}" Text="{Binding StatusHint}" />
-                </StackPanel>
+                    Margin="0,0,12,0"
+                    Fallback="{Binding Title}"
+                    Section="{Binding Section}"
+                    Size="36"
+                    Symbol="{Binding Symbol}" />
+                <TextBlock
+                    Grid.Column="1"
+                    FontSize="17"
+                    FontWeight="SemiBold"
+                    Style="{StaticResource Body}"
+                    Text="{Binding Title}" />
+                <ui:Button
+                    Grid.Column="2"
+                    Margin="12,0,0,0"
+                    Appearance="Primary"
+                    Command="{Binding DataContext.StatusActionCommand, ElementName=Root}"
+                    Content="{Binding ActionText}"
+                    Visibility="{Binding HasAction, Converter={StaticResource Visible}}" />
             </Grid>
         </Border>
 
@@ -164,12 +227,12 @@
                 <ColumnDefinition Width="12" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
-            <ContentControl Content="{Binding Microphone}" ContentTemplate="{StaticResource TileTemplate}" />
-            <ContentControl Grid.Column="2" Content="{Binding Ptt}" ContentTemplate="{StaticResource TileTemplate}" />
-            <ContentControl Grid.Column="4" Content="{Binding Game}" ContentTemplate="{StaticResource TileTemplate}" />
+            <ContentControl Content="{Binding Microphone}" ContentTemplate="{StaticResource TileTemplate}" Focusable="False" />
+            <ContentControl Grid.Column="2" Content="{Binding Ptt}" ContentTemplate="{StaticResource TileTemplate}" Focusable="False" />
+            <ContentControl Grid.Column="4" Content="{Binding Game}" ContentTemplate="{StaticResource TileTemplate}" Focusable="False" />
         </Grid>
 
-        <!-- Recent phrases: plain rows, the outcome and the response on the right in grey (spec: Recent phrases). -->
+        <!-- Recent phrases: one line each, the text, a result chip and the time; details in the tooltip (spec: Recent phrases). -->
         <TextBlock Margin="0,0,0,8" Style="{StaticResource SectionTitle}" Text="{loc:Tr RecentPhrases}" />
         <TextBlock
             Style="{StaticResource CaptionWrap}"
@@ -179,36 +242,34 @@
             <ItemsControl AlternationCount="10000" ItemsSource="{Binding Phrases}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate DataType="{x:Type vm:PhraseRow}">
-                        <Border Style="{StaticResource ListRow}">
+                        <Border Background="Transparent" Style="{StaticResource ListRow}" ToolTip="{Binding ToolTip}">
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="16" />
-                                    <ColumnDefinition Width="Auto" MaxWidth="340" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
-                                <StackPanel VerticalAlignment="Center">
-                                    <TextBlock Style="{StaticResource BodyWrap}" Text="{Binding Text}" />
-                                    <TextBlock
-                                        Margin="0,2,0,0"
-                                        Style="{StaticResource ErrorText}"
-                                        Text="{Binding Detail}"
-                                        Visibility="{Binding HasDetail, Converter={StaticResource Visible}}" />
-                                </StackPanel>
-                                <StackPanel Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Right">
-                                    <TextBlock HorizontalAlignment="Right" TextAlignment="Right" TextWrapping="Wrap">
-                                        <TextBlock.Style>
-                                            <Style TargetType="TextBlock" BasedOn="{StaticResource StateText}">
-                                                <Setter Property="FontSize" Value="14" />
-                                            </Style>
-                                        </TextBlock.Style>
-                                        <Run Text="{Binding Outcome, Mode=OneWay}" /><Run Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text=" · " /><Run Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="{Binding Response, Mode=OneWay}" />
-                                    </TextBlock>
-                                    <TextBlock
-                                        HorizontalAlignment="Right"
-                                        FontSize="12"
-                                        Style="{StaticResource Caption}"
-                                        Text="{Binding Time}" />
-                                </StackPanel>
+                                <TextBlock Text="{Binding Text}">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock" BasedOn="{StaticResource Body}">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsDim}" Value="True">
+                                                    <Setter Property="Foreground" Value="{DynamicResource TextFillColorTertiaryBrush}" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                                <Border Grid.Column="1" MaxWidth="260" Margin="12,0,0,0" Style="{StaticResource ResultChip}">
+                                    <TextBlock Style="{StaticResource ResultChipText}" Text="{Binding Chip}" />
+                                </Border>
+                                <TextBlock
+                                    Grid.Column="2"
+                                    MinWidth="44"
+                                    Margin="12,0,0,0"
+                                    Style="{StaticResource Caption}"
+                                    Text="{Binding Time}"
+                                    TextAlignment="Right" />
                             </Grid>
                         </Border>
                     </DataTemplate>

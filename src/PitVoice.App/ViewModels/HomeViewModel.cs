@@ -2,34 +2,39 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using PitVoice.App.Controls;
 using PitVoice.App.Localization;
 using PitVoice.Host;
-using Wpf.Ui.Controls;
 
 namespace PitVoice.App.ViewModels;
 
-/// <summary>A line of the recent phrases; <see cref="Tone"/> colors only the outcome word (spec: No colored phrase markers).</summary>
-internal sealed record PhraseRow(string Time, string Text, string Outcome, string Response, string Detail, StateTone Tone)
-{
-    public bool HasResponse => Response.Length > 0;
-
-    public bool HasDetail => Detail.Length > 0;
-}
+/// <summary>
+/// A line of the recent phrases: the text, a chip with the short outcome colored by <see cref="Tone"/> and the time;
+/// the full response, the reason and the time with seconds are in <see cref="ToolTip"/> (spec: Recent phrases).
+/// </summary>
+/// <param name="Time">"22:34".</param>
+/// <param name="Text">Recognized text.</param>
+/// <param name="Chip">Short responses of an applied phrase ("все шины · +25 л") or the outcome in a word ("не понял").</param>
+/// <param name="Tone">Color of the chip.</param>
+/// <param name="ToolTip">Full response, reason and time with seconds, one per line.</param>
+/// <param name="IsDim">True for a phrase that was not understood: its text is muted.</param>
+internal sealed record PhraseRow(string Time, string Text, string Chip, StateTone Tone, string ToolTip, bool IsDim);
 
 /// <summary>
-/// "Home": the status card, the three check tiles, the phrase counter, the elevation hint and the recent phrases
-/// (spec: Home status card, Home check tiles, Phrase counter, Recent phrases, Elevation hint).
+/// "Home": the status card, the three check tiles, the elevation hint and the recent phrases
+/// (spec: Home status card, Home check tiles, Recent phrases, Elevation hint).
 /// </summary>
 internal sealed partial class HomeViewModel : ObservableObject
 {
     private readonly AppServices _services;
     private readonly Action _openSettings;
+    private readonly Action _openModels;
+    private CardAction _statusAction;
 
-    public HomeViewModel(AppServices services, Action openSettings)
+    public HomeViewModel(AppServices services, Action openSettings, Action openModels)
     {
         _services = services;
         _openSettings = openSettings;
+        _openModels = openModels;
         services.Host.StatusChanged += _ => Ui.Post(Refresh);
         services.Host.SettingsChanged += _ => Ui.Post(Refresh);
         services.Host.Journal.Changed += () => Ui.Post(RefreshPhrases);
@@ -54,19 +59,7 @@ internal sealed partial class HomeViewModel : ObservableObject
     public ObservableCollection<PhraseRow> Phrases { get; } = [];
 
     [ObservableProperty]
-    public partial string StatusTitle { get; set; } = string.Empty;
-
-    [ObservableProperty]
-    public partial string StatusHint { get; set; } = string.Empty;
-
-    [ObservableProperty]
-    public partial bool StatusOk { get; set; }
-
-    [ObservableProperty]
-    public partial Section StatusSection { get; set; }
-
-    [ObservableProperty]
-    public partial SymbolRegular StatusSymbol { get; set; }
+    public partial StatusCard? Status { get; set; }
 
     [ObservableProperty]
     public partial Tile? Microphone { get; set; }
@@ -76,10 +69,6 @@ internal sealed partial class HomeViewModel : ObservableObject
 
     [ObservableProperty]
     public partial Tile? Game { get; set; }
-
-    /// <summary>"25 фраз, 23 применено"; empty (hidden) without phrases.</summary>
-    [ObservableProperty]
-    public partial string Counter { get; set; } = string.Empty;
 
     [ObservableProperty]
     public partial bool ElevationHintVisible { get; set; }
@@ -92,19 +81,30 @@ internal sealed partial class HomeViewModel : ObservableObject
     {
         var status = _services.Host.Status;
         var settings = _services.Host.Settings;
-        var card = HomeCards.Status(status);
-        StatusTitle = card.Title;
-        StatusHint = card.Hint;
-        StatusOk = card.IsOk;
-        StatusSection = card.Section;
-        StatusSymbol = card.Symbol;
+        Status = HomeCards.Status(status);
+        _statusAction = Status.Action;
         Microphone = HomeCards.Microphone(settings, _services.Platform.GetInputDevices());
         Ptt = HomeCards.Ptt(status, settings);
         Game = HomeCards.Game(status.Facts.Game);
         ElevationHintVisible = status.Facts.GameElevated;
     }
 
-    /// <summary>"Назначить" on the PTT tile opens the settings (spec: Button not assigned).</summary>
+    /// <summary>The button of the status card opens the section where the problem is solved (spec: Home status card).</summary>
+    [RelayCommand]
+    private void StatusAction()
+    {
+        switch (_statusAction)
+        {
+            case CardAction.OpenModels:
+                _openModels();
+                break;
+            case CardAction.OpenSettings:
+                _openSettings();
+                break;
+        }
+    }
+
+    /// <summary>The voice button tile with a problem opens the settings (spec: Button not assigned).</summary>
     [RelayCommand]
     private void OpenSettings() => _openSettings();
 
@@ -126,24 +126,22 @@ internal sealed partial class HomeViewModel : ObservableObject
     private void RefreshPhrases()
     {
         Phrases.Clear();
-        var journal = _services.Host.Journal;
-        foreach (var entry in journal.Entries)
+        foreach (var entry in _services.Host.Journal.Entries)
         {
             Phrases.Add(Row(entry));
         }
 
         NoPhrases = Phrases.Count == 0;
-        Counter = HomeCards.Counter(journal.TotalCount, journal.AppliedCount);
     }
 
     internal static PhraseRow Row(PhraseEntry entry)
     {
-        var detail = entry.Outcome switch
+        var reason = entry.Outcome switch
         {
             PhraseOutcome.Failed => $"{Texts.Stage(entry.FailedStage!.Value)}: {entry.Error}",
             PhraseOutcome.NotUnderstood when entry.Rejected is { } rejected => Texts.Reject(rejected),
-            PhraseOutcome.Unavailable when entry.Unavailable is { } reason =>
-                Loc.F($"reason.{reason}", entry.Error),
+            PhraseOutcome.Unavailable when entry.Unavailable is { } unavailable =>
+                Loc.F($"reason.{unavailable}", entry.Error),
             _ => entry.Error is { } cueError ? $"{Texts.Stage(Core.Events.PipelineStage.Cue)}: {cueError}" : string.Empty,
         };
         var text = entry.Text switch
@@ -154,16 +152,14 @@ internal sealed partial class HomeViewModel : ObservableObject
         };
         var tone = entry.Outcome switch
         {
-            PhraseOutcome.Applied or PhraseOutcome.InProgress => StateTone.Neutral,
-            PhraseOutcome.NotUnderstood => StateTone.Warn,
+            PhraseOutcome.Applied => StateTone.Ok,
+            PhraseOutcome.InProgress => StateTone.Neutral,
+            PhraseOutcome.NotUnderstood or PhraseOutcome.PartiallyApplied => StateTone.Warn,
             _ => StateTone.Problem,
         };
-        return new PhraseRow(
-            entry.PressedAt.ToLocalTime().ToString("HH:mm:ss", CultureInfo.InvariantCulture),
-            text,
-            Texts.Outcome(entry.Outcome),
-            entry.Response,
-            detail,
-            tone);
+        var chip = entry is { Outcome: PhraseOutcome.Applied, Short.Length: > 0 } ? entry.Short : Texts.Chip(entry.Outcome);
+        var at = entry.PressedAt.ToLocalTime();
+        var tip = string.Join('\n', new[] { entry.Response, reason, at.ToString("HH:mm:ss", CultureInfo.InvariantCulture) }.Where(l => l.Length > 0));
+        return new PhraseRow(at.ToString("HH:mm", CultureInfo.InvariantCulture), text, chip, tone, tip, entry.Outcome == PhraseOutcome.NotUnderstood);
     }
 }

@@ -28,7 +28,8 @@ internal static class Texts
 
     public static string Game(ConnectionState state) => Loc.T($"game.{state}");
 
-    public static string Outcome(PhraseOutcome outcome) => Loc.T($"outcome.{outcome}");
+    /// <summary>The outcome of a phrase in a word for its chip: "не понял", "нет игры".</summary>
+    public static string Chip(PhraseOutcome outcome) => Loc.T($"chip.{outcome}");
 
     public static string Stage(Core.Events.PipelineStage stage) => Loc.T($"stage.{stage}");
 
@@ -116,7 +117,7 @@ internal static class Texts
 
         foreach (var outcome in Enum.GetValues<PhraseOutcome>())
         {
-            yield return $"outcome.{outcome}";
+            yield return $"chip.{outcome}";
         }
 
         foreach (var stage in Enum.GetValues<Core.Events.PipelineStage>())
@@ -184,19 +185,19 @@ internal static class Texts
         foreach (var mode in Enum.GetValues<Core.Ptt.PttMode>())
         {
             yield return $"mode.{mode}";
-            yield return $"modeShort.{mode}";
         }
 
-        // The home page (spec: Home status card, Phrase counter).
+        // The home page (spec: Home status card, Home check tiles).
+        yield return "home.Ready";
         yield return "hint.Ready";
         foreach (var reason in Enum.GetValues<StatusReason>().Where(r => r != StatusReason.None))
         {
+            yield return $"home.{reason}";
             yield return $"hint.{reason}";
         }
 
         foreach (var category in Enum.GetValues<Core.Plural.PluralCategory>())
         {
-            yield return $"phrases.{category}";
             yield return $"ownPhrases.{category}";
         }
 

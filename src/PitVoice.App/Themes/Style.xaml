@@ -21,11 +21,10 @@
         <Setter Property="SnapsToDevicePixels" Value="True" />
     </Style>
 
-    <!-- A tile of the home page: a card with a little less padding, stretched in its column. -->
+    <!-- A tile of the home page: a one-line card with a little less padding, stretched in its column. -->
     <Style x:Key="Tile" TargetType="Border" BasedOn="{StaticResource Card}">
-        <Setter Property="Padding" Value="14,12" />
+        <Setter Property="Padding" Value="12,10" />
         <Setter Property="Margin" Value="0" />
-        <Setter Property="MinHeight" Value="96" />
     </Style>
 
     <!--

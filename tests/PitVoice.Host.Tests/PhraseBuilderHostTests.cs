@@ -81,7 +81,7 @@ public sealed class PhraseBuilderHostTests
         Assert.Equal("ставим дождевые, заливаем 20 литров", response);
         Assert.Null(notUnderstood);
         Assert.Equal(events, fixture.Events.Count);
-        Assert.Equal(0, host.Journal.TotalCount);
+        Assert.Empty(host.Journal.Entries);
         Assert.Empty(host.Pack!.UserPhrases);
         Assert.False(File.Exists(UserAdditionsLoader.GetFile(fixture.AdditionsDirectory, "ru")));
     }

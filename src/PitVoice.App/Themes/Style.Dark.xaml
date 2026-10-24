@@ -21,6 +21,10 @@
     <SolidColorBrush x:Key="StateOkBrush" Color="#6FD39A" />
     <SolidColorBrush x:Key="StateWarnBrush" Color="#F2C14E" />
     <SolidColorBrush x:Key="StateErrorBrush" Color="#FF8A80" />
+    <!-- Muted fills of the result chips and of a tile with a problem. -->
+    <SolidColorBrush x:Key="StateOkTintBrush" Color="#2B6FD39A" />
+    <SolidColorBrush x:Key="StateWarnTintBrush" Color="#2BF2C14E" />
+    <SolidColorBrush x:Key="StateErrorTintBrush" Color="#2BFF8A80" />
 
     <SolidColorBrush x:Key="DividerBrush" Color="#1AFFFFFF" />
     <SolidColorBrush x:Key="ChipBrush" Color="#24FFFFFF" />

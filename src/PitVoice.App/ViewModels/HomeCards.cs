@@ -1,9 +1,7 @@
-using System.Globalization;
 using PitVoice.App.Controls;
 using PitVoice.App.Localization;
 using PitVoice.Core.Audio;
 using PitVoice.Core.Pit;
-using PitVoice.Core.Plural;
 using PitVoice.Core.Ptt;
 using PitVoice.Core.Settings;
 using PitVoice.Host;
@@ -11,7 +9,7 @@ using Wpf.Ui.Controls;
 
 namespace PitVoice.App.ViewModels;
 
-/// <summary>How a tile or a word of state is colored: grey, green ("works") or red (a problem).</summary>
+/// <summary>How a tile or a word of state is colored: grey, green ("works"), amber or red (a problem).</summary>
 internal enum StateTone
 {
     Neutral,
@@ -20,109 +18,123 @@ internal enum StateTone
     Problem,
 }
 
-/// <summary>The status card of the home page (spec: Home status card).</summary>
-/// <param name="Title">"Всё готово", "Нет модели", "Ошибка — …", "Загрузка…".</param>
-/// <param name="Hint">What to do next.</param>
+/// <summary>Where the button of the status card leads.</summary>
+internal enum CardAction
+{
+    None,
+    OpenModels,
+    OpenSettings,
+}
+
+/// <summary>The status card of the home page, one line (spec: Home status card).</summary>
+/// <param name="Title">"Всё готово", "Нет модели", "Кнопка голоса не подключена", "Загрузка…".</param>
+/// <param name="ToolTip">What to do next: the former hint line.</param>
 /// <param name="IsOk">True only when the host is ready: the green mark.</param>
 /// <param name="Section">Hue of the icon.</param>
 /// <param name="Symbol">Icon of the card.</param>
-internal sealed record StatusCard(string Title, string Hint, bool IsOk, Section Section, SymbolRegular Symbol);
+/// <param name="Action">Where the button leads; <see cref="CardAction.None"/> without a button.</param>
+/// <param name="ActionText">"Скачать", "Назначить", ...; empty without a button.</param>
+internal sealed record StatusCard(string Title, string ToolTip, bool IsOk, Section Section, SymbolRegular Symbol, CardAction Action, string ActionText)
+{
+    public bool HasAction => Action != CardAction.None;
+}
 
-/// <summary>A check tile of the home page (spec: Home check tiles).</summary>
-/// <param name="Title">"Микрофон", "Кнопка PTT", "iRacing".</param>
-/// <param name="Value">Device name, binding or the game state.</param>
-/// <param name="StateText">The state in a word ("подключена", "не найден"); empty when the value says it all.</param>
-/// <param name="Tone">Color of the state word.</param>
-/// <param name="Detail">A second line in grey: mode, hint; empty when there is none.</param>
-/// <param name="ShowAssign">True to show the "Назначить" link to the settings.</param>
+/// <summary>A check tile of the home page, one line without a title (spec: Home check tiles).</summary>
+/// <param name="Value">Device name, binding or the game state: "fifine Microphone", "iRacing не запущен".</param>
+/// <param name="Tone">Color of the state dot.</param>
+/// <param name="ToolTip">The state in words, so it is not only a color: "Микрофон: подключён".</param>
+/// <param name="IsAction">True when the whole tile is the "Назначить кнопку" button to the settings.</param>
+/// <param name="DotInText">True for a dot before the text, false for a dot in the corner of the icon.</param>
 /// <param name="Section">Hue of the icon.</param>
 /// <param name="Symbol">Icon of the tile.</param>
-internal sealed record Tile(string Title, string Value, string StateText, StateTone Tone, string Detail, bool ShowAssign, Section Section, SymbolRegular Symbol);
+internal sealed record Tile(string Value, StateTone Tone, string ToolTip, bool IsAction, bool DotInText, Section Section, SymbolRegular Symbol)
+{
+    /// <summary>Name for a screen reader: the value and the state in words.</summary>
+    public string AccessibleName => $"{Value}. {ToolTip}";
+}
 
 /// <summary>
-/// Texts of the home page built from what the host knows (design D4 of refresh-window-visual-style): pure functions, so
+/// Texts of the home page built from what the host knows (design D4, D5 of simplify-window-screens): pure functions, so
 /// the tests check every host state without a window.
 /// </summary>
 internal static class HomeCards
 {
-    /// <summary>The status card; its title follows the tray icon state (<see cref="Texts.State"/>).</summary>
+    /// <summary>The status card; its title follows the tray icon state.</summary>
     public static StatusCard Status(HostStatus status)
     {
         ArgumentNullException.ThrowIfNull(status);
-        var reason = Texts.Reason(status);
-        return status switch
+        if (status.State == HostState.Ready)
         {
-            { State: HostState.Ready } => new StatusCard(Loc.T("HomeReady"), Loc.T("hint.Ready"), true, Section.Models, SymbolRegular.CheckmarkCircle24),
-            { Reason: StatusReason.Starting or StatusReason.ModelLoading } => new StatusCard(Loc.T("HomeLoading"), Hint(status), false, Section.Settings, SymbolRegular.Timer24),
-            { State: HostState.NoModel } => new StatusCard(Capital(Texts.State(status.State)), Hint(status), false, Section.Commands, SymbolRegular.ArrowDownload24),
-            { State: HostState.NoGame } => new StatusCard(Capital(Texts.State(status.State)), Hint(status), false, Section.Settings, SymbolRegular.Flag24),
-            _ => new StatusCard($"{Capital(Texts.State(status.State))} — {reason}", Hint(status), false, Section.Alert, SymbolRegular.ErrorCircle24),
+            return new StatusCard(Loc.T("home.Ready"), Loc.T("hint.Ready"), true, Section.Models, SymbolRegular.CheckmarkCircle24, CardAction.None, string.Empty);
+        }
+
+        var (action, actionKey) = status.Reason switch
+        {
+            StatusReason.ModelNotInstalled => (CardAction.OpenModels, "DownloadButton"),
+            StatusReason.ModelFailed => (CardAction.OpenModels, "NavModels"),
+            StatusReason.PttNotAssigned or StatusReason.PttDeviceDisconnected => (CardAction.OpenSettings, "AssignAction"),
+            StatusReason.PttSourceFailed => (CardAction.OpenSettings, "NavSettings"),
+            _ => (CardAction.None, null),
         };
+        var (section, symbol) = status switch
+        {
+            { Reason: StatusReason.Starting or StatusReason.ModelLoading } => (Section.Settings, SymbolRegular.Timer24),
+            { State: HostState.NoModel } => (Section.Commands, SymbolRegular.ArrowDownload24),
+            { State: HostState.NoGame } => (Section.Settings, SymbolRegular.Flag24),
+            _ => (Section.Alert, SymbolRegular.ErrorCircle24),
+        };
+        return new StatusCard(Loc.T($"home.{status.Reason}"), Hint(status), false, section, symbol, action,
+            actionKey is null ? string.Empty : Loc.T(actionKey));
     }
 
-    /// <summary>"Микрофон": the chosen device and whether it is in the system; "как в Windows" names the default one.</summary>
+    /// <summary>The microphone: the chosen device, or for "как в Windows" the current default one, by name only.</summary>
     public static Tile Microphone(AppSettings settings, IReadOnlyList<AudioDevice> present)
     {
         ArgumentNullException.ThrowIfNull(settings);
         ArgumentNullException.ThrowIfNull(present);
-        var title = Loc.T("TileMicrophone");
         if (settings.Microphone is not { } chosen)
         {
             var fallback = present.FirstOrDefault(d => d.IsDefault)?.Name ?? present.FirstOrDefault()?.Name;
             return fallback is null
-                ? new Tile(title, Loc.T("MicDefault"), Loc.T("MicNone"), StateTone.Problem, string.Empty, false, Section.Home, SymbolRegular.Mic24)
-                : new Tile(title, Loc.F("MicDefaultIs", fallback), Loc.T("MicPresent"), StateTone.Ok, string.Empty, false, Section.Home, SymbolRegular.Mic24);
+                ? Mic(Loc.T("MicNoneValue"), StateTone.Problem, Loc.T("MicNone"))
+                : Mic(fallback, StateTone.Ok, Loc.T("MicPresent"), Loc.T("MicDefaultTip"));
         }
 
         return present.Any(d => d.Name == chosen)
-            ? new Tile(title, chosen, Loc.T("MicPresent"), StateTone.Ok, string.Empty, false, Section.Home, SymbolRegular.Mic24)
-            : new Tile(title, chosen, Loc.T("MicMissing"), StateTone.Problem, Loc.T("MicMissingHint"), false, Section.Home, SymbolRegular.Mic24);
+            ? Mic(chosen, StateTone.Ok, Loc.T("MicPresent"))
+            : Mic(chosen, StateTone.Problem, Loc.T("MicMissing"), Loc.T("MicMissingHint"));
     }
 
-    /// <summary>"Кнопка PTT": device and button or key, the mode, and whether the device is connected.</summary>
+    /// <summary>The voice button: device and button or key without the mode; a problem makes the tile "Назначить кнопку".</summary>
     public static Tile Ptt(HostStatus status, AppSettings settings)
     {
         ArgumentNullException.ThrowIfNull(status);
         ArgumentNullException.ThrowIfNull(settings);
-        var title = Loc.T("TilePtt");
         if (settings.PttBinding is not { } binding)
         {
-            return new Tile(title, Loc.T("PttNone"), Loc.T("PttNotAssigned"), StateTone.Problem, string.Empty, true, Section.Overlay, SymbolRegular.Games24);
+            return Assign(Tip("TilePtt", Loc.T("PttNotAssigned"), Loc.T("hint.PttNotAssigned")));
         }
 
-        var mode = Loc.T($"modeShort.{settings.PttMode}");
-        var value = $"{Binding(binding)} · {mode}";
-        return status.Reason == StatusReason.PttDeviceDisconnected
-            ? new Tile(title, value, Loc.T("PttDisconnectedShort"), StateTone.Problem, string.Empty, true, Section.Overlay, SymbolRegular.Games24)
-            : binding.Kind == PttDeviceKind.Joystick
-                ? new Tile(title, value, Loc.T("PttConnected"), StateTone.Ok, string.Empty, false, Section.Overlay, SymbolRegular.Games24)
-                : new Tile(title, value, Loc.T("PttKeyboardReady"), StateTone.Ok, string.Empty, false, Section.Overlay, SymbolRegular.Keyboard24);
+        if (status.Reason == StatusReason.PttDeviceDisconnected)
+        {
+            return Assign(Tip("TilePtt", $"{Loc.T("PttDisconnectedShort")} — {Binding(binding)}", Loc.F("hint.PttDeviceDisconnected", binding.Name)));
+        }
+
+        return binding.Kind == PttDeviceKind.Joystick
+            ? new Tile(Loc.F("PttJoystickTile", binding.Name, binding.Key.Code), StateTone.Ok, Tip("TilePtt", Loc.T("PttConnected")), false, false, Section.Overlay, SymbolRegular.Games24)
+            : new Tile(Loc.F("PttKeyboard", binding.Name), StateTone.Ok, Tip("TilePtt", Loc.T("PttKeyboardReady")), false, false, Section.Overlay, SymbolRegular.Keyboard24);
     }
 
-    /// <summary>"iRacing": not running, running (not in the car), in the car.</summary>
+    /// <summary>iRacing: "iRacing не запущен", "iRacing запущен", "iRacing: в машине".</summary>
     public static Tile Game(ConnectionState game)
     {
-        var title = Loc.T("TileGame");
-        var value = Capital(Texts.Game(game));
-        return game switch
+        var (tone, tip) = game switch
         {
-            ConnectionState.NotRunning => new Tile(title, value, string.Empty, StateTone.Neutral, Loc.T("GameNotRunningHint"), false, Section.Commands, SymbolRegular.Flag24),
-            ConnectionState.Connected => new Tile(title, value, string.Empty, StateTone.Neutral, Loc.T("GameConnectedHint"), false, Section.Commands, SymbolRegular.Flag24),
-            _ => new Tile(title, value, Loc.T("GameInCarState"), StateTone.Ok, string.Empty, false, Section.Commands, SymbolRegular.Flag24),
+            ConnectionState.NotRunning => (StateTone.Neutral, Loc.T("GameNotRunningHint")),
+            ConnectionState.Connected => (StateTone.Neutral, Loc.T("GameConnectedHint")),
+            _ => (StateTone.Ok, Loc.T("GameInCarState")),
         };
-    }
-
-    /// <summary>"25 фраз, 23 применено"; empty without phrases (spec: Phrase counter).</summary>
-    public static string Counter(int total, int applied)
-    {
-        if (total == 0)
-        {
-            return string.Empty;
-        }
-
-        IPluralRules rules = Loc.Instance.Language == "ru" ? RuPluralRules.Instance : EnPluralRules.Instance;
-        var phrases = Loc.F($"phrases.{rules.Select(total)}", total);
-        return Loc.F("PhraseCounter", phrases, applied);
+        return new Tile(Texts.Game(game), tone, tip, false, true, Section.Commands, SymbolRegular.Flag24);
     }
 
     /// <summary>"SIMAGIC GT Neo, кнопка 1" or "клавиша F13", in the interface language.</summary>
@@ -134,8 +146,15 @@ internal static class HomeCards
             : Loc.F("PttKeyboard", binding.Name);
     }
 
-    private static string Hint(HostStatus status) => Loc.F($"hint.{status.Reason}", status.Detail);
+    private static Tile Mic(string value, StateTone tone, string state, params string[] more) =>
+        new(value, tone, Tip("TileMicrophone", state, more), false, false, Section.Home, SymbolRegular.Mic24);
 
-    private static string Capital(string text) =>
-        text.Length == 0 ? text : char.ToUpper(text[0], CultureInfo.InvariantCulture) + text[1..];
+    private static Tile Assign(string tip) =>
+        new(Loc.T("AssignButton"), StateTone.Problem, tip, true, false, Section.Overlay, SymbolRegular.Games24);
+
+    /// <summary>"Микрофон: не найден" and more lines under it.</summary>
+    private static string Tip(string titleKey, string state, params string[] more) =>
+        string.Join('\n', [$"{Loc.T(titleKey)}: {state}", .. more]);
+
+    private static string Hint(HostStatus status) => Loc.F($"hint.{status.Reason}", status.Detail);
 }

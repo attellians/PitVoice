@@ -72,35 +72,9 @@ public sealed class PhraseJournal
 
     private readonly Lock _lock = new();
     private readonly List<PhraseEntry> _entries = [];
-    private int _total;
-    private int _applied;
 
     /// <summary>The list changed.</summary>
     public event Action? Changed;
-
-    /// <summary>Phrases of this run that ended (cue signaled or press refused), beyond the <see cref="Capacity"/> shown (spec: Phrase counter).</summary>
-    public int TotalCount
-    {
-        get
-        {
-            lock (_lock)
-            {
-                return _total;
-            }
-        }
-    }
-
-    /// <summary>Of <see cref="TotalCount"/>, the phrases whose commands were applied.</summary>
-    public int AppliedCount
-    {
-        get
-        {
-            lock (_lock)
-            {
-                return _applied;
-            }
-        }
-    }
 
     /// <summary>Newest first.</summary>
     public IReadOnlyList<PhraseEntry> Entries
@@ -181,12 +155,10 @@ public sealed class PhraseJournal
 
             case PttUnavailable unavailable:
                 entry = entry with { Outcome = PhraseOutcome.Unavailable, Unavailable = unavailable.Reason, Error = unavailable.Detail, Finished = true };
-                Count(entry);
                 break;
 
             case ResultSignaled signaled:
                 entry = entry with { Response = signaled.ResponseText, Short = signaled.ShortText, Finished = true };
-                Count(entry);
                 break;
 
             default:
@@ -195,16 +167,6 @@ public sealed class PhraseJournal
 
         _entries[index] = entry;
         return true;
-    }
-
-    /// <summary>Counts a finished phrase once; a phrase finishes with one signal or one refusal.</summary>
-    private void Count(PhraseEntry entry)
-    {
-        _total++;
-        if (entry.Outcome == PhraseOutcome.Applied)
-        {
-            _applied++;
-        }
     }
 
     private static PhraseOutcome Map(ExecutionOutcome outcome) => outcome switch

@@ -196,7 +196,7 @@ internal partial class MainWindow : FluentWindow
             {
                 nameof(HomePage) => new HomePage(new HomeViewModel(services, window.OpenSettings, window.OpenModels)),
                 nameof(SettingsPage) => new SettingsPage(Settings = new SettingsViewModel(services, window.OpenModels)),
-                nameof(OverlayPage) when services.IndicatorControl is { } indicator => new OverlayPage(new IndicatorSettingsViewModel(indicator)),
+                nameof(OverlayPage) when services.IndicatorControl is { } indicator => new OverlayPage(new IndicatorSettingsViewModel(indicator, services.Vr)),
                 nameof(ModelsPage) =>new ModelsPage(new ModelsViewModel(services, window.ConfirmDeleteAsync)),
                 nameof(CommandsPage) => new CommandsPage(new CommandsViewModel(services, window.OpenPhrases)),
 

@@ -52,6 +52,9 @@ public sealed class SectionIconTests
             .ToHashSet(StringComparer.Ordinal);
 
         Assert.Contains("Gauge24", used);
+        Assert.Contains("Resize24", used);
+        Assert.Contains("ArrowReset24", used);
+        Assert.DoesNotContain("Scales24", used);
         Assert.DoesNotContain(used, name => !Enum.TryParse<SymbolRegular>(name, out _));
     }
 

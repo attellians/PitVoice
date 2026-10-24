@@ -6,6 +6,7 @@
     xmlns:controls="clr-namespace:PitVoice.App.Controls"
     xmlns:loc="clr-namespace:PitVoice.App.Localization"
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+    xmlns:vm="clr-namespace:PitVoice.App.ViewModels"
     Foreground="{DynamicResource TextFillColorPrimaryBrush}">
     <Page.Resources>
         <Style x:Key="RowIcon" TargetType="controls:SectionIcon">
@@ -15,6 +16,28 @@
         </Style>
         <Style x:Key="RowLabel" TargetType="TextBlock" BasedOn="{StaticResource Body}">
             <Setter Property="Margin" Value="0,0,16,0" />
+        </Style>
+        <!-- The state of the indicator in the headset: grey, green "в шлеме", red "ошибка VR" (spec: Color for state only). -->
+        <Style x:Key="VrState" TargetType="TextBlock" BasedOn="{StaticResource Caption}">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding StatusTone}" Value="{x:Static vm:StateTone.Ok}">
+                    <Setter Property="Foreground" Value="{DynamicResource StateOkBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding StatusTone}" Value="{x:Static vm:StateTone.Problem}">
+                    <Setter Property="Foreground" Value="{DynamicResource StateErrorBrush}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="VrDot" TargetType="Ellipse" BasedOn="{StaticResource StateDot}">
+            <Setter Property="Fill" Value="{DynamicResource TextFillColorTertiaryBrush}" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding StatusTone}" Value="{x:Static vm:StateTone.Ok}">
+                    <Setter Property="Fill" Value="{DynamicResource StateOkBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding StatusTone}" Value="{x:Static vm:StateTone.Problem}">
+                    <Setter Property="Fill" Value="{DynamicResource StateErrorBrush}" />
+                </DataTrigger>
+            </Style.Triggers>
         </Style>
     </Page.Resources>
 
@@ -28,6 +51,7 @@
             Message="{Binding SaveError}"
             Severity="Error" />
 
+        <!-- The top card: "Показывать оверлей" and under it "Режим VR" (spec: Indicator settings, VR mode setting). -->
         <Border Style="{StaticResource Card}" Padding="16,8">
             <StackPanel>
                 <Border Style="{StaticResource ListRowFirst}">
@@ -40,6 +64,33 @@
                         <controls:SectionIcon Style="{StaticResource RowIcon}" Symbol="Layer24" />
                         <TextBlock Grid.Column="1" Style="{StaticResource RowLabel}" Text="{loc:Tr OverlayEnabled}" />
                         <ui:ToggleSwitch Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center" IsChecked="{Binding Enabled}" />
+                    </Grid>
+                </Border>
+                <!-- The label, the dot and the state in one line, the state cut with an ellipsis; the switch on the right. -->
+                <Border Style="{StaticResource ListRow}" Visibility="{Binding HasVr, Converter={StaticResource Visible}}">
+                    <Grid DataContext="{Binding Vr}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <controls:SectionIcon Style="{StaticResource RowIcon}" Symbol="HeadsetVr24" />
+                        <TextBlock Grid.Column="1" Margin="0,0,12,0" Style="{StaticResource Body}" Text="{loc:Tr VrLabel}" />
+                        <Ellipse Grid.Column="2" Style="{StaticResource VrDot}" />
+                        <TextBlock
+                            Grid.Column="3"
+                            Margin="0,0,16,0"
+                            Style="{StaticResource VrState}"
+                            Text="{Binding StatusText}"
+                            ToolTip="{Binding StatusText}" />
+                        <ui:ToggleSwitch
+                            Grid.Column="4"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Center"
+                            AutomationProperties.Name="{loc:Tr VrLabel}"
+                            IsChecked="{Binding Enabled}" />
                     </Grid>
                 </Border>
             </StackPanel>
@@ -74,7 +125,7 @@
                                 <ColumnDefinition Width="3*" />
                                 <ColumnDefinition Width="4*" />
                             </Grid.ColumnDefinitions>
-                            <controls:SectionIcon Style="{StaticResource RowIcon}" Symbol="Scales24" />
+                            <controls:SectionIcon Style="{StaticResource RowIcon}" Symbol="Resize24" />
                             <TextBlock Grid.Column="1" Style="{StaticResource RowLabel}" Text="{loc:Tr OverlayScaleLabel}" />
                             <StackPanel Grid.Column="2" HorizontalAlignment="Right" Orientation="Horizontal">
                                 <Slider
@@ -108,6 +159,7 @@
                 </StackPanel>
             </Border>
 
+            <!-- One row: "Положение индикатора" with a hint, "Переместить" and the reset icon button (spec: Place row). -->
             <Border Style="{StaticResource Card}" Padding="16,8">
                 <StackPanel>
                     <TextBlock Margin="0,4,0,4" Style="{StaticResource SectionTitle}" Text="{loc:Tr OverlayPlaceSection}" />
@@ -117,13 +169,33 @@
                                 <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-                            <controls:SectionIcon Style="{StaticResource RowIcon}" Symbol="ArrowMove24" VerticalAlignment="Top" Margin="0,2,12,0" />
-                            <TextBlock Grid.Column="1" Style="{StaticResource CaptionWrap}" Text="{loc:Tr OverlayPlaceNote}" />
-                            <StackPanel Grid.Column="2" Margin="16,0,0,0" VerticalAlignment="Center">
-                                <ui:Button HorizontalAlignment="Stretch" Appearance="Primary" Command="{Binding ToggleMoveCommand}" Content="{Binding MoveText}" />
-                                <ui:Button Margin="0,8,0,0" HorizontalAlignment="Stretch" Command="{Binding ResetPositionCommand}" Content="{loc:Tr OverlayResetPosition}" IsEnabled="{Binding HasCustomPosition}" />
+                            <controls:SectionIcon Style="{StaticResource RowIcon}" Symbol="ArrowMove24" />
+                            <StackPanel Grid.Column="1" Margin="0,0,16,0" VerticalAlignment="Center">
+                                <TextBlock Style="{StaticResource Body}" Text="{loc:Tr OverlayPlaceLabel}" />
+                                <TextBlock Margin="0,2,0,0" Style="{StaticResource CaptionWrap}" Text="{loc:Tr OverlayPlaceHint}" />
                             </StackPanel>
+                            <ui:Button
+                                Grid.Column="2"
+                                VerticalAlignment="Center"
+                                Appearance="Primary"
+                                Command="{Binding ToggleMoveCommand}"
+                                Content="{Binding MoveText}" />
+                            <ui:Button
+                                Grid.Column="3"
+                                Width="36"
+                                Height="36"
+                                Margin="8,0,0,0"
+                                Padding="0"
+                                VerticalAlignment="Center"
+                                AutomationProperties.Name="{loc:Tr OverlayResetPosition}"
+                                Command="{Binding ResetPositionCommand}"
+                                IsEnabled="{Binding HasCustomPosition}"
+                                ToolTip="{loc:Tr OverlayResetPosition}"
+                                ToolTipService.ShowOnDisabled="True">
+                                <ui:SymbolIcon FontSize="16" Symbol="ArrowReset24" />
+                            </ui:Button>
                         </Grid>
                     </Border>
                 </StackPanel>

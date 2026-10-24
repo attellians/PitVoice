@@ -43,6 +43,22 @@ public sealed partial class SettingsPageTests
         Assert.DoesNotContain("ui:Card", xaml, StringComparison.Ordinal);
     }
 
+    /// <summary>Spec: VR mode row — "Язык и вид" has the three rows of language, interface language and theme.</summary>
+    [Fact]
+    public void Look_group_has_three_rows_and_no_vr_mode()
+    {
+        var xaml = File.ReadAllText(Path.Combine(SourceDirectory(), "Pages", "SettingsPage.xaml"));
+        var start = xaml.IndexOf("LookSection", StringComparison.Ordinal);
+        var group = xaml[start..xaml.IndexOf("PttSection", start, StringComparison.Ordinal)];
+
+        var symbols = Regex.Matches(group, "Symbol=\"([A-Za-z0-9]+)\"").Select(m => m.Groups[1].Value);
+        Assert.Equal(["Translate24", "Globe24", "DarkTheme24"], symbols);
+        Assert.DoesNotContain("Vr", xaml, StringComparison.Ordinal);
+
+        var overlay = File.ReadAllText(Path.Combine(SourceDirectory(), "Pages", "OverlayPage.xaml"));
+        Assert.Contains("VrLabel", overlay, StringComparison.Ordinal);
+    }
+
     private static string SourceDirectory()
     {
         for (var directory = new DirectoryInfo(AppContext.BaseDirectory); directory is not null; directory = directory.Parent)

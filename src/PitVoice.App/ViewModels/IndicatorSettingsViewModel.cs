@@ -8,22 +8,34 @@ using PitVoice.Core.Settings;
 namespace PitVoice.App.ViewModels;
 
 /// <summary>
-/// The "Indicator" block of the settings (spec: Indicator settings, Moving the indicator). Every change is saved at once
-/// and applies live; "Move" turns into "Done" in move mode; "Move" and "Reset position" are hidden while the indicator is
-/// turned off.
+/// The "Overlay" page (spec: Indicator settings, Moving the indicator). Every change is saved at once and applies live;
+/// "Move" turns into "Done" in move mode; "Move" and "Reset position" are hidden while the indicator is turned off. The
+/// "VR mode" row is the second row of the top card (design D7 of simplify-window-screens).
 /// </summary>
 internal sealed partial class IndicatorSettingsViewModel : ObservableObject
 {
     private readonly IIndicatorControl _control;
     private bool _loading;
 
-    public IndicatorSettingsViewModel(IIndicatorControl control)
+    /// <param name="control">The indicator and its settings.</param>
+    /// <param name="vr">State of the indicator in the headset; null without VR support, then there is no VR row.</param>
+    public IndicatorSettingsViewModel(IIndicatorControl control, IVrStatus? vr = null)
     {
         _control = control;
+        if (vr is not null)
+        {
+            Vr = new VrSettingsViewModel(control, vr);
+        }
+
         control.Changed += Load;
         Loc.Instance.LanguageChanged += Load;
         Load();
     }
+
+    /// <summary>The "VR mode" row; null without VR support.</summary>
+    public VrSettingsViewModel? Vr { get; }
+
+    public bool HasVr => Vr is not null;
 
     public ObservableCollection<Choice> Kinds { get; } = [];
 

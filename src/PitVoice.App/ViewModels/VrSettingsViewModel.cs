@@ -15,8 +15,8 @@ internal interface IVrStatus
 }
 
 /// <summary>
-/// The "VR mode" row of "Language and look" (add-vr-overlay spec: VR mode setting): the switch saves <c>overlay.vr</c> at
-/// once, the line under it shows the state of the indicator in the headset (D8).
+/// The "VR mode" row of the "Overlay" page (spec: VR mode setting): the switch saves <c>overlay.vr</c> at
+/// once, the state of the indicator in the headset follows the label in the same line (D8).
 /// </summary>
 internal sealed partial class VrSettingsViewModel : ObservableObject
 {

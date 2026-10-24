@@ -8,7 +8,7 @@ using Xunit;
 
 namespace PitVoice.App.Tests;
 
-/// <summary>The "VR mode" row of the settings (add-vr-overlay spec: VR mode setting; D8).</summary>
+/// <summary>The "VR mode" row of the "Overlay" page (spec: VR mode setting; D7 of simplify-window-screens).</summary>
 [Collection("Interface language")]
 public sealed class VrSettingsViewModelTests
 {
@@ -45,7 +45,8 @@ public sealed class VrSettingsViewModelTests
         {
             var strings = Loc.LoadDictionary(language)!;
             Assert.All(Enum.GetValues<VrState>(), s => Assert.True(strings.ContainsKey($"vr.{s}"), $"{language}: vr.{s}"));
-            Assert.True(strings.ContainsKey("VrLabel") && strings.ContainsKey("VrHint"), language);
+            Assert.True(strings.ContainsKey("VrLabel"), language);
+            Assert.False(strings.ContainsKey("VrHint"), language);
         }
     }
 

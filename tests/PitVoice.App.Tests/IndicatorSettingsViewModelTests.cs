@@ -89,6 +89,25 @@ public sealed class IndicatorSettingsViewModelTests
         Assert.False(model.Moving);
     }
 
+    /// <summary>Design D7 of simplify-window-screens: the "VR mode" row lives on the "Overlay" page.</summary>
+    [Fact]
+    public void Overlay_page_has_the_vr_row_that_saves_the_mode()
+    {
+        var control = new FakeControl();
+        var status = new Status();
+        var model = new IndicatorSettingsViewModel(control, status);
+        Assert.True(model.HasVr);
+        var vr = model.Vr!;
+        Assert.False(vr.Enabled);
+
+        status.State = Overlay.Vr.VrState.WaitingSteamVr;
+        vr.Enabled = true;
+
+        Assert.True(control.Settings.Vr);
+        Assert.Equal(Loc.T("vr.WaitingSteamVr"), vr.StatusText);
+        Assert.False(new IndicatorSettingsViewModel(new FakeControl()).HasVr);
+    }
+
     [Fact]
     public void Failed_save_is_shown_and_the_change_still_applies()
     {
@@ -99,6 +118,15 @@ public sealed class IndicatorSettingsViewModelTests
 
         Assert.Equal(175, control.Settings.Scale);
         Assert.Contains("read-only", model.SaveError, StringComparison.Ordinal);
+    }
+
+    private sealed class Status : IVrStatus
+    {
+        public event Action? Changed;
+
+        public Overlay.Vr.VrState State { get; set; }
+
+        public void Raise() => Changed?.Invoke();
     }
 
     /// <summary>Behaves like <see cref="IndicatorControl"/>: changes are raised at once, move mode ends with the indicator.</summary>

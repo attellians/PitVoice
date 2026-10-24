@@ -40,27 +40,6 @@
                 </DataTrigger>
             </Style.Triggers>
         </Style>
-        <Style x:Key="VrState" TargetType="TextBlock" BasedOn="{StaticResource Caption}">
-            <Style.Triggers>
-                <DataTrigger Binding="{Binding StatusTone}" Value="{x:Static vm:StateTone.Ok}">
-                    <Setter Property="Foreground" Value="{DynamicResource StateOkBrush}" />
-                </DataTrigger>
-                <DataTrigger Binding="{Binding StatusTone}" Value="{x:Static vm:StateTone.Problem}">
-                    <Setter Property="Foreground" Value="{DynamicResource StateErrorBrush}" />
-                </DataTrigger>
-            </Style.Triggers>
-        </Style>
-        <Style x:Key="VrDot" TargetType="Ellipse" BasedOn="{StaticResource StateDot}">
-            <Setter Property="Fill" Value="{DynamicResource TextFillColorTertiaryBrush}" />
-            <Style.Triggers>
-                <DataTrigger Binding="{Binding StatusTone}" Value="{x:Static vm:StateTone.Ok}">
-                    <Setter Property="Fill" Value="{DynamicResource StateOkBrush}" />
-                </DataTrigger>
-                <DataTrigger Binding="{Binding StatusTone}" Value="{x:Static vm:StateTone.Problem}">
-                    <Setter Property="Fill" Value="{DynamicResource StateErrorBrush}" />
-                </DataTrigger>
-            </Style.Triggers>
-        </Style>
     </Page.Resources>
 
     <StackPanel Margin="24,16,24,24">
@@ -141,31 +120,6 @@
                             SelectedValue="{Binding Theme}"
                             SelectedValuePath="Key"
                             Style="{StaticResource RowCombo}" />
-                    </Grid>
-                </Border>
-                <!-- Режим VR: the last row of the group (add-vr-overlay spec: VR mode row). -->
-                <Border DataContext="{Binding Vr}" Style="{StaticResource ListRow}">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <controls:SectionIcon Section="Overlay" Style="{StaticResource RowIcon}" Symbol="HeadsetVr24" />
-                        <StackPanel Grid.Column="1" Margin="0,0,16,0" VerticalAlignment="Center">
-                            <TextBlock Style="{StaticResource Body}" Text="{loc:Tr VrLabel}" />
-                            <TextBlock Margin="0,2,0,0" Style="{StaticResource CaptionWrap}" Text="{loc:Tr VrHint}" />
-                            <StackPanel Margin="0,2,0,0" Orientation="Horizontal">
-                                <Ellipse Style="{StaticResource VrDot}" />
-                                <TextBlock Style="{StaticResource VrState}" Text="{Binding StatusText}" />
-                            </StackPanel>
-                            <TextBlock
-                                Margin="0,2,0,0"
-                                Style="{StaticResource ErrorText}"
-                                Text="{Binding SaveError}"
-                                Visibility="{Binding SaveError, Converter={StaticResource NotEmptyVisible}}" />
-                        </StackPanel>
-                        <ui:ToggleSwitch Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center" IsChecked="{Binding Enabled}" />
                     </Grid>
                 </Border>
             </StackPanel>

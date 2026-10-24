@@ -62,7 +62,7 @@
             tiles). A tile with a problem is a muted red button to the settings.
         -->
         <DataTemplate x:Key="TileTemplate" DataType="{x:Type vm:Tile}">
-            <Grid AutomationProperties.Name="{Binding AccessibleName}" ToolTip="{Binding ToolTip}">
+            <Grid ToolTip="{Binding ToolTip}">
                 <Border>
                     <Border.Style>
                         <Style TargetType="Border" BasedOn="{StaticResource Tile}">
@@ -115,7 +115,8 @@
                                 </Style>
                             </Ellipse.Style>
                         </Ellipse>
-                        <TextBlock Grid.Column="2" Text="{Binding Value}">
+                        <!-- Panels have no automation peer: the screen reader name with the state in words is on the text. -->
+                        <TextBlock Grid.Column="2" AutomationProperties.Name="{Binding AccessibleName}" Text="{Binding Value}">
                             <TextBlock.Style>
                                 <Style TargetType="TextBlock" BasedOn="{StaticResource Body}">
                                     <Style.Triggers>

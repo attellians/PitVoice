@@ -28,9 +28,6 @@
   <a href="README.md">Русский</a>
 </p>
 
-> [!WARNING]
-> The only official builds are on this repository's [Releases](https://github.com/attellians/PitVoice/releases) page.
-
 <p align="center">
   <img width="760" src=".github/assets/window-home.png" alt="PitVoice home page: all set, microphone, button and iRacing connected, recent phrases">
   <br>
@@ -60,7 +57,7 @@ them.
   Clicks pass through it into the game. Kind, size, opacity and place are set on the "Overlay" page.
 - **Indicator in the VR headset** (new). Turned on with "VR mode" in "Settings"; works when iRacing runs through
   SteamVR. More in the [FAQ](#faq).
-- **Own phrases.** Give a pit command your own phrase: "Commands" → "Own phrases" → "Set up". The phrase is checked
+- **Own phrases** (new). Give a pit command your own phrase: "Commands" → "Own phrases" → "Set up". The phrase is checked
   at once, before it is saved, and the reference shows it marked "own".
 - **Recent phrases** on the home page: what was heard, how it ended and why.
 - **Lives in the tray**, needs no administrator rights and never touches the game process.

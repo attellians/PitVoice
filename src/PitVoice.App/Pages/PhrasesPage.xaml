@@ -8,7 +8,10 @@
     xmlns:vm="clr-namespace:PitVoice.App.ViewModels"
     Foreground="{DynamicResource TextFillColorPrimaryBrush}">
     <StackPanel Margin="24,16,24,24">
-        <!-- The page lives inside "Commands": its own back arrow and the path "Команды / Свои фразы" (design D8, D13). -->
+        <!--
+            The page lives inside "Commands": its own back arrow and the path "Команды / Свои фразы" (design D8, D13).
+            The path is one TextBlock: runs of different sizes share the baseline at any DPI (simplify-window-screens D11).
+        -->
         <Grid Margin="0,0,0,4">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
@@ -27,23 +30,19 @@
                 ToolTip="{loc:Tr BackButton}">
                 <ui:SymbolIcon FontSize="18" Symbol="ArrowLeft24" />
             </ui:Button>
-            <WrapPanel Grid.Column="1" VerticalAlignment="Center">
-                <TextBlock
-                    Margin="0,0,8,0"
-                    VerticalAlignment="Center"
+            <TextBlock
+                Grid.Column="1"
+                VerticalAlignment="Center"
+                Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                TextWrapping="Wrap"><Run
                     Cursor="Hand"
                     FontSize="20"
-                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                     MouseLeftButtonUp="OnBack"
-                    Text="{loc:Tr NavCommands}" />
-                <TextBlock
-                    Margin="0,0,8,0"
-                    VerticalAlignment="Center"
-                    FontSize="20"
-                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                    Text="/" />
-                <TextBlock VerticalAlignment="Center" Style="{StaticResource PageTitle}" Text="{loc:Tr PhrasesTitle}" />
-            </WrapPanel>
+                    Text="{loc:Tr NavCommands}" /><Run FontSize="20" Text=" / " /><Run
+                    FontSize="26"
+                    FontWeight="SemiBold"
+                    Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                    Text="{loc:Tr PhrasesTitle}" /></TextBlock>
         </Grid>
         <TextBlock Margin="0,0,0,16" Style="{StaticResource Caption}" Text="{Binding LanguageTitle}" />
 

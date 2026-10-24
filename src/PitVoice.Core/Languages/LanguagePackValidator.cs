@@ -153,7 +153,13 @@ public static class LanguagePackValidator
                     }
                 }
 
-                units[unitId] = new UnitDefinition(unitId, synonyms, forms);
+                var abbreviation = unit?.Short?.Trim() ?? string.Empty;
+                if (abbreviation.Length == 0)
+                {
+                    Error($"unit '{unitId}' has no abbreviation 'short' for short responses", "units", unitId);
+                }
+
+                units[unitId] = new UnitDefinition(unitId, synonyms, forms, abbreviation);
             }
         }
 
@@ -353,13 +359,7 @@ public static class LanguagePackValidator
 
                 foreach (var placeholder in Placeholders(value))
                 {
-                    var allowed = isIntent && placeholder switch
-                    {
-                        "amount" => definition!.HasSlot(SlotKind.Amount),
-                        "unit" => definition!.HasSlot(SlotKind.Unit),
-                        _ => false,
-                    };
-                    if (!allowed)
+                    if (!isIntent || !Provides(definition!, placeholder))
                     {
                         Error($"response '{key}' uses {{{placeholder}}}, which it does not provide", "responses", key);
                     }
@@ -399,6 +399,41 @@ public static class LanguagePackValidator
             if (!responses.ContainsKey(intent.Value))
             {
                 Error($"intent '{intent}' has no response", "responses");
+            }
+        }
+
+        // --- short responses: the result chip of an applied phrase ("все шины · +25 л")
+        var shortResponses = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var (key, value) in dto.ShortResponses ?? [])
+        {
+            if (!IntentCatalog.TryGet(new IntentId(key), out var definition))
+            {
+                Error($"unknown short response '{key}': it is not a catalog intent", "short_responses", key);
+                continue;
+            }
+
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                Error($"short response '{key}' is empty", "short_responses", key);
+                continue;
+            }
+
+            foreach (var placeholder in Placeholders(value))
+            {
+                if (!Provides(definition, placeholder))
+                {
+                    Error($"short response '{key}' uses {{{placeholder}}}, which it does not provide", "short_responses", key);
+                }
+            }
+
+            shortResponses[key] = value.Trim();
+        }
+
+        foreach (var intent in IntentCatalog.All.Select(d => d.Id).Where(available.Contains))
+        {
+            if (!shortResponses.ContainsKey(intent.Value))
+            {
+                Error($"intent '{intent}' has no short response in 'short_responses'", "short_responses");
             }
         }
 
@@ -470,6 +505,7 @@ public static class LanguagePackValidator
             tests,
             normalizer!)
         {
+            ShortResponses = shortResponses,
             RejectWords = rejectWords,
             IntoHomophones = intoHomophones,
         };
@@ -505,6 +541,13 @@ public static class LanguagePackValidator
 
         return result;
     }
+
+    private static bool Provides(IntentDefinition definition, string placeholder) => placeholder switch
+    {
+        "amount" => definition.HasSlot(SlotKind.Amount),
+        "unit" => definition.HasSlot(SlotKind.Unit),
+        _ => false,
+    };
 
     private static IEnumerable<string> Placeholders(string text)
     {

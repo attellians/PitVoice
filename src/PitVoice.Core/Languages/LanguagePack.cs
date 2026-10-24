@@ -9,10 +9,12 @@ namespace PitVoice.Core.Languages;
 /// <param name="Id">Canonical id (<see cref="FuelUnits"/>).</param>
 /// <param name="Synonyms">Normalized words that mean this unit in speech.</param>
 /// <param name="Forms">Word form per plural category, used in responses.</param>
+/// <param name="Short">Abbreviation used in short responses, the same for every number.</param>
 public sealed record UnitDefinition(
     string Id,
     IReadOnlyList<string> Synonyms,
-    IReadOnlyDictionary<PluralCategory, string> Forms);
+    IReadOnlyDictionary<PluralCategory, string> Forms,
+    string Short);
 
 /// <summary>A command the pack expects a test phrase to produce; <c>null</c> fields are not checked.</summary>
 public sealed record ExpectedCommand(IntentId Intent, int? Amount, string? Unit)
@@ -130,6 +132,9 @@ public sealed class LanguagePack
     /// <summary>Responses of intents (by intent id) and generic ones: <c>not_understood</c>, <c>not_connected</c>, ...</summary>
     public IReadOnlyDictionary<string, string> Responses { get; }
 
+    /// <summary>Short responses of intents (by intent id) for the result chip of a phrase.</summary>
+    public IReadOnlyDictionary<string, string> ShortResponses { get; internal init; } = new Dictionary<string, string>(StringComparer.Ordinal);
+
     public IReadOnlyList<PackTest> Tests { get; }
 
     public Normalizer Normalizer { get; }
@@ -138,6 +143,9 @@ public sealed class LanguagePack
 
     /// <summary>The response of <paramref name="intent"/>.</summary>
     public string ResponseOf(IntentId intent) => Responses[intent.Value];
+
+    /// <summary>The short response of <paramref name="intent"/>.</summary>
+    public string ShortResponseOf(IntentId intent) => ShortResponses[intent.Value];
 
     /// <summary>Catalog intents this pack cannot produce; phrases for them are rejected in this language.</summary>
     public IReadOnlyList<IntentId> MissingIntents =>
@@ -158,6 +166,7 @@ public sealed class LanguagePack
             Lexicon.With(extra), Responses, Tests, Normalizer, Intents)
         {
             AdditionsFile = additionsFile,
+            ShortResponses = ShortResponses,
             RejectWords = RejectWords,
             IntoHomophones = IntoHomophones,
             UserPhrases = [.. UserPhrases, .. phrases],

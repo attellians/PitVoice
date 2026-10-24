@@ -45,6 +45,9 @@ public sealed class LanguagePackDto
 
     public Dictionary<string, string?>? Responses { get; set; }
 
+    /// <summary>Intent → short response for the result chip of a phrase: <c>fuel.add: "+{amount} {unit}"</c>.</summary>
+    public Dictionary<string, string?>? ShortResponses { get; set; }
+
     public List<TestDto?>? Tests { get; set; }
 }
 
@@ -53,6 +56,9 @@ public sealed class UnitDto
     public List<string?>? Synonyms { get; set; }
 
     public Dictionary<string, string?>? Forms { get; set; }
+
+    /// <summary>Abbreviation used in short responses, not agreed with the number: <c>л</c>, <c>gal</c>.</summary>
+    public string? Short { get; set; }
 }
 
 public sealed class TestDto

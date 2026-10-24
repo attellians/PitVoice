@@ -58,7 +58,9 @@ public sealed record ApplyFailed(int PhraseId, DateTimeOffset Timestamp, Executi
 /// <param name="ResponseText">Text response of the language pack for the outcome.</param>
 /// <param name="Cancelled">True when a newer press cancelled the cue, so it did not play.</param>
 /// <param name="LatencyFromStop">From the end of the recording to the cue.</param>
-public sealed record ResultSignaled(int PhraseId, DateTimeOffset Timestamp, Cue Cue, string ResponseText, bool Cancelled, TimeSpan LatencyFromStop)
+/// <param name="ShortText">Short responses of the applied commands ("все шины · +25 л"); empty when not applied.</param>
+public sealed record ResultSignaled(
+    int PhraseId, DateTimeOffset Timestamp, Cue Cue, string ResponseText, bool Cancelled, TimeSpan LatencyFromStop, string ShortText = "")
     : PipelineEvent(PhraseId, Timestamp);
 
 /// <summary>A stage failed. The phrase ends with the error cue (unless the cue itself failed); the host keeps running.</summary>

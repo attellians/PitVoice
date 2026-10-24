@@ -8,6 +8,7 @@ units:                             # only `liters` and `gallons` are known
   liters:
     synonyms: [литр, литра, литров]                 # single words that mean this unit in speech
     forms: { one: литр, few: литра, many: литров }  # one form per plural category of `plural_rules`
+    short: л                                        # abbreviation for short responses
 
 conjunctions: [и, а также]         # split compound phrases; multi-word entries are allowed
 fillers: [пожалуйста, ну]          # removed before parsing; must not appear in the lexicon
@@ -40,6 +41,16 @@ responses:
   not_connected: "нет связи с игрой"     # required
   not_in_car: "ты не в машине"           # required
   apply_failed: "команда не применилась" # required
+
+short_responses:                   # result chip in the window, one per command of `responses`
+  fuel.add: "+{amount} {unit}"
+  fuel.none: "без топлива"
+  tires.all: "все шины"
+  tires.front: "передние"
+  tires.lf: "переднее левое"
+  tires.none: "без шин"
+  tires.none.front: "без передних"
+  tires.none.lf: "без переднего левого"
 
 tests:
   - say: "залей тридцать пять литров"

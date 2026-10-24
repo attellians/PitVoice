@@ -11,9 +11,11 @@ units:
   liters:
     synonyms: [литр, литра, литров, литры, л]
     forms: { one: литр, few: литра, many: литров }
+    short: л
   gallons:
     synonyms: [галлон, галлона, галлонов]
     forms: { one: галлон, few: галлона, many: галлонов }
+    short: гал
 
 conjunctions: [и, а также, плюс, потом, затем, ещё]
 fillers: [пожалуйста, давай, так, ну, слушай, эй, короче, значит, надо]
@@ -112,6 +114,36 @@ responses:
   no_dry_tires: "у машины нет сухих шин"
   no_wet_tires: "у машины нет дождевых шин"
   several_dry_tires: "у машины несколько сухих составов"
+
+# The result chip of an applied phrase in the window: short responses of its commands joined by " · ".
+short_responses:
+  fuel.add: "+{amount} {unit}"
+  fuel.none: "без топлива"
+  tires.all: "все шины"
+  tires.left: "левые"
+  tires.right: "правые"
+  tires.front: "передние"
+  tires.rear: "задние"
+  tires.lf: "переднее левое"
+  tires.rf: "переднее правое"
+  tires.lr: "заднее левое"
+  tires.rr: "заднее правое"
+  tires.dry: "сухие"
+  tires.wet: "дождевые"
+  tires.none: "без шин"
+  tires.none.left: "без левых"
+  tires.none.right: "без правых"
+  tires.none.front: "без передних"
+  tires.none.rear: "без задних"
+  tires.none.lf: "без переднего левого"
+  tires.none.rf: "без переднего правого"
+  tires.none.lr: "без заднего левого"
+  tires.none.rr: "без заднего правого"
+  windshield.tearoff: "стекло"
+  windshield.none: "без стекла"
+  repair.fast: "ремонт"
+  repair.none: "без ремонта"
+  pit.clear: "сброс"
 
 tests:
   # fuel.add: every verb

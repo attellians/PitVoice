@@ -112,6 +112,7 @@ public sealed class VoicePipelineTests : IAsyncLifetime
         Assert.Equal(Cue.Success, result.Cue);
         Assert.False(result.Cancelled);
         Assert.Equal("меняем все шины, заливаем 25 литров", result.ResponseText);
+        Assert.Equal("все шины · +25 л", result.ShortText);
         Assert.Equal(Wheels.All, _game.Pit.Wheels);
         Assert.Equal(25, _game.Pit.FuelToAdd);
         Assert.Equal([Cue.Start, Cue.Success], _cues.Played);
@@ -127,6 +128,7 @@ public sealed class VoicePipelineTests : IAsyncLifetime
         var result = await Result(1);
         Assert.Equal(Cue.Error, result.Cue);
         Assert.Equal(TestPacks.Ru.Responses[ResponseBuilder.NotConnectedKey], result.ResponseText);
+        Assert.Equal(string.Empty, result.ShortText);
         Assert.Empty(_sink.Sent);
         Assert.Equal(ExecutionOutcome.NotConnected, (await WaitFor<ApplyFailed>()).Outcome);
     }
@@ -153,7 +155,9 @@ public sealed class VoicePipelineTests : IAsyncLifetime
         Press();
         Release();
 
-        Assert.Equal(Cue.Error, (await Result(1)).Cue);
+        var result = await Result(1);
+        Assert.Equal(Cue.Error, result.Cue);
+        Assert.Equal(string.Empty, result.ShortText);
         Assert.Equal(RejectReason.LowConfidence, (await WaitFor<CommandsRejected>()).Reason);
         Assert.Empty(_sink.Sent);
     }

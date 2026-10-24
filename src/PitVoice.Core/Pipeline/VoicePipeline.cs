@@ -246,7 +246,7 @@ public sealed class VoicePipeline : IAsyncDisposable
         {
             if (await ProcessAsync(phrase).ConfigureAwait(false) is { } result)
             {
-                Signal(phrase, result.Cue, result.Response);
+                Signal(phrase, result.Cue, result.Response, result.Short);
             }
 
             lock (_lock)
@@ -257,7 +257,7 @@ public sealed class VoicePipeline : IAsyncDisposable
     }
 
     /// <summary>Recognition, parsing and execution of one phrase; null when the pipeline is being stopped.</summary>
-    private async Task<(Cue Cue, string Response)?> ProcessAsync(Phrase phrase)
+    private async Task<(Cue Cue, string Response, string Short)?> ProcessAsync(Phrase phrase)
     {
         if (phrase.CaptureError is { } captureError)
         {
@@ -300,17 +300,19 @@ public sealed class VoicePipeline : IAsyncDisposable
         {
             var rejected = (ParseResult.Rejected)parse;
             Publish(new CommandsRejected(phrase.Id, Now, rejected.Reason, rejected.Details));
-            return (Cue.Error, _services.Responses.Build(parse));
+            return (Cue.Error, _services.Responses.Build(parse), string.Empty);
         }
 
         Publish(new CommandsParsed(phrase.Id, Now, accepted.Commands));
 
         ExecutionResult execution;
         string response;
+        string shortResponse;
         try
         {
             execution = await _services.Executor.ExecuteAsync(accepted, speech.Phrase.Text,_stopping.Token).ConfigureAwait(false);
             response = _services.Responses.Build(parse, execution);
+            shortResponse = _services.Responses.BuildShort(parse, execution);
         }
         catch (OperationCanceledException) when (_stopping.IsCancellationRequested)
         {
@@ -325,28 +327,28 @@ public sealed class VoicePipeline : IAsyncDisposable
         Publish(execution.Outcome == ExecutionOutcome.Applied
             ? new CommandsApplied(phrase.Id, Now, execution.Sent)
             : new ApplyFailed(phrase.Id, Now, execution.Outcome, execution.Unconfirmed));
-        return (CueSelector.ForResult(parse, execution), response);
+        return (CueSelector.ForResult(parse, execution), response, shortResponse);
     }
 
-    private (Cue, string) Fail(int id, PipelineStage stage, string error)
+    private (Cue, string, string) Fail(int id, PipelineStage stage, string error)
     {
         Publish(new PipelineFailed(id, Now, stage, error));
-        return (Cue.Error, string.Empty);
+        return (Cue.Error, string.Empty, string.Empty);
     }
 
-    private void Signal(Phrase phrase, Cue cue, string response)
+    private void Signal(Phrase phrase, Cue cue, string response, string shortResponse)
     {
         lock (_lock)
         {
             var latency = _services.Time.GetElapsedTime(phrase.StoppedAt);
             if (phrase.Generation != _generation)
             {
-                Publish(new ResultSignaled(phrase.Id, Now, cue, response, Cancelled: true, latency));
+                Publish(new ResultSignaled(phrase.Id, Now, cue, response, Cancelled: true, latency, shortResponse));
                 return;
             }
 
             var playback = PlaySafely(cue);
-            Publish(new ResultSignaled(phrase.Id, Now, cue, response, Cancelled: false, latency));
+            Publish(new ResultSignaled(phrase.Id, Now, cue, response, Cancelled: false, latency, shortResponse));
             Report(phrase.Id, playback);
         }
     }

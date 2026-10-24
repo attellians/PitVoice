@@ -70,6 +70,8 @@ public sealed partial class NoPhraseRecordsTests
         }
 
         Assert.DoesNotMatch(@"\b(37|43)\b", text);
+        Assert.Equal("+37 л", applied.ShortText);
+        Assert.DoesNotContain(applied.ShortText, text, StringComparison.Ordinal);
     }
 
     /// <summary>The time at the start of a line may contain any digits.</summary>

@@ -22,11 +22,20 @@ public class LanguagePackValidatorTests
         return index + 1;
     }
 
-    /// <summary>The minimal pack with <paramref name="lexicon"/> lines appended to its lexicon.</summary>
-    private static LanguagePackLoadResult MinimalWith(string lexicon, string responses = "", string tests = "")
+    /// <summary>
+    /// The minimal pack with <paramref name="lexicon"/> lines appended to its lexicon; every added response also becomes
+    /// a short response of the same text unless <paramref name="shortResponses"/> is false.
+    /// </summary>
+    private static LanguagePackLoadResult MinimalWith(string lexicon, string responses = "", string tests = "", bool shortResponses = true)
     {
         var yaml = FixtureText("valid-minimal.yaml");
         yaml = Regex.Replace(yaml, "^responses:\r?\n", lexicon + "responses:\n" + responses, RegexOptions.Multiline);
+        if (shortResponses)
+        {
+            var intents = string.Concat(responses.Split('\n').Where(l => l.Contains('.', StringComparison.Ordinal)).Select(l => l + "\n"));
+            yaml = Regex.Replace(yaml, "^short_responses:\r?\n", "short_responses:\n" + intents, RegexOptions.Multiline);
+        }
+
         yaml += tests;
         return LanguagePackLoader.LoadText(yaml, "inline.yaml");
     }
@@ -134,6 +143,68 @@ public class LanguagePackValidatorTests
         Assert.Contains("{liters}", error.Message, StringComparison.Ordinal);
         Assert.Contains("'fuel.add'", error.Message, StringComparison.Ordinal);
         Assert.Equal("responses/fuel.add", error.Path);
+    }
+
+    [Fact]
+    public void Missing_short_response_names_the_file_and_the_intent()
+    {
+        var yaml = FixtureText("valid-minimal.yaml").Replace("  tires.all: \"все шины\"", string.Empty, StringComparison.Ordinal);
+        var result = LanguagePackLoader.LoadText(yaml, "inline.yaml");
+
+        Assert.False(result.IsSuccess);
+        var error = Assert.Single(result.Errors);
+        Assert.Equal("inline.yaml", error.File);
+        Assert.Contains("'tires.all' has no short response", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Missing_short_response_of_repair_names_it()
+    {
+        var result = MinimalWith(
+            "  repair: { fast: [быстрый], object: [ремонт] }\n",
+            "  repair.fast: \"быстрый ремонт\"\n",
+            "  - say: \"быстрый ремонт\"\n    expect: [{ intent: repair.fast }]\n",
+            shortResponses: false);
+
+        Assert.False(result.IsSuccess);
+        var error = Assert.Single(result.Errors);
+        Assert.Contains("'repair.fast' has no short response", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Missing_unit_abbreviation_names_the_file_and_the_unit()
+    {
+        var yaml = FixtureText("valid-minimal.yaml").Replace("    short: л", string.Empty, StringComparison.Ordinal);
+        var result = LanguagePackLoader.LoadText(yaml, "inline.yaml");
+
+        Assert.False(result.IsSuccess);
+        var error = Assert.Single(result.Errors);
+        Assert.Equal("inline.yaml", error.File);
+        Assert.Contains("'liters'", error.Message, StringComparison.Ordinal);
+        Assert.Equal("units/liters", error.Path);
+    }
+
+    [Fact]
+    public void Unknown_slot_in_a_short_response_names_it_and_the_slot()
+    {
+        var yaml = FixtureText("valid-minimal.yaml").Replace("\"+{amount} {unit}\"", "\"+{amount} {liters}\"", StringComparison.Ordinal);
+        var result = LanguagePackLoader.LoadText(yaml, "inline.yaml");
+
+        Assert.False(result.IsSuccess);
+        var error = Assert.Single(result.Errors);
+        Assert.Contains("{liters}", error.Message, StringComparison.Ordinal);
+        Assert.Contains("short response 'fuel.add'", error.Message, StringComparison.Ordinal);
+        Assert.Equal("short_responses/fuel.add", error.Path);
+    }
+
+    [Fact]
+    public void Short_response_of_an_unknown_intent_is_an_error()
+    {
+        var yaml = FixtureText("valid-minimal.yaml").Replace("short_responses:", "short_responses:\n  tires.flip: \"flip\"", StringComparison.Ordinal);
+        var result = LanguagePackLoader.LoadText(yaml, "inline.yaml");
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("'tires.flip'", Assert.Single(result.Errors).Message, StringComparison.Ordinal);
     }
 
     [Fact]

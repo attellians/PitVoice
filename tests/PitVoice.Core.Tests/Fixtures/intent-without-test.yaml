@@ -5,6 +5,7 @@ units:
   liters:
     synonyms: [литр, литра, литров]
     forms: { one: литр, few: литра, many: литров }
+    short: л
 conjunctions: [и]
 fillers: [пожалуйста]
 lexicon:
@@ -19,6 +20,10 @@ responses:
   not_in_car: "not in car"
   apply_failed: "failed"
   repair.fast: "чиним"
+short_responses:
+  fuel.add: "+{amount} {unit}"
+  tires.all: "все шины"
+  repair.fast: "ремонт"
 tests:
   - say: "залей десять литров"
     expect: [{ intent: fuel.add, amount: 10, unit: liters }]

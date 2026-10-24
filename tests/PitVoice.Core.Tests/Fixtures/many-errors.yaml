@@ -7,6 +7,8 @@ lexicon:
 responses:
   fuel.add: "заливаем {laps}"
   cancelled: "ок"
+short_responses:
+  fuel.add: "+{amount} {unit}"
 tests:
   - say: ""
     expect: reject

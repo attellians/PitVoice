@@ -22,6 +22,9 @@ public sealed class ResponseBuilder
     public const string NoWetTiresKey = "no_wet_tires";
     public const string SeveralDryTiresKey = "several_dry_tires";
 
+    /// <summary>Joins the short responses of the commands of a phrase.</summary>
+    public const string ShortSeparator = " · ";
+
     /// <summary>Responses every pack must have: for a rejected phrase and for every execution outcome.</summary>
     public static IReadOnlyList<string> RequiredKeys { get; } =
         [NotUnderstoodKey, NotConnectedKey, NotInCarKey, ApplyFailedKey];
@@ -82,23 +85,52 @@ public sealed class ResponseBuilder
     }
 
     /// <summary>
+    /// Short response for the result chip of a phrase: the short responses of its commands joined by
+    /// <see cref="ShortSeparator"/> when applied ("все шины · +25 л"), otherwise empty.
+    /// </summary>
+    public string BuildShort(ParseResult result, ExecutionResult execution)
+    {
+        ArgumentNullException.ThrowIfNull(result);
+        ArgumentNullException.ThrowIfNull(execution);
+        return result is ParseResult.Accepted accepted && execution.Outcome == ExecutionOutcome.Applied
+            ? string.Join(ShortSeparator, accepted.Commands.Select(BuildShortApplied))
+            : string.Empty;
+    }
+
+    /// <summary>The short response of one command, the unit as its abbreviation.</summary>
+    public string BuildShort(ParsedCommand command)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+        return Fill(_pack.ShortResponseOf(command.Intent), command, ShortUnit(command.Unit));
+    }
+
+    /// <summary>
     /// "Add zero" is executed as clearing refueling, so it is confirmed with the response of <c>fuel.none</c>
     /// rather than "adding 0 liters".
     /// </summary>
     private string BuildApplied(ParsedCommand command) =>
-        command is { Amount: 0 } && command.Intent == IntentCatalog.FuelAdd
-            && _pack.Supports(IntentCatalog.FuelNone)
-            ? _pack.ResponseOf(IntentCatalog.FuelNone)
-            : Build(command);
+        IsAddZero(command) ? _pack.ResponseOf(IntentCatalog.FuelNone) : Build(command);
+
+    private string BuildShortApplied(ParsedCommand command) =>
+        IsAddZero(command) ? _pack.ShortResponseOf(IntentCatalog.FuelNone) : BuildShort(command);
+
+    private bool IsAddZero(ParsedCommand command) =>
+        command is { Amount: 0 } && command.Intent == IntentCatalog.FuelAdd && _pack.Supports(IntentCatalog.FuelNone);
 
     public string Build(ParsedCommand command)
     {
         ArgumentNullException.ThrowIfNull(command);
-        var template = _pack.ResponseOf(command.Intent);
-        return template
-            .Replace("{amount}", command.Amount?.ToString(CultureInfo.InvariantCulture) ?? string.Empty, StringComparison.Ordinal)
-            .Replace("{unit}", UnitForm(command.Unit, command.Amount), StringComparison.Ordinal);
+        return Fill(_pack.ResponseOf(command.Intent), command, UnitForm(command.Unit, command.Amount));
     }
+
+    private static string Fill(string template, ParsedCommand command, string unit) => template
+        .Replace("{amount}", command.Amount?.ToString(CultureInfo.InvariantCulture) ?? string.Empty, StringComparison.Ordinal)
+        .Replace("{unit}", unit, StringComparison.Ordinal);
+
+    private string ShortUnit(string? unit) =>
+        unit is null ? string.Empty
+        : _pack.Units.TryGetValue(unit, out var definition) ? definition.Short
+        : unit;
 
     private string UnitForm(string? unit, int? amount)
     {

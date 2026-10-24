@@ -35,7 +35,7 @@ public sealed class PhraseJournalTests
             new SpeechRecognized(1, T0, Words("меняй шины и залей двадцать пять литров"), TimeSpan.Zero),
             new CommandsParsed(1, T0, [new ParsedCommand(IntentCatalog.TiresAll, null, null, 1), new ParsedCommand(IntentCatalog.FuelAdd, 25, "liters", 1)]),
             new CommandsApplied(1, T0, [new SentCommand(PitCommand.Fuel, 25)]),
-            new ResultSignaled(1, T0, Cue.Success, "Меняем все шины, заливаем 25 литров", false, TimeSpan.Zero));
+            new ResultSignaled(1, T0, Cue.Success, "Меняем все шины, заливаем 25 литров", false, TimeSpan.Zero, "все шины · +25 л"));
 
         var entry = Assert.Single(journal.Entries);
         Assert.Equal(1, entry.PhraseId);
@@ -43,6 +43,7 @@ public sealed class PhraseJournalTests
         Assert.Equal("меняй шины и залей двадцать пять литров", entry.Text);
         Assert.Equal(PhraseOutcome.Applied, entry.Outcome);
         Assert.Equal("Меняем все шины, заливаем 25 литров", entry.Response);
+        Assert.Equal("все шины · +25 л", entry.Short);
         Assert.True(entry.Finished);
     }
 
@@ -59,6 +60,7 @@ public sealed class PhraseJournalTests
         Assert.Equal(PhraseOutcome.NotUnderstood, entry.Outcome);
         Assert.Equal(RejectReason.LowConfidence, entry.Rejected);
         Assert.Equal("не понял, повтори", entry.Response);
+        Assert.Equal(string.Empty, entry.Short);
     }
 
     [Fact]

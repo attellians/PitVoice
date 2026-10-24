@@ -11,9 +11,11 @@ units:
   liters:
     synonyms: [liters, liter, litres, litre, l]
     forms: { one: liter, other: liters }
+    short: L
   gallons:
     synonyms: [gallons, gallon, gal]
     forms: { one: gallon, other: gallons }
+    short: gal
 
 conjunctions: [and, and then, then, plus, also, as well as]
 fillers: [please, just, hey, um, uh, okay, ok, now, the]
@@ -92,6 +94,36 @@ responses:
   no_dry_tires: "this car has no dry tires"
   no_wet_tires: "this car has no wet tires"
   several_dry_tires: "this car has several dry compounds"
+
+# The result chip of an applied phrase in the window: short responses of its commands joined by " · ".
+short_responses:
+  fuel.add: "+{amount} {unit}"
+  fuel.none: "no fuel"
+  tires.all: "all tires"
+  tires.left: "left side"
+  tires.right: "right side"
+  tires.front: "fronts"
+  tires.rear: "rears"
+  tires.lf: "front left"
+  tires.rf: "front right"
+  tires.lr: "rear left"
+  tires.rr: "rear right"
+  tires.dry: "dry"
+  tires.wet: "wet"
+  tires.none: "no tires"
+  tires.none.left: "keep left"
+  tires.none.right: "keep right"
+  tires.none.front: "keep fronts"
+  tires.none.rear: "keep rears"
+  tires.none.lf: "keep front left"
+  tires.none.rf: "keep front right"
+  tires.none.lr: "keep rear left"
+  tires.none.rr: "keep rear right"
+  windshield.tearoff: "tear off"
+  windshield.none: "no tear off"
+  repair.fast: "repair"
+  repair.none: "no repair"
+  pit.clear: "cleared"
 
 tests:
   # fuel.add: every verb

@@ -6,6 +6,7 @@ units:
   gallons:
     synonyms: [галлон]
     forms: { one: галлон }
+    short: гал
 lexicon:
   tires: { action: [меняй], object: [шины] }
 responses:
@@ -14,6 +15,8 @@ responses:
   not_connected: "no connection"
   not_in_car: "not in car"
   apply_failed: "failed"
+short_responses:
+  tires.all: "все шины"
 tests:
   - say: "меняй шины"
     expect: [{ intent: tires.all }]

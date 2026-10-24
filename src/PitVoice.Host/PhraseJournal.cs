@@ -56,6 +56,9 @@ public sealed record PhraseEntry(
 {
     /// <summary>True once the result cue was signaled (or the press was refused).</summary>
     public bool Finished { get; init; }
+
+    /// <summary>Short responses of the applied commands for the result chip ("все шины · +25 л"); empty otherwise.</summary>
+    public string Short { get; init; } = string.Empty;
 }
 
 /// <summary>
@@ -182,7 +185,7 @@ public sealed class PhraseJournal
                 break;
 
             case ResultSignaled signaled:
-                entry = entry with { Response = signaled.ResponseText, Finished = true };
+                entry = entry with { Response = signaled.ResponseText, Short = signaled.ShortText, Finished = true };
                 Count(entry);
                 break;
 

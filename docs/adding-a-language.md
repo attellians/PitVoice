@@ -38,6 +38,7 @@ units:                             # only `liters` and `gallons` are known
   liters:
     synonyms: [литр, литра, литров]                 # single words that mean this unit in speech
     forms: { one: литр, few: литра, many: литров }  # one form per plural category of `plural_rules`
+    short: л                                        # abbreviation for short responses
 
 conjunctions: [и, а также]         # split compound phrases; multi-word entries are allowed
 fillers: [пожалуйста, ну]          # removed before parsing; must not appear in the lexicon
@@ -70,6 +71,16 @@ responses:
   not_connected: "нет связи с игрой"     # required
   not_in_car: "ты не в машине"           # required
   apply_failed: "команда не применилась" # required
+
+short_responses:                   # result chip in the window, one per command of `responses`
+  fuel.add: "+{amount} {unit}"
+  fuel.none: "без топлива"
+  tires.all: "все шины"
+  tires.front: "передние"
+  tires.lf: "переднее левое"
+  tires.none: "без шин"
+  tires.none.front: "без передних"
+  tires.none.lf: "без переднего левого"
 
 tests:
   - say: "залей тридцать пять литров"
@@ -250,6 +261,15 @@ intent nor an outcome is an error too.
 | `no_dry_tires`, `no_wet_tires`, `several_dry_tires` | the car has no compound of that kind, or several dry ones; nothing was sent. Required when the pack has compound words |
 
 `not_supported` and `cancelled` of format 1 are not used any more and give a warning.
+
+## Short responses
+
+`short_responses` holds a short text of every command the pack can give, by intent id: "Recent phrases" in the window
+shows it in the result chip of an applied phrase. The short responses of a compound command are joined with " · " in
+the order of speech ("все шины · +25 л"); keep each one to a word or two. `{amount}` is replaced by digits and `{unit}`
+by the unit's `short` abbreviation, the same for every number ("+25 л", "+12 gal"). "Add zero" shows the short response
+of `fuel.none`, as the full response does. A command the lexicon can give without a short response, a unit without
+`short`, a key that is not an intent and a placeholder the intent does not provide are validation errors.
 
 ## Tests
 

@@ -20,7 +20,7 @@ public sealed partial class SettingsPageTests
         "Outputs", "Output",
         "Volume", "PreviewCommand", "PreviewMessage",
         "Units", "Unit",
-        "ThresholdText", "ApplyThresholdCommand", "ThresholdError",
+        "Threshold",
         "Diagnostics.CollectCommand", "Diagnostics.OpenLogsCommand", "Diagnostics.Message",
     ];
 

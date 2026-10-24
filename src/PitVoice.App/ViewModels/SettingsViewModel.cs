@@ -1,5 +1,4 @@
 using System.Collections.ObjectModel;
-using System.Globalization;
 using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -47,6 +46,7 @@ internal sealed partial class SettingsViewModel : ObservableObject
             _volumeTimer.Stop();
             Save(s => s with { CueVolume = Volume });
         };
+        Threshold = new ThresholdSlider(value => Save(s => s with { Threshold = value }));
         services.Host.StatusChanged += _ => Ui.Post(RefreshStatus);
         services.Host.SettingsChanged += _ => Ui.Post(Load);
         Loc.Instance.LanguageChanged += Load;
@@ -95,11 +95,8 @@ internal sealed partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     public partial int Volume { get; set; }
 
-    [ObservableProperty]
-    public partial string ThresholdText { get; set; } = string.Empty;
-
-    [ObservableProperty]
-    public partial string ThresholdError { get; set; } = string.Empty;
+    /// <summary>The confidence threshold slider (spec: Confidence threshold slider).</summary>
+    public ThresholdSlider Threshold { get; }
 
     [ObservableProperty]
     public partial string PttText { get; set; } = string.Empty;
@@ -214,20 +211,6 @@ internal sealed partial class SettingsViewModel : ObservableObject
         }
     }
 
-    [RelayCommand]
-    private void ApplyThreshold()
-    {
-        var text = ThresholdText.Trim().Replace(',', '.');
-        if (!double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out var value) || value is < 0 or > 1)
-        {
-            ThresholdError = Loc.T("ThresholdRange");
-            return;
-        }
-
-        ThresholdError = string.Empty;
-        Save(s => s with { Threshold = value });
-    }
-
     private bool CanAssign() => !Assigning;
 
     [RelayCommand(CanExecute = nameof(CanAssign))]
@@ -299,7 +282,7 @@ internal sealed partial class SettingsViewModel : ObservableObject
             Mode = settings.PttMode.ToString();
             Unit = settings.DefaultUnit;
             Volume = settings.CueVolume;
-            ThresholdText = settings.Threshold.ToString("0.##", CultureInfo.InvariantCulture);
+            Threshold.Load(settings.Threshold);
         }
         finally
         {

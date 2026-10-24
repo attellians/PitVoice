@@ -1,3 +1,4 @@
+using System.IO;
 using System.Windows;
 using PitVoice.App.Controls;
 using Wpf.Ui.Controls;
@@ -35,6 +36,24 @@ public sealed class SectionIconTests
         Assert.Equal(size, icon.ActualHeight);
         Assert.Equal(size >= 40 ? 10 : 8, icon.CornerRadius.TopLeft);
     });
+
+    /// <summary>A symbol name in XAML is parsed at run time: a missing one would break the page only when it opens.</summary>
+    [Fact]
+    public void Every_symbol_used_in_xaml_exists()
+    {
+        var source = new DirectoryInfo(AppContext.BaseDirectory);
+        while (!Directory.Exists(Path.Combine(source.FullName, "src", "PitVoice.App")))
+        {
+            source = source.Parent ?? throw new DirectoryNotFoundException("src/PitVoice.App not found");
+        }
+
+        var used = Directory.EnumerateFiles(Path.Combine(source.FullName, "src", "PitVoice.App"), "*.xaml", SearchOption.AllDirectories)
+            .SelectMany(f => System.Text.RegularExpressions.Regex.Matches(File.ReadAllText(f), "Symbol=\"([A-Za-z0-9]+)\"").Select(m => m.Groups[1].Value))
+            .ToHashSet(StringComparer.Ordinal);
+
+        Assert.Contains("Gauge24", used);
+        Assert.DoesNotContain(used, name => !Enum.TryParse<SymbolRegular>(name, out _));
+    }
 
     [Fact]
     public void Section_picks_its_hue_and_tint_keys()

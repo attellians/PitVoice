@@ -142,7 +142,7 @@
   "unit.liters": "liters",
   "unit.gallons": "gallons",
   "ThresholdLabel": "Confidence threshold",
-  "ThresholdRange": "Enter a number from 0 to 1.",
+  "ThresholdHint": "How sure PitVoice must be that it heard the phrase before it runs the command. Higher means fewer accidental commands but more misses. Lower is the opposite.",
   "SaveFailed": "Settings were not saved to the file ({0}). They apply until you exit.",
 
   "ModelsIntro": "Recognition works offline: the model of the commands language ({0}) is needed. Models of other languages can be downloaded ahead.",

@@ -321,34 +321,38 @@
                             Style="{StaticResource RowCombo}" />
                     </Grid>
                 </Border>
-                <Border Style="{StaticResource ListRow}">
+                <!-- The threshold: label and explanation wrap in their column, the slider and the number stay whole on the right (spec: Confidence threshold slider). -->
+                <Border DataContext="{Binding Threshold}" Style="{StaticResource ListRow}">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="3*" />
-                            <ColumnDefinition Width="4*" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
-                        <controls:SectionIcon Style="{StaticResource RowIcon}" Symbol="Beaker24" />
-                        <TextBlock Grid.Column="1" Style="{StaticResource RowLabel}" Text="{loc:Tr ThresholdLabel}" />
-                        <ui:TextBox
-                            Grid.Column="2"
-                            Width="120"
-                            HorizontalAlignment="Right"
-                            VerticalAlignment="Center"
-                            LostFocus="OnThresholdLostFocus"
-                            Text="{Binding ThresholdText, UpdateSourceTrigger=PropertyChanged}">
-                            <ui:TextBox.InputBindings>
-                                <KeyBinding Key="Enter" Command="{Binding ApplyThresholdCommand}" />
-                            </ui:TextBox.InputBindings>
-                        </ui:TextBox>
+                        <controls:SectionIcon Style="{StaticResource RowIcon}" Symbol="Gauge24" />
+                        <StackPanel Grid.Column="1" Margin="0,0,16,0" VerticalAlignment="Center">
+                            <TextBlock Style="{StaticResource Body}" Text="{loc:Tr ThresholdLabel}" />
+                            <TextBlock Margin="0,2,0,0" Style="{StaticResource CaptionWrap}" Text="{loc:Tr ThresholdHint}" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="2" VerticalAlignment="Center" Orientation="Horizontal">
+                            <Slider
+                                AutomationProperties.Name="{loc:Tr ThresholdLabel}"
+                                LargeChange="0.1"
+                                Maximum="0.9"
+                                Minimum="0.3"
+                                PreviewMouseLeftButtonUp="OnThresholdReleased"
+                                SmallChange="0.05"
+                                Style="{StaticResource RowSlider}"
+                                TickFrequency="0.05"
+                                Value="{Binding Value}" />
+                            <TextBlock
+                                Width="44"
+                                Margin="8,0,0,0"
+                                Style="{StaticResource Body}"
+                                Text="{Binding Text}" />
+                        </StackPanel>
                     </Grid>
                 </Border>
-                <!-- The threshold error under its row (spec: Invalid threshold input). -->
-                <TextBlock
-                    Margin="40,0,0,8"
-                    Style="{StaticResource ErrorText}"
-                    Text="{Binding ThresholdError}"
-                    Visibility="{Binding ThresholdError, Converter={StaticResource NotEmptyVisible}}" />
             </StackPanel>
         </Border>
 

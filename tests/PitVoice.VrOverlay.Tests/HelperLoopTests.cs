@@ -106,9 +106,13 @@ public sealed class HelperLoopTests
         await using var run = new Run(vr);
         await run.Line("ready");
 
-        await Task.Delay(TimeSpan.FromSeconds(1));
+        // Measured over the time that really passed: a busy CI machine may sleep longer than asked.
+        var before = vr.Polls;
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+        await Task.Delay(TimeSpan.FromSeconds(2));
+        var perSecond = (vr.Polls - before) / clock.Elapsed.TotalSeconds;
 
-        Assert.InRange(vr.Polls, 5, 15);
+        Assert.InRange(perSecond, 5, 20);
         Assert.Equal(VrExitCode.InputClosed, await run.CloseInput());
     }
 

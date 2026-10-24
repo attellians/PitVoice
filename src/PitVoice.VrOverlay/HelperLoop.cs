@@ -77,33 +77,57 @@ internal static class HelperLoop
         }
     }
 
+    /// <summary>
+    /// Reads until the input ends. The loop may have ended first (a failure) and disposed the queue; whatever comes after
+    /// that is dropped, so this thread never takes the helper down.
+    /// </summary>
     private static void Read(Stream input, BlockingCollection<object> queue)
     {
+        object last;
         try
         {
             while (VrProtocol.Read(input) is { } message)
             {
-                queue.Add(message);
+                if (!Post(queue, message))
+                {
+                    return;
+                }
             }
 
-            queue.Add(new EndOfInput());
+            last = new EndOfInput();
         }
         catch (VrProtocolException e)
         {
-            queue.Add(e);
+            last = e;
         }
         catch (IOException)
         {
             // A broken pipe: the app is gone.
-            queue.Add(new EndOfInput());
+            last = new EndOfInput();
         }
         catch (ObjectDisposedException)
         {
-            // The loop ended and the queue went with it.
+            // The input was closed under the reader.
+            last = new EndOfInput();
+        }
+
+        Post(queue, last);
+    }
+
+    private static bool Post(BlockingCollection<object> queue, object item)
+    {
+        try
+        {
+            queue.Add(item);
+            return true;
+        }
+        catch (ObjectDisposedException)
+        {
+            return false;
         }
         catch (InvalidOperationException)
         {
-            // The same, while adding.
+            return false;
         }
     }
 

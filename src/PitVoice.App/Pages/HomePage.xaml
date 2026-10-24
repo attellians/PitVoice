@@ -218,19 +218,38 @@
             </Grid>
         </Border>
 
-        <!-- The three check tiles (spec: Home check tiles). -->
-        <Grid Margin="0,0,0,20">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="12" />
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="12" />
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
-            <ContentControl Content="{Binding Microphone}" ContentTemplate="{StaticResource TileTemplate}" Focusable="False" />
-            <ContentControl Grid.Column="2" Content="{Binding Ptt}" ContentTemplate="{StaticResource TileTemplate}" Focusable="False" />
-            <ContentControl Grid.Column="4" Content="{Binding Game}" ContentTemplate="{StaticResource TileTemplate}" Focusable="False" />
-        </Grid>
+        <!--
+            The three check tiles in a row (spec: Home check tiles). In a narrow window they stand one under another, so
+            each keeps its one line readable instead of cutting "iRacing не запущен" to "iRacing…".
+        -->
+        <UniformGrid x:Name="Tiles" Margin="-6,0,-6,20">
+            <UniformGrid.Resources>
+                <Style TargetType="ContentControl">
+                    <Setter Property="Focusable" Value="False" />
+                    <Setter Property="ContentTemplate" Value="{StaticResource TileTemplate}" />
+                    <Setter Property="Margin" Value="6,0" />
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding ActualWidth, ElementName=Tiles, Converter={StaticResource NarrowerThan}, ConverterParameter=600}" Value="True">
+                            <Setter Property="Margin" Value="6,0,6,8" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </UniformGrid.Resources>
+            <UniformGrid.Style>
+                <Style TargetType="UniformGrid">
+                    <Setter Property="Rows" Value="1" />
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding ActualWidth, RelativeSource={RelativeSource Self}, Converter={StaticResource NarrowerThan}, ConverterParameter=600}" Value="True">
+                            <Setter Property="Rows" Value="3" />
+                            <Setter Property="Columns" Value="1" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </UniformGrid.Style>
+            <ContentControl Content="{Binding Microphone}" />
+            <ContentControl Content="{Binding Ptt}" />
+            <ContentControl Content="{Binding Game}" />
+        </UniformGrid>
 
         <!-- Recent phrases: one line each, the text, a result chip and the time; details in the tooltip (spec: Recent phrases). -->
         <TextBlock Margin="0,0,0,8" Style="{StaticResource SectionTitle}" Text="{loc:Tr RecentPhrases}" />

@@ -285,7 +285,7 @@
                         </Grid.ColumnDefinitions>
                         <controls:SectionIcon Style="{StaticResource RowIcon}" Symbol="Gauge24" />
                         <StackPanel Grid.Column="1" Margin="0,0,16,0" VerticalAlignment="Center">
-                            <TextBlock Style="{StaticResource Body}" Text="{loc:Tr ThresholdLabel}" />
+                            <TextBlock Style="{StaticResource BodyWrap}" Text="{loc:Tr ThresholdLabel}" />
                             <TextBlock Margin="0,2,0,0" Style="{StaticResource CaptionWrap}" Text="{loc:Tr ThresholdHint}" />
                         </StackPanel>
                         <StackPanel Grid.Column="2" VerticalAlignment="Center" Orientation="Horizontal">

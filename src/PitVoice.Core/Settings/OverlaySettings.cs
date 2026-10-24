@@ -27,6 +27,9 @@ public sealed record OverlaySettings
 
     /// <summary>Center of the icon in physical pixels of the virtual screen; null is the default place (design D6).</summary>
     public ScreenPoint? Position { get; init; }
+
+    /// <summary>"VR mode": the indicator is shown in the SteamVR headset too, only together with <see cref="Enabled"/> (add-vr-overlay D9).</summary>
+    public bool Vr { get; init; }
 }
 
 /// <summary>A: the round icon; B: the icon and a short word of the state.</summary>

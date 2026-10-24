@@ -68,12 +68,15 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
-      # App and CLI share one self-contained folder: the CLI reuses the runtime and the native libraries. The version
-      # from the tag overrides the one Directory.Build.props reads from VERSION; for a stable release they are equal.
+      # App, CLI and the VR helper share one self-contained folder: they reuse the runtime and the native libraries; the
+      # helper brings openvr_api.dll. The version from the tag overrides the one Directory.Build.props reads from VERSION;
+      # for a stable release they are equal.
       - name: Publish
         run: |
           dotnet publish src/PitVoice.App/PitVoice.App.csproj -c Release -r win-x64 --self-contained -o publish -p:Version=$env:VERSION
           dotnet publish tools/PitVoice.Cli/PitVoice.Cli.csproj -c Release -r win-x64 --self-contained -o publish -p:Version=$env:VERSION
+          dotnet publish src/PitVoice.VrOverlay/PitVoice.VrOverlay.csproj -c Release -r win-x64 --self-contained -o publish -p:Version=$env:VERSION
+          if (-not (Test-Path publish/PitVoice.VrOverlay.exe) -or -not (Test-Path publish/openvr_api.dll)) { throw "the VR helper or openvr_api.dll is missing in publish" }
 
       - name: Check third-party notices
         run: dotnet run --project tools/notices-gen -c Release -- --check

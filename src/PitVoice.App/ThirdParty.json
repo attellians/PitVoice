@@ -90,6 +90,12 @@
     "url": "https://www.openfst.org"
   },
   {
+    "name": "OpenVR SDK",
+    "version": "2.5.1",
+    "license": "BSD-3-Clause",
+    "url": "https://github.com/ValveSoftware/openvr"
+  },
+  {
     "name": "ppy.SDL3-CS",
     "version": "2026.722.0",
     "license": "MIT",

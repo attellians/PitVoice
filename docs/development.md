@@ -15,6 +15,8 @@ src/PitVoice.Host/                 the pipeline host shared by the app and `run`
                                    tray status, recent phrases, models, PTT assignment, one host per user,
                                    log, crash reports and the diagnostics archive
 src/PitVoice.App/                  the tray app (WPF, WPF-UI): window, pages, tray icon, interface strings ru/en
+src/PitVoice.VrOverlay/            the VR helper: the indicator in a SteamVR headset through an OpenVR overlay, fed by the app
+third_party/openvr/                openvr_api.dll of the pinned OpenVR SDK with its license and hash
 tools/PitVoice.Cli/                pitvoice-cli: run, ptt, cues, diagnostics, parse, validate, models, devices, recognize, listen, status, send, record
 tools/cue-gen/                     generates the three built-in cue sounds
 tools/icon-gen/                    renders the app icon (.ico) from the same vector sign as the tray icon
@@ -26,6 +28,7 @@ tests/PitVoice.Models.Tests/       manifest, license allowlist, store and downlo
 tests/PitVoice.Speech.Tests/       audio conversion, capture logic, grammar, Vosk engine, recorded sample set
 tests/PitVoice.Host.Tests/         the app logic on fakes: live apply, status, journal, reference, models, assignment, diagnostics
 tests/PitVoice.App.Tests/          interface dictionaries and the components list (Windows only)
+tests/PitVoice.VrOverlay.Tests/    the VR protocol, the helper loop on a fake OpenVR, the overlay pose
 tests/PitVoice.NoticesGen.Tests/   the notices generator on prepared package files: listing, forbidden licenses
 languages/                         ru.yaml, en.yaml
 models/                            manifest.json: downloadable models with URL, size, sha256 and license
@@ -129,6 +132,58 @@ place is kept per monitor and falls back to the top right corner of the main mon
 Windows shows it over iRacing in **windowed and borderless** mode only; in exclusive fullscreen it is not visible.
 `pitvoice-cli run` has no indicator.
 
+### Indicator in the VR headset
+
+"VR mode" ("Settings" → "Language and look", `overlay.vr`) shows the same indicator in a SteamVR headset too. The app
+never touches OpenVR itself: while the mode and "Show the overlay" are on, it looks for the `vrserver` process every
+2 s and only then starts `PitVoice.VrOverlay.exe` next to it, with redirected standard streams and inside a job object
+that ends it with the app. The helper loads `openvr_api.dll` (OpenVR SDK 2.5.1 in `third_party/openvr`), creates an
+overlay fixed to the head with a Direct3D 11 texture on the GPU of the SteamVR compositor (`SetOverlayRaw` blinked at
+30 frames a second), and takes length-prefixed binary messages on its input (`Frame` RGBA pictures, `Visible`,
+`Place` angles, `Ping`); it answers `ready`, `pong`, `error <code>` and `quit` on its output
+(`src/PitVoice.Core/Vr/VrProtocol.cs`). The app renders the frames with a second `IndicatorBadge` outside any window,
+30 per second while an animation runs and none when idle; a crash, a hang (no `pong` for 5 s) or an error of the helper
+is retried after 2 s, three within 2 minutes give "VR error" until SteamVR restarts. The helper is only next to the app in
+a published folder, not in `bin\`: publish the app and `src/PitVoice.VrOverlay` into one folder to try it.
+
+`PitVoice.VrOverlay.exe --demo` shows a green test badge in the top right of the view until Enter, without the app.
+
+#### Building a VR stand
+
+There is no headset to test with, so SteamVR runs with its null driver: a virtual headset, the compositor and the
+overlays work, and the compositor shows the picture of both eyes in a desktop window titled **Headset Window**
+(2160 × 1200); it plays the role of VR View. Checked 2026-10-24 with SteamVR 2.18.4.
+
+1. Install **SteamVR** from Steam (Library → Tools). Start and close it once, so its config files exist.
+2. Close SteamVR, keep a copy of `Steam\config\steamvr.vrsettings`, then add to it (merge with the sections that are
+   already there):
+
+   ```json
+   "steamvr": {
+     "requireHmd": false,
+     "forcedDriver": "null",
+     "activateMultipleDrivers": true
+   },
+   "driver_null": {
+     "enable": true
+   },
+   "power": {
+     "pauseCompositorOnStandby": false,
+     "turnOffScreensTimeout": 3600
+   }
+   ```
+
+   and set `"enable": true` in `Steam\steamapps\common\SteamVR\drivers\null\resources\settings\default.vrsettings`
+   (section `driver_null`). The virtual headset has no proximity sensor, so without the `power` lines SteamVR goes to
+   standby after a short while and the headset window stays black.
+3. Start SteamVR (`SteamVR\bin\win64\vrstartup.exe`): "Headset ready", and the headset window shows the SteamVR scene
+   with the dashboard. The first start may open Room Setup; finish or close it.
+4. Check the helper alone: `publish\PitVoice.VrOverlay.exe --demo` — a green badge appears at the top right of the view
+   in both eyes. The headset window is a Direct3D window: `PrintWindow` gives black, so capture it from the screen while
+   it is on top.
+
+Remove the lines (or put the copy back) to use a real headset again.
+
 ## Push-to-talk: from the wheel button to the game
 
 `run` is the whole pipeline without a window: PTT button → microphone → recognition → parsing → iRacing → sound cue. It takes everything from the settings file, so set it up once:
@@ -178,7 +233,7 @@ The reason of an error is in the `run` output. `cues play [start|success|error|a
   "threshold": 0.6,
   "interfaceLanguage": null,
   "theme": "system",
-  "overlay": { "enabled": true, "kind": "A", "scale": 100, "opacity": 90, "hideWhenNotInCar": false, "position": null }
+  "overlay": { "enabled": true, "kind": "A", "scale": 100, "opacity": 90, "position": null, "vr": false }
 }
 ```
 
@@ -187,7 +242,7 @@ The reason of an error is in the `run` output. `cues play [start|success|error|a
 - `microphone`, `outputDevice`: device names as `devices` prints them; `null` is the system default. A missing device falls back to the default with a warning.
 - `cueVolume`: 0 to 100; 0 mutes the cues. `defaultUnit`: `liters` or `gallons`. `threshold`: confidence threshold 0 to 1.
 - `interfaceLanguage`: `ru` or `en` for the window and the tray menu; `null` follows `language`. `theme`: `system`, `light` or `dark`.
-- `overlay`: the indicator above the game. `kind`: `A` (icon) or `B` (icon and word); `scale`: 75 to 200 (%); `opacity`: 30 to 100 (%), the idle icon gets 45 % of it; `position`: center of the icon in physical pixels (`{ "x": …, "y": … }`), `null` is the top right corner of the main monitor. Out-of-range size and opacity are clamped with a warning, an unknown kind becomes `A`.
+- `overlay`: the indicator above the game. `kind`: `A` (icon) or `B` (icon and word); `scale`: 75 to 200 (%); `opacity`: 30 to 100 (%), the idle icon gets 45 % of it; `position`: center of the icon in physical pixels (`{ "x": …, "y": … }`), `null` is the top right corner of the main monitor; `vr`: "VR mode", the indicator in a SteamVR headset too (only with `enabled`). Out-of-range size and opacity are clamped with a warning, an unknown kind becomes `A`, a `vr` that is not `true`/`false` becomes `false`.
 
 A missing field gets its default; an invalid value gets its default (the volume is clamped to 0..100) with a warning. A file that is not valid JSON is renamed to `settings.json.bak` and the defaults are used.
 

@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>PitVoice.VrOverlay</AssemblyName>
+    <RootNamespace>PitVoice.VrOverlay</RootNamespace>
+    <Description>The VR helper of PitVoice: shows the indicator in the SteamVR headset through an OpenVR overlay (add-vr-overlay D1). Started and fed by the tray app, no window.</Description>
+    <!-- LibraryImport and the OpenVR function tables use pointers. -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\PitVoice.Core\PitVoice.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The pinned OpenVR SDK (add-vr-overlay D2); only this process ever loads it. -->
+    <None Include="..\..\third_party\openvr\2.5.1\openvr_api.dll" Link="openvr_api.dll" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="PitVoice.VrOverlay.Tests" />
+  </ItemGroup>
+
+</Project>

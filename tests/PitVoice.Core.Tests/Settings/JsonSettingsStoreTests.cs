@@ -360,6 +360,72 @@ public sealed class JsonSettingsStoreTests : IDisposable
         Assert.Contains("\"position\": null", File.ReadAllText(FilePath), StringComparison.Ordinal);
     }
 
+    /// <summary>Spec: Default after update — a 1.0.0 file has no <c>overlay.vr</c>.</summary>
+    [Fact]
+    public void Overlay_vr_missing_in_a_1_0_0_file_is_off()
+    {
+        var result = LoadFrom("""
+            {
+              "version": 1,
+              "language": "ru",
+              "cueVolume": 70,
+              "overlay": { "enabled": true, "kind": "B", "scale": 125, "opacity": 90, "position": null }
+            }
+            """);
+
+        Assert.Empty(result.Warnings);
+        Assert.False(result.Settings.Overlay.Vr);
+        Assert.Equal(IndicatorKind.B, result.Settings.Overlay.Kind);
+        Assert.Equal(70, result.Settings.CueVolume);
+    }
+
+    [Fact]
+    public void Overlay_vr_true_is_read()
+    {
+        var result = LoadFrom("""{ "overlay": { "vr": true } }""");
+
+        Assert.Empty(result.Warnings);
+        Assert.Equal(OverlaySettings.Default with { Vr = true }, result.Settings.Overlay);
+    }
+
+    /// <summary>Spec: Invalid value in the file.</summary>
+    [Fact]
+    public void Overlay_vr_string_is_off_with_warning_and_the_rest_loads()
+    {
+        var result = LoadFrom("""{ "language": "en", "overlay": { "vr": "yes", "scale": 150 } }""");
+
+        Assert.False(result.Settings.Overlay.Vr);
+        Assert.Equal(150, result.Settings.Overlay.Scale);
+        Assert.Equal("en", result.Settings.Language);
+        Assert.Contains("overlay.vr", Assert.Single(result.Warnings), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Overlay_vr_round_trips()
+    {
+        var settings = AppSettings.Defaults("ru") with { Overlay = OverlaySettings.Default with { Vr = true } };
+
+        Store().Save(settings);
+        var loaded = Store().Load();
+
+        Assert.Empty(loaded.Warnings);
+        Assert.Equal(settings, loaded.Settings);
+        Assert.Contains("\"vr\": true", File.ReadAllText(FilePath), StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Rollback: the reader takes only the fields it knows, so an older version reads a file with <c>overlay.vr</c>
+    /// (and any field added later) without warnings.
+    /// </summary>
+    [Fact]
+    public void Overlay_unknown_fields_are_ignored()
+    {
+        var result = LoadFrom("""{ "overlay": { "kind": "B", "vr": false, "future": { "a": 1 } } }""");
+
+        Assert.Empty(result.Warnings);
+        Assert.Equal(OverlaySettings.Default with { Kind = IndicatorKind.B }, result.Settings.Overlay);
+    }
+
     [Fact]
     public void Path_ExplicitWinsOverEnvironment()
     {

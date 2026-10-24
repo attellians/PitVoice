@@ -58,6 +58,8 @@ them.
 - **Three short sounds** instead of a voice: recording started, success, error.
 - **Indicator above the game.** A small icon in the car shows "listening", "recognizing" and how the phrase ended.
   Clicks pass through it into the game. Kind, size, opacity and place are set on the "Overlay" page.
+- **Indicator in the VR headset** (new). Turned on with "VR mode" in "Settings"; works when iRacing runs through
+  SteamVR. More in the [FAQ](#faq).
 - **Own phrases.** Give a pit command your own phrase: "Commands" → "Own phrases" → "Set up". The phrase is checked
   at once, before it is saved, and the reference shows it marked "own".
 - **Recent phrases** on the home page: what was heard, how it ended and why.
@@ -157,6 +159,23 @@ nothing to the game: asking again is better than guessing.
 The indicator is shown only while you are in the car. In exclusive fullscreen Windows shows no windows over the game:
 switch iRacing to borderless or windowed mode. Turn the indicator off or move it on the "Overlay" page or with "Move
 indicator" in the tray icon menu.
+</details>
+
+<details>
+<summary><b>Indicator in the VR headset</b></summary>
+<br/>
+Turn on "VR mode" in "Settings" → "Language and look"; "Show the overlay" on the "Overlay" page must be on too. The
+indicator shows in the headset only when iRacing runs through <b>SteamVR</b>: PitVoice never starts SteamVR itself and
+waits for it. Quest over Oculus Link with iRacing in Oculus mode, Windows Mixed Reality and other runtimes without
+SteamVR are not supported.<br/><br/>
+The line under the switch shows the state: "waiting for SteamVR" — SteamVR is not running; "connecting…"; "in the
+headset" — the indicator shows in the headset by the same rules as on the monitor; "VR error" — the link to SteamVR
+failed three times, PitVoice tries again after SteamVR restarts (the reason is in the log). Voice commands and sounds
+work in every state.<br/><br/>
+The place in the view is set with "Move" on the "Overlay" page: where the indicator stands on its monitor, it stands in
+the headset (the top right of the monitor is the top right of the view). Kind, size and opacity are shared with the
+indicator on the monitor. The mode is new and was checked without a real headset — tell us in an
+<a href="https://github.com/attellians/PitVoice/issues">issue</a> whether the place and size are comfortable.
 </details>
 
 <details>

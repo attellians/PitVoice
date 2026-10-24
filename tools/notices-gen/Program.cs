@@ -25,6 +25,7 @@ try
         [
             Path.Combine(root, "src", "PitVoice.App", "obj", "project.assets.json"),
             Path.Combine(root, "tools", "PitVoice.Cli", "obj", "project.assets.json"),
+            Path.Combine(root, "src", "PitVoice.VrOverlay", "obj", "project.assets.json"),
         ],
         Path.Combine(root, "tools", "notices-gen", "components.json"),
         Path.Combine(root, "models", "manifest.json"),

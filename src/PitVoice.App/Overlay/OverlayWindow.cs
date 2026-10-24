@@ -107,6 +107,20 @@ internal sealed class IndicatorWindow : OverlayWindow
     public IndicatorBadge Badge { get; } = new();
 }
 
+/// <summary>
+/// An empty window that stays off the screen. WPF advances animation clocks only while some window renders, so the badge
+/// of the headset, which is in no window, animates while this one is shown (add-vr-overlay task 1.3).
+/// </summary>
+internal sealed class ClockWindow : OverlayWindow
+{
+    public ClockWindow()
+    {
+        SizeToContent = SizeToContent.Manual;
+        Width = 1;
+        Height = 1;
+    }
+}
+
 /// <summary>The "Done" button of move mode, a small window under the icon (design D5).</summary>
 internal sealed class DoneWindow : OverlayWindow
 {

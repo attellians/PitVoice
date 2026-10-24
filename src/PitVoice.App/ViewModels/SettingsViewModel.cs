@@ -35,7 +35,13 @@ internal sealed partial class SettingsViewModel : ObservableObject
     public SettingsViewModel(AppServices services, Action openModels)
     {
         _services = services;
-        _openModels = openModels;        _volumeTimer = new DispatcherTimer { Interval = VolumeDelay };
+        _openModels = openModels;
+        if (services.IndicatorControl is { } indicator && services.Vr is { } vr)
+        {
+            Vr = new VrSettingsViewModel(indicator, vr);
+        }
+
+        _volumeTimer = new DispatcherTimer { Interval = VolumeDelay };
         _volumeTimer.Tick += (_, _) =>
         {
             _volumeTimer.Stop();
@@ -46,6 +52,9 @@ internal sealed partial class SettingsViewModel : ObservableObject
         Loc.Instance.LanguageChanged += Load;
         Load();
     }
+
+    /// <summary>The "VR mode" row; null before the indicator is started.</summary>
+    public VrSettingsViewModel? Vr { get; }
 
     public ObservableCollection<Choice> Languages { get; } = [];
 

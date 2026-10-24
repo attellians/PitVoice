@@ -54,6 +54,9 @@ internal sealed class OverlayController : IDisposable
         _window?.Close();
     }
 
+    /// <summary>The icon is dragged in move mode: its center and monitor before the position is saved (add-vr-overlay D7).</summary>
+    public event Action<ScreenPoint, MonitorArea>? Dragged;
+
     /// <summary>The word of kind B for a state (design D9).</summary>
     public static string Word(IndicatorVisual visual) => visual == IndicatorVisual.Idle ? string.Empty : Loc.T($"overlay.{visual}");
 
@@ -267,6 +270,7 @@ internal sealed class OverlayController : IDisposable
         _center = OverlayLayout.Clamp(wanted, monitor, _settings.Scale, _wordRoom);
         _monitor = monitor;
         Place();
+        Dragged?.Invoke(_center, monitor);
     }
 
     /// <summary>The position is saved when the mouse is released (spec: Moving the indicator).</summary>

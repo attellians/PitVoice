@@ -287,6 +287,18 @@ public sealed class JsonSettingsStore : ISettingsStore
             }
         }
 
+        if (TryGet(overlay, "vr", out var vr))
+        {
+            if (vr.ValueKind is JsonValueKind.True or JsonValueKind.False)
+            {
+                settings = settings with { Vr = vr.GetBoolean() };
+            }
+            else
+            {
+                warnings.Add($"settings: invalid overlay.vr {vr.GetRawText()}, using false");
+            }
+        }
+
         return settings;
     }
 
@@ -445,6 +457,7 @@ public sealed class JsonSettingsStore : ISettingsStore
             writer.WriteNull("position");
         }
 
+        writer.WriteBoolean("vr", overlay.Vr);
         writer.WriteEndObject();
     }
 

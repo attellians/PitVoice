@@ -34,13 +34,13 @@ public sealed class AboutTests
         Assert.Equal(names, AboutViewModel.LoadComponents().Select(c => c.Name));
     }
 
-    [Fact]
-    public void Project_license_is_MIT_in_both_languages()
+    /// <summary>Spec: Open about, English interface — "Лицензия MIT" / "MIT License", no colon and no period.</summary>
+    [Theory]
+    [InlineData("ru", "Лицензия MIT")]
+    [InlineData("en", "MIT License")]
+    public void Project_license_line(string language, string expected)
     {
-        foreach (var language in Loc.Languages)
-        {
-            Assert.Contains("MIT", Loc.LoadDictionary(language)!["ProjectLicense"], StringComparison.Ordinal);
-        }
+        Assert.Equal(expected, Loc.LoadDictionary(language)!["ProjectLicense"]);
     }
 
     private static string RepositoryRoot()

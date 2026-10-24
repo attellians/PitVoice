@@ -290,7 +290,7 @@
   "intent.repair.none": "Без ремонта",
   "intent.pit.clear": "Сбросить всё",
 
-  "ProjectLicense": "Лицензия: MIT.",
+  "ProjectLicense": "Лицензия MIT",
   "BrowserFailed": "Браузер не открылся. Скопируйте адрес:",
   "ModelsLicenses": "Модели распознавания речи",
   "ComponentsLicenses": "Сторонние компоненты",

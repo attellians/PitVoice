@@ -106,13 +106,14 @@ public sealed class HelperLoopTests
         await using var run = new Run(vr);
         await run.Line("ready");
 
-        // Measured over the time that really passed: a busy CI machine may sleep longer than asked.
+        // About 10 a second on an idle machine; a busy CI machine (4.5 a second seen on Linux) runs the loop thread less
+        // often. The test only checks that the events are read again and again and the loop does not spin.
         var before = vr.Polls;
         var clock = System.Diagnostics.Stopwatch.StartNew();
         await Task.Delay(TimeSpan.FromSeconds(2));
         var perSecond = (vr.Polls - before) / clock.Elapsed.TotalSeconds;
 
-        Assert.InRange(perSecond, 5, 20);
+        Assert.InRange(perSecond, 2, 30);
         Assert.Equal(VrExitCode.InputClosed, await run.CloseInput());
     }
 
